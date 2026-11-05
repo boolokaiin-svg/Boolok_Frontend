@@ -119,6 +119,7 @@ const COMMUNITY_MEMBERS = [
     _id: 'ajmal',
     fullName: 'Mohammed Ajmal',
     username: 'ajmal',
+    email: 'ajmal@boolok.ai',
     headline: 'Luxury Living & High-End Residential Broker',
     location: 'Dubai & Kochi · Luxury Villas',
     bio: 'Connecting international investors to premier waterfront villas and bespoke residential developments.',
@@ -335,6 +336,7 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     _id: targetId,
     fullName: cleanName,
     username: targetId.toLowerCase(),
+    email: `${targetId.toLowerCase()}@boolok.ai`,
     headline: 'Certified Real Estate Advisor @ Boolok Network',
     location: 'Chennai, Tamil Nadu · Prime Assets',
     bio: 'Real estate professional and certified portfolio advisor on the Boolok AI network.',
@@ -3741,11 +3743,11 @@ export default function ProfessionalUserProfileScreen() {
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={[styles.contactItemLabel, { color: textMuted }]}>EMAIL ADDRESS</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
-                      {profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`}
+                      {isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai'))}
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => handleCopyText(profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`, 'email')}
+                    onPress={() => handleCopyText(isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai')), 'email')}
                     style={[styles.contactCopyBtn, { borderColor }]}
                   >
                     <MaterialIcons

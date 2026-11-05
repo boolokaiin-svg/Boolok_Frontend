@@ -19,7 +19,6 @@
     },
     "android": {
       "package": "com.boolokgpt",
-      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
