@@ -146,9 +146,13 @@ export default function LegalVerificationScreen() {
 
       // Append primary Sale Deed
       if (Platform.OS === 'web') {
-        const response = await fetch(saleDeedFile.uri);
-        const blob = await response.blob();
-        formData.append('document', blob, saleDeedFile.name);
+        if (saleDeedFile.file) {
+          formData.append('document', saleDeedFile.file, saleDeedFile.name);
+        } else {
+          const response = await fetch(saleDeedFile.uri);
+          const blob = await response.blob();
+          formData.append('document', blob, saleDeedFile.name);
+        }
       } else {
         formData.append('document', {
           uri: saleDeedFile.uri,
@@ -160,9 +164,13 @@ export default function LegalVerificationScreen() {
       // Append optional manual EC
       if (ecFile) {
         if (Platform.OS === 'web') {
-          const resp = await fetch(ecFile.uri);
-          const blob = await resp.blob();
-          formData.append('manual_ec', blob, ecFile.name);
+          if (ecFile.file) {
+            formData.append('manual_ec', ecFile.file, ecFile.name);
+          } else {
+            const resp = await fetch(ecFile.uri);
+            const blob = await resp.blob();
+            formData.append('manual_ec', blob, ecFile.name);
+          }
         } else {
           formData.append('manual_ec', {
             uri: ecFile.uri,
@@ -175,9 +183,13 @@ export default function LegalVerificationScreen() {
       // Append optional manual Patta
       if (pattaFile) {
         if (Platform.OS === 'web') {
-          const resp = await fetch(pattaFile.uri);
-          const blob = await resp.blob();
-          formData.append('manual_patta', blob, pattaFile.name);
+          if (pattaFile.file) {
+            formData.append('manual_patta', pattaFile.file, pattaFile.name);
+          } else {
+            const resp = await fetch(pattaFile.uri);
+            const blob = await resp.blob();
+            formData.append('manual_patta', blob, pattaFile.name);
+          }
         } else {
           formData.append('manual_patta', {
             uri: pattaFile.uri,
