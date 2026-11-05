@@ -1045,6 +1045,12 @@ const VideoItem = ({
           borderWidth: isMobile ? 0 : 1,
           borderColor: '#1e293b',
         },
+        Platform.OS === 'web'
+          ? ({
+              scrollSnapAlign: 'start',
+              scrollSnapStop: 'always',
+            } as any)
+          : null,
       ]}
     >
       {/* ── Video Background / Tap Layer ── */}
@@ -1699,23 +1705,16 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
     if (uploading) {
       interval = setInterval(() => {
         setUploadProgress((prev) => {
-          if (prev < 40) {
-            setUploadStageText('Uploading high-definition property video...');
-            return prev + 6;
-          }
-          if (prev < 75) {
-            setUploadStageText('Optimizing bitrate & cover streams...');
-            return prev + 4;
-          }
-          if (prev < 92) {
-            setUploadStageText('Generating AI Property Intelligence match...');
-            return prev + 2;
+          if (prev >= 90 && prev < 97) {
+            setUploadStageText('Processing on server & optimizing streams…');
+            return prev + 1;
           }
           return prev;
         });
-      }, 300);
+      }, 700);
     } else {
       setUploadProgress(0);
+      setUploadStageText('Preparing video & property media...');
     }
     return () => clearInterval(interval);
   }, [uploading]);
@@ -1782,7 +1781,7 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
     }
 
     setUploading(true);
-    setUploadProgress(15);
+    setUploadProgress(5);
     setUploadStageText('Preparing video & property media...');
     try {
       const token = Platform.OS === 'web'
@@ -1859,8 +1858,15 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
         onUploadProgress: (evt: any) => {
           if (evt?.total) {
             const pct = Math.round((evt.loaded / evt.total) * 100);
-            setUploadProgress(Math.min(95, 15 + Math.round(pct * 0.8)));
-            setUploadStageText(pct < 100 ? `Uploading video… ${pct}%` : 'Processing on server…');
+            // Real network progress maps monotonically from 10% to 90%
+            const current = Math.min(90, 10 + Math.round(pct * 0.8));
+            setUploadProgress((prev) => Math.max(prev, current));
+            if (pct < 100) {
+              setUploadStageText(`Uploading video… ${pct}%`);
+            } else {
+              setUploadProgress((prev) => Math.max(prev, 90));
+              setUploadStageText('Processing on server & optimizing streams…');
+            }
           }
         },
       });
@@ -2223,12 +2229,15 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
                 }}
               >
                 <View
-                  style={{
-                    height: '100%',
-                    width: `${uploadProgress}%`,
-                    backgroundColor: theme.primary,
-                    borderRadius: 3,
-                  }}
+                  style={[
+                    {
+                      height: '100%',
+                      width: `${uploadProgress}%`,
+                      backgroundColor: theme.primary,
+                      borderRadius: 3,
+                    },
+                    Platform.OS === 'web' ? ({ transition: 'width 0.3s ease-out' } as any) : null,
+                  ]}
                 />
               </View>
 
@@ -2630,7 +2639,10 @@ export default function InsightsScreen() {
           <FlatList
             ref={flatListRef}
             data={videos}
-            style={{ flex: 1, width: '100%' }}
+            style={[
+              { flex: 1, width: '100%' },
+              Platform.OS === 'web' ? ({ scrollSnapType: 'y mandatory' } as any) : null,
+            ]}
             contentContainerStyle={{ flexGrow: 1 }}
             renderItem={({ item, index }) => (
               <VideoItem
@@ -2652,7 +2664,7 @@ export default function InsightsScreen() {
               });
             }}
             ListEmptyComponent={renderEmptyReels}
-            pagingEnabled={Platform.OS === 'ios'}
+            pagingEnabled={true}
             snapToInterval={cardHeight}
             snapToAlignment="start"
             decelerationRate="fast"
