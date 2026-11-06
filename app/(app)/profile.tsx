@@ -649,13 +649,13 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
           />
         ) : (
           <>
-            {(reel.thumbnail || reel.poster) && !isPlaying && (
+            {Boolean((reel.thumbnail || reel.poster) && !isPlaying) ? (
               <Image
                 source={{ uri: reel.thumbnail || reel.poster }}
                 style={StyleSheet.absoluteFill}
                 resizeMode="cover"
               />
-            )}
+            ) : null}
             <VideoView
               player={player}
               style={StyleSheet.absoluteFill}
@@ -665,13 +665,13 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
           </>
         )}
 
-        {!isPlaying && (
+        {!isPlaying ? (
           <View style={styles.centerPlayOverlay} pointerEvents="none">
             <View style={styles.playIconCircle}>
               <MaterialIcons name="play-arrow" size={36} color="#e6b800" />
             </View>
           </View>
-        )}
+        ) : null}
       </Pressable>
 
       {/* ── Top Overlay: AI Match Score & Watch in Reels ── */}
@@ -868,6 +868,15 @@ export default function ProfessionalUserProfileScreen() {
 
   // Tabs: 'properties' vs 'reels'
   const [activeTab, setActiveTab] = useState<'properties' | 'reels' | 'saved'>('properties');
+
+  // Instagram Media Grid dynamic calculations for perfect 3-column alignment
+  const [gridContainerWidth, setGridContainerWidth] = useState<number>(0);
+  const gridGap = isSmallMobile ? 4 : (isMobile ? 6 : 8);
+  const estimatedCardWidth = Math.min(width, 880) - (isMobile ? 36 : 64);
+  const fallbackTileWidth = Math.max(80, Math.floor((estimatedCardWidth - (gridGap * 2)) / 3));
+  const gridTileWidth = gridContainerWidth > 0 
+    ? Math.floor((gridContainerWidth - (gridGap * 2)) / 3) 
+    : fallbackTileWidth;
 
   // Username edit state for self
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -2802,14 +2811,17 @@ export default function ProfessionalUserProfileScreen() {
           {/* TAB 1: POSTS GRID (with Instagram Real-time Likes & Comments Hover Overlay) */}
           {activeTab === 'properties' && (
             posts && posts.length > 0 ? (
-              <View style={styles.instagramGrid}>
-                {posts.map((post: any, idx: number) => {
+              <View 
+                style={[styles.instagramGrid, { gap: gridGap }]}
+                onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
+              >
+                {posts.map((post: any) => {
                   const authorId = post.author?._id || post.author?.id || (typeof post.author === 'string' ? post.author : '');
                   const viewerId = viewer?.id || viewer?._id || '';
                   const isPostOwner = isSelf || (authorId && (authorId === viewerId || (viewer?.username && authorId === viewer.username)));
                   const postLikesCount = getLiveLikesCount(post._id, post.likes, post.likesCount);
                   const postCommentsCount = getLiveCommentsCount(post._id, post.comments);
-                  const isPinned = idx < 2;
+                  const isPinned = Boolean(post.isPinned || post.pinned);
                   const isSavedItem = isPostSaved(post._id);
 
                   return (
@@ -2818,9 +2830,7 @@ export default function ProfessionalUserProfileScreen() {
                       onPress={() => handleOpenPostDetailsModal(post)}
                       style={({ pressed, hovered }: any) => [
                         styles.instagramGridTile,
-                        isMobile
-                          ? { width: '32.6%', aspectRatio: 4 / 5 }
-                          : { width: '24.2%', aspectRatio: 4 / 5 },
+                        { width: gridTileWidth, aspectRatio: 4 / 5 },
                         (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                       ]}
                     >
@@ -2931,7 +2941,10 @@ export default function ProfessionalUserProfileScreen() {
           {/* TAB 2: REELS GRID (with Instagram Real-time Views & Comments Hover Overlay) */}
           {activeTab === 'reels' && (
             reels && reels.length > 0 ? (
-              <View style={styles.instagramGrid}>
+              <View 
+                style={[styles.instagramGrid, { gap: gridGap }]}
+                onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
+              >
                 {reels.map((reel: any) => {
                   const reelCommentsCount = getLiveCommentsCount(reel._id, reel.comments);
                   const reelViews = getReelViewsDisplay(reel);
@@ -2943,9 +2956,7 @@ export default function ProfessionalUserProfileScreen() {
                       onPress={() => setSelectedReelForModal(reel)}
                       style={({ pressed, hovered }: any) => [
                         styles.instagramGridTile,
-                        isMobile
-                          ? { width: '32.6%', aspectRatio: 9 / 16 }
-                          : { width: '24.2%', aspectRatio: 9 / 16 },
+                        { width: gridTileWidth, aspectRatio: 9 / 16 },
                         (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                       ]}
                     >
@@ -3102,7 +3113,10 @@ export default function ProfessionalUserProfileScreen() {
                 }
 
                 return (
-                  <View style={styles.instagramGrid}>
+                  <View 
+                    style={[styles.instagramGrid, { gap: gridGap }]}
+                    onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
+                  >
                     {/* Render Saved Posts */}
                     {displayPosts.map((post: any) => {
                       const postLikesCount = getLiveLikesCount(post._id, post.likes, post.likesCount);
@@ -3114,9 +3128,7 @@ export default function ProfessionalUserProfileScreen() {
                           onPress={() => handleOpenPostDetailsModal(post)}
                           style={({ pressed, hovered }: any) => [
                             styles.instagramGridTile,
-                            isMobile
-                              ? { width: '32.6%', aspectRatio: 4 / 5 }
-                              : { width: '24.2%', aspectRatio: 4 / 5 },
+                            { width: gridTileWidth, aspectRatio: 4 / 5 },
                             (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                           ]}
                         >
@@ -3180,9 +3192,7 @@ export default function ProfessionalUserProfileScreen() {
                           onPress={() => setSelectedReelForModal(reel)}
                           style={({ pressed, hovered }: any) => [
                             styles.instagramGridTile,
-                            isMobile
-                              ? { width: '32.6%', aspectRatio: 9 / 16 }
-                              : { width: '24.2%', aspectRatio: 9 / 16 },
+                            { width: gridTileWidth, aspectRatio: 9 / 16 },
                             (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                           ]}
                         >
@@ -5184,8 +5194,8 @@ const styles = StyleSheet.create({
   instagramGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 6,
     justifyContent: 'flex-start',
+    width: '100%',
   },
   instagramGridTile: {
     borderRadius: 8,
