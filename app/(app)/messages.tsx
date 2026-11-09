@@ -25,6 +25,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
@@ -45,6 +46,206 @@ const COMMUNITY_MEMBERS_DIRECTORY = [
   { id: 'bavadharini_rs', fullName: 'Bavadharini RS', username: 'bavadharini_rs', headline: 'Interior Architecture Lead' },
   { id: 'the_akshtr_estate', fullName: 'Akshat Commercials', username: 'the_akshtr_estate', headline: 'Institutional Syndications' },
 ];
+
+export interface ReelShareData {
+  reelId: string;
+  title: string;
+  authorName: string;
+  authorAvatar?: string | null;
+  thumbnail?: string | null;
+  location?: string | null;
+  price?: string | null;
+}
+
+export function parseReelMessage(text?: string): ReelShareData | null {
+  if (!text || typeof text !== 'string') return null;
+  const trimmed = text.trim();
+
+  // 1. Structured JSON format: [REEL_SHARE]:{...}
+  if (trimmed.startsWith('[REEL_SHARE]:')) {
+    try {
+      const jsonStr = trimmed.slice('[REEL_SHARE]:'.length);
+      const parsed = JSON.parse(jsonStr);
+      if (parsed && (parsed.reelId || parsed.id)) {
+        return {
+          reelId: String(parsed.reelId || parsed.id),
+          title: parsed.title || 'Luxury Property Reel',
+          authorName: parsed.authorName || 'Verified Broker',
+          authorAvatar: parsed.authorAvatar || null,
+          thumbnail: parsed.thumbnail || null,
+          location: parsed.location || 'Featured Listing',
+          price: parsed.price || null,
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to parse [REEL_SHARE] payload:', e);
+    }
+  }
+
+  // 2. Legacy / link format (e.g. from user screenshot:
+  // "Check out this property reel: "Loki" by G Dinesh\n\nhttp://localhost:8081/(app)/insights?reelId=6aed73836a2f4fe59eac7fd5")
+  // Or any link with reelId=...
+  if (trimmed.includes('reelId=')) {
+    const reelIdMatch = trimmed.match(/reelId=([a-zA-Z0-9_-]+)/i);
+    if (reelIdMatch && reelIdMatch[1]) {
+      const reelId = reelIdMatch[1];
+      const titleMatch = trimmed.match(/reel:\s*"([^"]+)"/i) || trimmed.match(/"([^"]+)"/);
+      const authorMatch = trimmed.match(/by\s+([^\n\r]+)/i);
+
+      // High-quality default covers for property reels
+      const fallbackThumbnail = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80';
+
+      return {
+        reelId,
+        title: titleMatch ? titleMatch[1] : 'Property Reel',
+        authorName: authorMatch ? authorMatch[1].trim() : 'Boolok Creator',
+        authorAvatar: null,
+        thumbnail: fallbackThumbnail,
+        location: 'Verified Property',
+        price: null,
+      };
+    }
+  }
+
+  return null;
+}
+
+export function formatMessageSnippet(rawText?: string): string {
+  if (!rawText) return 'Started a conversation';
+  const reel = parseReelMessage(rawText);
+  if (reel) {
+    return `📹 Reel: "${reel.title}"`;
+  }
+  return rawText;
+}
+
+interface ReelMessageCardProps {
+  reel: ReelShareData;
+  isMe: boolean;
+  timeStr: string;
+  isSending?: boolean;
+  isRead?: boolean;
+  onPress: () => void;
+}
+
+const ReelMessageCard: React.FC<ReelMessageCardProps> = ({
+  reel,
+  isMe,
+  timeStr,
+  isSending,
+  isRead,
+  onPress,
+}) => {
+  const [imageFailed, setImageFailed] = useState(false);
+  const fallbackImage = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80';
+  const coverUri = (!imageFailed && reel.thumbnail) ? (resolveImageUrl(reel.thumbnail) || reel.thumbnail) : fallbackImage;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed, hovered }: any) => [
+        styles.reelCardContainer,
+        {
+          borderColor: isMe ? 'rgba(218, 165, 32, 0.45)' : 'rgba(255, 255, 255, 0.12)',
+          opacity: pressed ? 0.92 : 1,
+        },
+        hovered && { borderColor: '#daa520' },
+      ]}
+    >
+      {/* ── Top Header: Creator Avatar + Name + REEL tag ── */}
+      <View style={styles.reelCardHeader}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+          {reel.authorAvatar ? (
+            <Image
+              source={{ uri: resolveImageUrl(reel.authorAvatar) || reel.authorAvatar }}
+              style={styles.reelCardAuthorAvatar}
+            />
+          ) : (
+            <View style={styles.reelCardAuthorAvatarFallback}>
+              <Text style={{ color: '#DAA520', fontSize: 10, fontWeight: '800' }}>
+                {(reel.authorName || 'B')[0]?.toUpperCase()}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.reelCardAuthorName} numberOfLines={1}>
+            {reel.authorName}
+          </Text>
+          <MaterialIcons name="verified" size={12} color="#38bdf8" />
+        </View>
+
+        <View style={styles.reelCardTag}>
+          <MaterialCommunityIcons name="movie-play-outline" size={11} color="#FFFFFF" />
+          <Text style={styles.reelCardTagText}>REEL</Text>
+        </View>
+      </View>
+
+      {/* ── Media Preview with Play Button Overlay ── */}
+      <View style={styles.reelCardMediaWrap}>
+        <Image
+          source={{ uri: coverUri }}
+          style={styles.reelCardImage}
+          resizeMode="cover"
+          onError={() => setImageFailed(true)}
+        />
+        {/* Subtle Dark Gradient Overlay */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0.15)', 'transparent', 'rgba(0,0,0,0.9)']}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* Center Circular Play Button */}
+        <View style={styles.reelCardPlayCenter}>
+          <View style={styles.reelCardPlayCircle}>
+            <MaterialIcons name="play-arrow" size={26} color="#FFFFFF" style={{ marginLeft: 2 }} />
+          </View>
+        </View>
+
+        {/* Video Overlay Text */}
+        <View style={styles.reelCardMediaOverlay}>
+          <Text style={styles.reelCardTitle} numberOfLines={2}>
+            {reel.title}
+          </Text>
+          <View style={styles.reelCardMetaRow}>
+            {Boolean(reel.location) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 }}>
+                <MaterialIcons name="location-on" size={11} color="#CBD5E1" />
+                <Text style={styles.reelCardLocation} numberOfLines={1}>
+                  {reel.location}
+                </Text>
+              </View>
+            )}
+            {Boolean(reel.price) && (
+              <View style={styles.reelCardPricePill}>
+                <Text style={styles.reelCardPriceText}>{reel.price}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+
+      {/* ── Footer CTA Bar ── */}
+      <View style={styles.reelCardFooter}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <MaterialIcons name="play-circle-fill" size={14} color="#daa520" />
+          <Text style={styles.reelCardFooterText}>Watch on Boolok Reels</Text>
+        </View>
+        <MaterialIcons name="arrow-forward" size={14} color="#daa520" />
+      </View>
+
+      {/* ── Time & Tick Status ── */}
+      <View style={styles.reelCardTimeRow}>
+        <Text style={styles.reelCardTimeText}>{timeStr}</Text>
+        {isMe && (
+          <MaterialIcons
+            name={isSending ? 'access-time' : isRead ? 'done-all' : 'done'}
+            size={13}
+            color="#daa520"
+          />
+        )}
+      </View>
+    </Pressable>
+  );
+};
 
 export default function MessagesScreen() {
   const { width, height: windowHeight } = useWindowDimensions();
@@ -744,7 +945,7 @@ export default function MessagesScreen() {
                         </View>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
                           <Text style={[styles.convSnippet, { color: item.unreadCount > 0 ? textPrimary : textMuted, fontWeight: item.unreadCount > 0 ? '700' : '400' }]} numberOfLines={1}>
-                            {item.lastMessage?.text || 'Started a conversation'}
+                            {formatMessageSnippet(item.lastMessage?.text)}
                           </Text>
                           {item.unreadCount > 0 && (
                             <View style={styles.unreadPill}>
@@ -959,40 +1160,58 @@ export default function MessagesScreen() {
                                 )
                               )}
 
-                              <View
-                                style={[
-                                  styles.messageBubble,
-                                  isMe ? [styles.bubbleMe, { backgroundColor: isDark ? '#daa520' : '#d97706' }] : [styles.bubbleOther, { backgroundColor: cardBg, borderColor }],
-                                ]}
-                              >
-                                {/* Attached Media */}
-                                {Boolean(item.mediaUrl) && (
-                                  <Image
-                                    source={{ uri: resolveImageUrl(item.mediaUrl)! }}
-                                    style={{ width: 220, height: 140, borderRadius: 8, marginBottom: 6 }}
-                                    resizeMode="cover"
-                                  />
-                                )}
-
-                                {Boolean(item.text) && (
-                                  <Text style={[styles.messageText, { color: isMe ? '#000000' : textPrimary }]}>
-                                    {item.text}
-                                  </Text>
-                                )}
-
-                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
-                                  <Text style={[styles.messageTime, { color: isMe ? 'rgba(0,0,0,0.6)' : textMuted }]}>
-                                    {smartTimeStr || timeStr}
-                                  </Text>
-                                  {isMe && (
-                                    <MaterialIcons
-                                      name={item.sending ? 'access-time' : item.read ? 'done-all' : 'done'}
-                                      size={14}
-                                      color={isMe ? 'rgba(0,0,0,0.6)' : goldPrimary}
+                              {(() => {
+                                const reelData = parseReelMessage(item.text);
+                                if (reelData) {
+                                  return (
+                                    <ReelMessageCard
+                                      reel={reelData}
+                                      isMe={isMe}
+                                      timeStr={smartTimeStr || timeStr}
+                                      isSending={item.sending}
+                                      isRead={item.read}
+                                      onPress={() => router.push(`/(app)/insights?reelId=${reelData.reelId}` as any)}
                                     />
-                                  )}
-                                </View>
-                              </View>
+                                  );
+                                }
+
+                                return (
+                                  <View
+                                    style={[
+                                      styles.messageBubble,
+                                      isMe ? [styles.bubbleMe, { backgroundColor: isDark ? '#daa520' : '#d97706' }] : [styles.bubbleOther, { backgroundColor: cardBg, borderColor }],
+                                    ]}
+                                  >
+                                    {/* Attached Media */}
+                                    {Boolean(item.mediaUrl) && (
+                                      <Image
+                                        source={{ uri: resolveImageUrl(item.mediaUrl)! }}
+                                        style={{ width: 220, height: 140, borderRadius: 8, marginBottom: 6 }}
+                                        resizeMode="cover"
+                                      />
+                                    )}
+
+                                    {Boolean(item.text) && (
+                                      <Text style={[styles.messageText, { color: isMe ? '#000000' : textPrimary }]}>
+                                        {item.text}
+                                      </Text>
+                                    )}
+
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
+                                      <Text style={[styles.messageTime, { color: isMe ? 'rgba(0,0,0,0.6)' : textMuted }]}>
+                                        {smartTimeStr || timeStr}
+                                      </Text>
+                                      {isMe && (
+                                        <MaterialIcons
+                                          name={item.sending ? 'access-time' : item.read ? 'done-all' : 'done'}
+                                          size={14}
+                                          color={isMe ? 'rgba(0,0,0,0.6)' : goldPrimary}
+                                        />
+                                      )}
+                                    </View>
+                                  </View>
+                                );
+                              })()}
                             </View>
                           </View>
                         );
@@ -1379,5 +1598,168 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
+  },
+  reelCardContainer: {
+    width: 240,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#090D16',
+    borderWidth: 1.5,
+    marginVertical: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  reelCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#0F172A',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  reelCardAuthorAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1,
+    borderColor: '#daa520',
+  },
+  reelCardAuthorAvatarFallback: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#daa520',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reelCardAuthorName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#F8FAFC',
+    maxWidth: 120,
+  },
+  reelCardTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  reelCardTagText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  reelCardMediaWrap: {
+    width: '100%',
+    height: 240,
+    position: 'relative',
+    backgroundColor: '#020617',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reelCardImage: {
+    width: '100%',
+    height: '100%',
+  },
+  reelCardPlayCenter: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  reelCardPlayCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+  },
+  reelCardMediaOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 10,
+  },
+  reelCardTitle: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 17,
+    textShadowColor: 'rgba(0, 0, 0, 0.85)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  reelCardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  reelCardLocation: {
+    color: '#CBD5E1',
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  reelCardPricePill: {
+    backgroundColor: '#daa520',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  reelCardPriceText: {
+    color: '#000000',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  reelCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#0B1120',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  reelCardFooterText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#daa520',
+    letterSpacing: 0.2,
+  },
+  reelCardTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingBottom: 6,
+    backgroundColor: '#0B1120',
+  },
+  reelCardTimeText: {
+    fontSize: 10,
+    color: '#94A3B8',
   },
 });

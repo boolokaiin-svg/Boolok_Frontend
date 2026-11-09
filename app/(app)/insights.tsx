@@ -15,6 +15,9 @@ import {
   Alert,
   Image,
   AppState,
+  Share,
+  Linking,
+  Animated as RNAnimated,
 } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,20 +33,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 
 // No hardcoded seeded videos: reels are loaded live from the user and backend
 const DUMMY_VIDEOS: any[] = [];
-
-const SHARE_CONTACTS = [
-  { id: '1', name: 'Shreekutti', role: 'Residential Architect · Chennai', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120' },
-  { id: '2', name: 'Ajmal', role: 'CRE Advisory & Multi-Family', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120' },
-  { id: '3', name: 'Yashwanth', role: 'Commercial Realty · Tech Hubs', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120' },
-  { id: '4', name: 'Logeshwaran A', role: 'Architectural Consultant · Tech Parks', avatar: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c' },
-  { id: '5', name: 'Sai Vimenthan', role: 'Principal Broker · Commercial Assets', avatar: 'https://lh3.googleusercontent.com/a/ACg8ocK0o5SZUMa-JTOuTUTxS6t1Bl20HPwVkbFAz98dCG6e1rbpGA=s96-c' },
-];
 
 const DEFAULT_POSTERS: Record<string, string> = {
   'Uluwatu Cliffside Resort': 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1200',
@@ -253,19 +248,165 @@ const MarketIntelligenceSidebar = ({ theme, isDark }: { theme: any, isDark: bool
   );
 };
 
-// ── Heart burst component for double-tap ─────────────────────────────────────
-const HeartBurst = ({ visible }: { visible: boolean }) => {
+// ── Instagram-Style Bouncy Heart Burst with Particle Stars ────────────────────
+const HeartBurst = ({ visible, onAnimationEnd }: { visible: boolean; onAnimationEnd?: () => void }) => {
+  const scale = useRef(new RNAnimated.Value(0)).current;
+  const opacity = useRef(new RNAnimated.Value(1)).current;
+  const translateY = useRef(new RNAnimated.Value(0)).current;
+  const rotate = useRef(new RNAnimated.Value(-14)).current;
+  const particleDist = useRef(new RNAnimated.Value(0)).current;
+  const particleOpacity = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible) {
+      scale.setValue(0);
+      opacity.setValue(1);
+      translateY.setValue(12);
+      rotate.setValue(-14);
+      particleDist.setValue(0);
+      particleOpacity.setValue(0);
+
+      RNAnimated.parallel([
+        // Bouncy spring pop & overshoot
+        RNAnimated.sequence([
+          RNAnimated.spring(scale, {
+            toValue: 1.25,
+            friction: 4,
+            tension: 200,
+            useNativeDriver: true,
+          }),
+          RNAnimated.timing(scale, {
+            toValue: 1.0,
+            duration: 120,
+            useNativeDriver: true,
+          }),
+          RNAnimated.delay(200),
+          RNAnimated.timing(scale, {
+            toValue: 1.35,
+            duration: 250,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Straighten rotation
+        RNAnimated.spring(rotate, {
+          toValue: 0,
+          friction: 5,
+          tension: 140,
+          useNativeDriver: true,
+        }),
+        // Upward float
+        RNAnimated.timing(translateY, {
+          toValue: -32,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+        // Smooth fade out
+        RNAnimated.sequence([
+          RNAnimated.delay(420),
+          RNAnimated.timing(opacity, {
+            toValue: 0,
+            duration: 320,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Particle burst outward in radial pattern
+        RNAnimated.sequence([
+          RNAnimated.timing(particleOpacity, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          RNAnimated.parallel([
+            RNAnimated.timing(particleDist, {
+              toValue: 70,
+              duration: 550,
+              useNativeDriver: true,
+            }),
+            RNAnimated.timing(particleOpacity, {
+              toValue: 0,
+              duration: 550,
+              useNativeDriver: true,
+            }),
+          ]),
+        ]),
+      ]).start(() => {
+        onAnimationEnd?.();
+      });
+    }
+  }, [visible]);
+
   if (!visible) return null;
+
+  const rotateInterpolation = rotate.interpolate({
+    inputRange: [-15, 0, 15],
+    outputRange: ['-15deg', '0deg', '15deg'],
+  });
+
+  const particleAngles = [0, 60, 120, 180, 240, 300];
+
   return (
-    <Animated.View
-      entering={FadeIn.duration(120)}
-      style={styles.heartBurstContainer}
-      pointerEvents="none"
-    >
-      <View style={styles.heartBurstGlow}>
-        <MaterialIcons name="favorite" size={90} color="#ff2d55" />
-      </View>
-    </Animated.View>
+    <View style={styles.heartBurstContainer} pointerEvents="none">
+      {/* 6 Surrounding Radial Sparkle/Heart Particles */}
+      {particleAngles.map((deg, i) => {
+        const rad = (deg * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        return (
+          <RNAnimated.View
+            key={`particle_${i}`}
+            style={{
+              position: 'absolute',
+              opacity: particleOpacity,
+              transform: [
+                { translateX: RNAnimated.multiply(particleDist, cos) },
+                { translateY: RNAnimated.multiply(particleDist, sin) },
+                { scale: particleOpacity },
+              ],
+            }}
+          >
+            <MaterialCommunityIcons
+              name={i % 2 === 0 ? 'heart' : 'star-four-points'}
+              size={i % 2 === 0 ? 18 : 16}
+              color={i % 2 === 0 ? '#ff2d55' : '#f9c03d'}
+              style={{
+                textShadowColor: 'rgba(255, 45, 85, 0.75)',
+                textShadowOffset: { width: 0, height: 0 },
+                textShadowRadius: 8,
+              }}
+            />
+          </RNAnimated.View>
+        );
+      })}
+
+      {/* Main Bouncy Heart with Silhouette Glow (No Square Box Shadow) */}
+      <RNAnimated.View
+        style={{
+          transform: [
+            { scale },
+            { rotate: rotateInterpolation },
+            { translateY },
+          ],
+          opacity,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <MaterialIcons
+          name="favorite"
+          size={108}
+          color="#ff2d55"
+          style={{
+            textShadowColor: 'rgba(255, 45, 85, 0.85)',
+            textShadowOffset: { width: 0, height: 2 },
+            textShadowRadius: 28,
+          }}
+        />
+        {/* Subtle interior sparkle */}
+        <View style={{ position: 'absolute', top: 30, left: 26, opacity: 0.55 }}>
+          <MaterialCommunityIcons name="star-four-points" size={22} color="#ffffff" />
+        </View>
+      </RNAnimated.View>
+    </View>
   );
 };
 
@@ -465,9 +606,14 @@ const VideoItem = ({
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  // Share state
+  // Share state (Real-Time Dynamic Contacts & Messages)
   const [showShareModal, setShowShareModal] = useState(false);
+  const [realContacts, setRealContacts] = useState<any[]>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [sendingContacts, setSendingContacts] = useState<Record<string, boolean>>({});
   const [sharedContacts, setSharedContacts] = useState<Record<string, boolean>>({});
+  const [shareSearchQuery, setShareSearchQuery] = useState('');
+  const [shareToast, setShareToast] = useState<string | null>(null);
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -908,12 +1054,251 @@ const VideoItem = ({
     }
   };
 
-  // Share to contact
-  const handleShareToContact = (contactId: string) => {
-    setSharedContacts((prev) => ({ ...prev, [contactId]: true }));
+  // ── Instagram-Style Real-Time Share Handlers ──
+  const getReelShareUrl = () => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      return `${window.location.origin}/(app)/insights?reelId=${item._id}`;
+    }
+    return `https://boolok.com/insights?reelId=${item._id}`;
+  };
+
+  const showToastMsg = (msg: string) => {
+    setShareToast(msg);
     setTimeout(() => {
-      setSharedContacts((prev) => ({ ...prev, [contactId]: false }));
-    }, 2000);
+      setShareToast(null);
+    }, 2400);
+  };
+
+  // Fetch real contacts & recent chat partners when share modal is opened
+  useEffect(() => {
+    if (!showShareModal) return;
+    let isCancelled = false;
+
+    const fetchRealContacts = async () => {
+      setIsLoadingContacts(true);
+      try {
+        const token = Platform.OS === 'web'
+          ? localStorage.getItem('userToken')
+          : await SecureStore.getItemAsync('userToken');
+
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const [suggestedRes, convRes] = await Promise.allSettled([
+          axios.get(`${API_BASE_URL}/api/users/suggested`, { headers }),
+          axios.get(`${API_BASE_URL}/api/messages/conversations`, { headers }),
+        ]);
+
+        const contactList: any[] = [];
+        const seenIds = new Set<string>();
+
+        // 1. Add recent conversation partners first
+        if (convRes.status === 'fulfilled' && Array.isArray(convRes.value.data?.conversations)) {
+          for (const conv of convRes.value.data.conversations) {
+            const other = conv.otherUser;
+            if (other && (other._id || other.id)) {
+              const oId = String(other._id || other.id);
+              if (!seenIds.has(oId) && oId !== user?.id && oId !== user?._id) {
+                seenIds.add(oId);
+                contactList.push({
+                  _id: oId,
+                  id: oId,
+                  name: other.fullName || other.username || 'Member',
+                  role: other.headline || other.location || (other.username ? `@${other.username}` : 'Recent Chat'),
+                  avatar: other.profilePicture,
+                  isRecent: true,
+                });
+              }
+            }
+          }
+        }
+
+        // 2. Add real suggested platform members
+        if (suggestedRes.status === 'fulfilled' && Array.isArray(suggestedRes.value.data?.suggested)) {
+          for (const u of suggestedRes.value.data.suggested) {
+            const uId = String(u._id || u.id);
+            if (uId && !seenIds.has(uId) && uId !== user?.id && uId !== user?._id) {
+              seenIds.add(uId);
+              contactList.push({
+                _id: uId,
+                id: uId,
+                name: u.fullName || u.username || 'Boolok Member',
+                role: u.headline || u.title || u.location || (u.username ? `@${u.username}` : 'Community Member'),
+                avatar: u.avatar || u.profilePicture,
+                isRecent: false,
+              });
+            }
+          }
+        }
+
+        if (!isCancelled) {
+          setRealContacts(contactList);
+        }
+      } catch (err) {
+        console.warn('Failed to load real contacts for sharing:', err);
+      } finally {
+        if (!isCancelled) setIsLoadingContacts(false);
+      }
+    };
+
+    fetchRealContacts();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [showShareModal]);
+
+  // Real-time user search as user types
+  useEffect(() => {
+    if (!showShareModal || !shareSearchQuery.trim() || shareSearchQuery.trim().length < 2) return;
+
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const token = Platform.OS === 'web'
+          ? localStorage.getItem('userToken')
+          : await SecureStore.getItemAsync('userToken');
+
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await axios.get(`${API_BASE_URL}/api/users/search?q=${encodeURIComponent(shareSearchQuery.trim())}`, { headers });
+
+        if (!isCancelled && res.data && Array.isArray(res.data.results)) {
+          const results = res.data.results
+            .filter((u: any) => String(u._id || u.id) !== String(user?.id) && String(u._id || u.id) !== String(user?._id))
+            .map((u: any) => ({
+              _id: String(u._id || u.id),
+              id: String(u._id || u.id),
+              name: u.fullName || u.username || 'Member',
+              role: u.headline || u.location || (u.username ? `@${u.username}` : 'Member'),
+              avatar: u.profilePicture,
+            }));
+
+          setRealContacts((prev) => {
+            const map = new Map<string, any>();
+            results.forEach((c: any) => map.set(c.id, c));
+            prev.forEach((c: any) => { if (!map.has(c.id)) map.set(c.id, c); });
+            return Array.from(map.values());
+          });
+        }
+      } catch (_) {}
+    }, 280);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [shareSearchQuery, showShareModal]);
+
+  const handleCopyLink = async () => {
+    const url = getReelShareUrl();
+    try {
+      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const RN = require('react-native');
+        if (RN.Clipboard && RN.Clipboard.setString) {
+          RN.Clipboard.setString(url);
+        }
+      }
+      showToastMsg('Link copied to clipboard! 📋');
+    } catch (_) {
+      showToastMsg('Link copied! 📋');
+    }
+  };
+
+  const handleSystemShare = async () => {
+    const url = getReelShareUrl();
+    const shareMessage = `Check out this luxury property reel on Boolok: "${item.title || 'Property Reel'}" by ${authorName}!\n\n${url}`;
+
+    setShowShareModal(false);
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: item.title || 'Boolok Property Reel',
+          text: shareMessage,
+          url,
+        });
+        return;
+      } catch (e: any) {
+        if (e.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await Share.share({
+        title: item.title || 'Boolok Property Reel',
+        message: shareMessage,
+        url,
+      });
+    } catch (error) {
+      console.warn('Share error:', error);
+    }
+  };
+
+  const handleWhatsAppShare = () => {
+    const url = getReelShareUrl();
+    const text = encodeURIComponent(`Check out this luxury property reel on Boolok: "${item.title}" by ${authorName}\n\n${url}`);
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${text}`;
+    setShowShareModal(false);
+    Linking.openURL(whatsappUrl).catch(() => {
+      Alert.alert('Notice', 'Unable to open WhatsApp.');
+    });
+  };
+
+  const handleDirectChatShare = () => {
+    setShowShareModal(false);
+    showToastMsg('Opening Boolok Messages... 💬');
+    router.push('/(app)/messages' as any);
+  };
+
+  // Real-time dispatch message via /api/messages/send (Instagram-Style Media Reel Share)
+  const handleShareToContact = async (contact: any) => {
+    const contactId = String(contact._id || contact.id);
+    if (!contactId || sendingContacts[contactId] || sharedContacts[contactId]) return;
+
+    setSendingContacts((prev) => ({ ...prev, [contactId]: true }));
+    const posterUrl = resolveCoverUrl(item);
+    const reelPayload = {
+      type: 'REEL_SHARE',
+      reelId: String(item._id || item.id),
+      title: item.title || 'Luxury Property Reel',
+      authorName: authorName || 'Verified Broker',
+      authorAvatar: authorAvatar || null,
+      thumbnail: posterUrl || null,
+      location: item.location || (item.property?.city ? `${item.property.city}, ${item.property.state || ''}` : '') || 'Featured Property',
+      price: item.price ? `₹${Number(item.price).toLocaleString('en-IN')}` : null,
+    };
+    const shareText = `[REEL_SHARE]:${JSON.stringify(reelPayload)}`;
+
+    try {
+      const token = Platform.OS === 'web'
+        ? localStorage.getItem('userToken')
+        : await SecureStore.getItemAsync('userToken');
+
+      if (!token) {
+        showToastMsg('Please sign in to send messages.');
+        setSendingContacts((prev) => ({ ...prev, [contactId]: false }));
+        return;
+      }
+
+      const payload: any = {
+        recipientId: contactId,
+        text: shareText,
+      };
+
+      await axios.post(
+        `${API_BASE_URL}/api/messages/send`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setSharedContacts((prev) => ({ ...prev, [contactId]: true }));
+      showToastMsg(`Sent to ${contact.name}! ✓`);
+    } catch (err: any) {
+      console.error('Failed to send reel in chat:', err.response?.data || err.message);
+      showToastMsg(err.response?.data?.message || `Could not send to ${contact.name}`);
+    } finally {
+      setSendingContacts((prev) => ({ ...prev, [contactId]: false }));
+    }
   };
 
   // Add Comment
@@ -1143,7 +1528,7 @@ const VideoItem = ({
         )}
 
         {/* Center Heart Burst on double tap */}
-        <HeartBurst visible={showHeartBurst} />
+        <HeartBurst visible={showHeartBurst} onAnimationEnd={() => setShowHeartBurst(false)} />
 
         {/* Play / Pause Indicator */}
         {!isPlaying && (
@@ -1213,9 +1598,9 @@ const VideoItem = ({
       </View>
       )}
 
-      {/* ── Right Social Actions Rail (Clean, transparent icons - no heavy containers) ── */}
+      {/* ── Right Social Actions Rail (Clean, transparent icons - positioned snugly at bottom) ── */}
       {!clearView && (
-      <View style={[styles.rightOverlay, { bottom: isMobile ? 66 : 32 }]} pointerEvents="box-none">
+      <View style={[styles.rightOverlay, { bottom: isMobile ? 12 : 18 }]} pointerEvents="box-none">
         {/* Creator Avatar with follow badge */}
         <View style={styles.creatorRailItem}>
           <TouchableOpacity
@@ -1323,8 +1708,8 @@ const VideoItem = ({
         style={[
           styles.bottomOverlay,
           {
-            paddingBottom: isMobile ? 64 : 20,
-            paddingRight: isMobile ? 62 : 60,
+            paddingBottom: isMobile ? 12 : 16,
+            paddingRight: isMobile ? 54 : 56,
           },
         ]}
         pointerEvents="box-none"
@@ -1421,7 +1806,7 @@ const VideoItem = ({
           activeOpacity={0.8}
           style={{
             position: 'absolute',
-            bottom: isMobile ? 72 : 28,
+            bottom: isMobile ? 18 : 20,
             alignSelf: 'center',
             backgroundColor: 'rgba(0,0,0,0.45)',
             paddingHorizontal: 14,
@@ -1484,77 +1869,172 @@ const VideoItem = ({
         </Pressable>
       </Modal>
 
-      {/* ── Share Modal ── */}
+      {/* ── Instagram-Style Floating Share Toast ── */}
+      {Boolean(shareToast) && (
+        <View style={styles.shareToastBadge} pointerEvents="none">
+          <MaterialIcons name="check-circle" size={16} color="#10b981" />
+          <Text style={styles.shareToastText}>{shareToast}</Text>
+        </View>
+      )}
+
+      {/* ── Instagram-Style Smooth Share Bottom Sheet ── */}
       <Modal
         visible={showShareModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowShareModal(false)}
       >
         <Pressable
           onPress={() => setShowShareModal(false)}
-          style={styles.modalBackdrop}
+          style={styles.shareBackdrop}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            style={styles.shareCard}
+            style={[
+              styles.shareSheet,
+              {
+                maxHeight: isMobile ? '82%' : '72%',
+                height: isMobile ? '78%' : 560,
+              },
+            ]}
           >
-            <View style={styles.shareCardHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <MaterialIcons name="send" size={20} color={theme.primary} />
+            {/* Sheet Handle */}
+            <View style={styles.sheetHandle} />
+
+            {/* Header */}
+            <View style={styles.shareSheetHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <MaterialCommunityIcons name="share-variant" size={20} color={theme.primary} />
                 <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '800' }}>
-                  Share Property Reel
+                  Share Reel
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setShowShareModal(false)} style={{ padding: 4 }}>
-                <MaterialIcons name="close" size={22} color="#8b9bb4" />
+                <MaterialIcons name="close" size={22} color="#94a3b8" />
               </TouchableOpacity>
             </View>
 
-            <Text style={{ color: '#8b9bb4', fontSize: 12.5, marginBottom: 14 }}>
-              Select a certified broker or advisor to send this video insight:
-            </Text>
+            {/* Search Input (Instagram style) */}
+            <View style={styles.shareSearchBox}>
+              <MaterialIcons name="search" size={19} color="#94a3b8" style={{ marginRight: 6 }} />
+              <TextInput
+                value={shareSearchQuery}
+                onChangeText={setShareSearchQuery}
+                placeholder="Search advisors, brokers, or friends..."
+                placeholderTextColor="#64748b"
+                style={styles.shareSearchInput}
+              />
+              {shareSearchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setShareSearchQuery('')}>
+                  <MaterialIcons name="cancel" size={16} color="#94a3b8" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-            <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
-              {SHARE_CONTACTS.map((contact) => {
-                const isSent = sharedContacts[contact.id];
-                return (
-                  <View key={contact.id} style={styles.shareContactRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                      {contact.avatar && (contact.avatar.startsWith('http') || contact.avatar.startsWith('data:')) ? (
-                        <Image source={{ uri: contact.avatar }} style={styles.shareAvatar} resizeMode="cover" />
-                      ) : (
-                        <View style={[styles.shareAvatarFallback, { backgroundColor: theme.primary }]}>
-                          <Text style={{ color: '#000000', fontWeight: '800', fontSize: 14 }}>
-                            {(contact.name || 'U').charAt(0).toUpperCase()}
+            {/* Real-time Contacts List */}
+            {isLoadingContacts && realContacts.length === 0 ? (
+              <View style={{ paddingVertical: 36, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="small" color={theme.primary} />
+                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 10 }}>Loading community contacts...</Text>
+              </View>
+            ) : realContacts.length === 0 ? (
+              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
+                <MaterialCommunityIcons name="account-search-outline" size={32} color="#64748b" />
+                <Text style={{ color: '#94a3b8', fontSize: 12.5, marginTop: 8 }}>
+                  No members found. Use quick actions below to share!
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+                {realContacts.filter((c) => {
+                  if (!shareSearchQuery.trim()) return true;
+                  const q = shareSearchQuery.toLowerCase();
+                  return (c.name && c.name.toLowerCase().includes(q)) || (c.role && c.role.toLowerCase().includes(q));
+                }).map((contact) => {
+                  const contactId = String(contact._id || contact.id);
+                  const isSent = sharedContacts[contactId];
+                  const isSending = sendingContacts[contactId];
+
+                  return (
+                    <View key={contactId} style={styles.shareContactRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                        {contact.avatar && (contact.avatar.startsWith('http') || contact.avatar.startsWith('data:')) ? (
+                          <Image source={{ uri: contact.avatar }} style={styles.shareAvatar} resizeMode="cover" />
+                        ) : (
+                          <View style={[styles.shareAvatarFallback, { backgroundColor: theme.primary }]}>
+                            <Text style={{ color: '#000000', fontWeight: '800', fontSize: 14 }}>
+                              {(contact.name || 'U').charAt(0).toUpperCase()}
+                            </Text>
+                          </View>
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
+                            {contact.name}
+                          </Text>
+                          <Text style={{ color: '#8b9bb4', fontSize: 11.5 }} numberOfLines={1}>
+                            {contact.role}
                           </Text>
                         </View>
-                      )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
-                          {contact.name}
-                        </Text>
-                        <Text style={{ color: '#8b9bb4', fontSize: 11.5 }} numberOfLines={1}>
-                          {contact.role}
-                        </Text>
                       </View>
-                    </View>
 
-                    <TouchableOpacity
-                      onPress={() => handleShareToContact(contact.id)}
-                      style={[
-                        styles.shareSendBtn,
-                        { backgroundColor: isSent ? '#10b981' : theme.primary },
-                      ]}
-                    >
-                      <Text style={{ color: '#000000', fontWeight: '700', fontSize: 12 }}>
-                        {isSent ? '✓ Sent' : 'Send'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })}
-            </ScrollView>
+                      <TouchableOpacity
+                        onPress={() => handleShareToContact(contact)}
+                        disabled={isSending || isSent}
+                        activeOpacity={0.8}
+                        style={[
+                          styles.shareSendBtn,
+                          isSent && { backgroundColor: '#10b981' },
+                          isSending && { opacity: 0.7 },
+                        ]}
+                      >
+                        {isSending ? (
+                          <ActivityIndicator size="small" color="#000000" />
+                        ) : (
+                          <Text style={[styles.shareSendBtnText, isSent && { color: '#ffffff' }]}>
+                            {isSent ? '✓ Sent' : 'Send'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Instagram Quick Actions Bar (Bottom Row) */}
+            <View style={styles.shareQuickActionsRow}>
+              {/* 1. Copy Link */}
+              <TouchableOpacity onPress={handleCopyLink} style={styles.quickActionItem} activeOpacity={0.7}>
+                <View style={styles.quickActionIconCircle}>
+                  <MaterialIcons name="link" size={22} color="#ffffff" />
+                </View>
+                <Text style={styles.quickActionLabel}>Copy Link</Text>
+              </TouchableOpacity>
+
+              {/* 2. WhatsApp Direct */}
+              <TouchableOpacity onPress={handleWhatsAppShare} style={styles.quickActionItem} activeOpacity={0.7}>
+                <View style={[styles.quickActionIconCircle, { backgroundColor: '#25D366' }]}>
+                  <MaterialCommunityIcons name="whatsapp" size={24} color="#ffffff" />
+                </View>
+                <Text style={styles.quickActionLabel}>WhatsApp</Text>
+              </TouchableOpacity>
+
+              {/* 3. System Share (Android / iOS / Web Sheet) */}
+              <TouchableOpacity onPress={handleSystemShare} style={styles.quickActionItem} activeOpacity={0.7}>
+                <View style={[styles.quickActionIconCircle, { backgroundColor: 'rgba(249, 192, 61, 0.2)', borderColor: theme.primary, borderWidth: 1 }]}>
+                  <MaterialIcons name="share" size={22} color={theme.primary} />
+                </View>
+                <Text style={styles.quickActionLabel}>Share to...</Text>
+              </TouchableOpacity>
+
+              {/* 4. Direct Messages */}
+              <TouchableOpacity onPress={handleDirectChatShare} style={styles.quickActionItem} activeOpacity={0.7}>
+                <View style={styles.quickActionIconCircle}>
+                  <MaterialCommunityIcons name="chat-processing-outline" size={22} color="#ffffff" />
+                </View>
+                <Text style={styles.quickActionLabel}>Messages</Text>
+              </TouchableOpacity>
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
@@ -2290,6 +2770,7 @@ export default function InsightsScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
+  const { reelId } = useLocalSearchParams<{ reelId?: string }>();
   const isMobile = width < 768; // Standard responsive breakpoint
   const initialMobileHeight = Math.max(300, height - ((isMobile ? 64 : 80) + insets.top));
   const [listHeight, setListHeight] = useState(initialMobileHeight);
@@ -2340,6 +2821,24 @@ export default function InsightsScreen() {
   useEffect(() => {
     fetchReels();
   }, []);
+
+  // Jump to specific reel if shared via chat or URL link
+  useEffect(() => {
+    if (reelId && videos.length > 0) {
+      const targetIdx = videos.findIndex((v) => String(v._id || v.id) === String(reelId));
+      if (targetIdx !== -1) {
+        setActiveVideoIndex(targetIdx);
+        setTimeout(() => {
+          try {
+            flatListRef.current?.scrollToIndex({ index: targetIdx, animated: true });
+          } catch (_) {
+            const itemH = cardHeight + 36;
+            flatListRef.current?.scrollToOffset({ offset: targetIdx * itemH, animated: true });
+          }
+        }, 220);
+      }
+    }
+  }, [reelId, videos.length, cardHeight]);
 
   const fetchReels = async () => {
     try {
@@ -2996,12 +3495,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 25,
   },
-  heartBurstGlow: {
-    shadowColor: '#ff2d55',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 24,
-  },
   // Top Overlay
   topOverlay: {
     position: 'absolute',
@@ -3339,34 +3832,60 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
-  // Share Card
-  shareCard: {
+  // Instagram-Style Share Sheet
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.72)',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+  },
+  shareSheet: {
     width: '100%',
-    maxWidth: 440,
-    backgroundColor: '#0f172a',
-    borderRadius: 20,
+    maxWidth: 540,
+    backgroundColor: '#0c1322',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderWidth: 1,
     borderColor: '#1e293b',
-    padding: 22,
+    borderBottomWidth: 0,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 22,
+    display: 'flex',
+    flexDirection: 'column',
   },
-  shareCardHeader: {
+  shareSheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    paddingBottom: 12,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  shareSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#162033',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 9 : 6,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+  shareSearchInput: {
+    flex: 1,
+    color: '#ffffff',
+    fontSize: 13,
   },
   shareContactRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     backgroundColor: '#162033',
     borderRadius: 14,
-    marginBottom: 8,
+    marginBottom: 7,
   },
   shareAvatar: {
     width: 38,
@@ -3381,9 +3900,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shareSendBtn: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 15,
     paddingVertical: 6,
     borderRadius: 16,
+    backgroundColor: '#f9c03d',
+  },
+  shareSendBtnText: {
+    color: '#000000',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  shareQuickActionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b',
+    marginTop: 6,
+  },
+  quickActionItem: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  quickActionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#162033',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  quickActionLabel: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  shareToastBadge: {
+    position: 'absolute',
+    top: 50,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(15, 23, 42, 0.95)',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 100,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+  },
+  shareToastText: {
+    color: '#ffffff',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   // Comments Sheet
   commentsBackdrop: {
