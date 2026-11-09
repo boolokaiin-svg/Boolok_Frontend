@@ -290,6 +290,7 @@ const VideoItem = ({
   const [videoHasError, setVideoHasError] = useState(false);
   const [showHeartBurst, setShowHeartBurst] = useState(false);
   const [expandedInsight, setExpandedInsight] = useState(false);
+  const [clearView, setClearView] = useState(false);
 
   const [videoSrc, setVideoSrc] = useState<string>(() => resolveVideoUrl(item));
   const [coverHasError, setCoverHasError] = useState(false);
@@ -1148,13 +1149,14 @@ const VideoItem = ({
         {!isPlaying && (
           <View style={styles.playOverlay} pointerEvents="none">
             <View style={styles.playIconContainer}>
-              <MaterialIcons name="play-arrow" size={50} color={theme.primary} />
+              <MaterialIcons name="play-arrow" size={36} color={theme.primary} />
             </View>
           </View>
         )}
       </TouchableOpacity>
 
-      {/* ── Top Bar Overlay: Insights Branding + AI Match Badge + Sound & Upload Controls ── */}
+      {/* ── Top Bar Overlay: Slim AI Match + Sound + Clear View Toggle ── */}
+      {!clearView && (
       <View
         style={[
           styles.topOverlay,
@@ -1162,37 +1164,40 @@ const VideoItem = ({
         ]}
         pointerEvents="box-none"
       >
-        {/* Left: Brand Title (Mobile) + AI Match Badge */}
+        {/* Left: AI Match micro badge */}
         <View style={styles.topLeftContainer}>
-          {isMobile && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 2 }}>
-              <Text style={styles.mobileTopTitle}>Insights</Text>
-              <View style={[styles.liveDot, { backgroundColor: theme.primary }]} />
-            </View>
-          )}
           <View style={styles.aiMatchBadge}>
             <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
             <Text style={[styles.aiMatchText, { color: theme.primary }]}>
-              {item.aiMatch || 96}% AI MATCH
+              {item.aiMatch || 96}% MATCH
             </Text>
           </View>
         </View>
 
-        {/* Right: Sound / Mute Toggle + Upload Button */}
+        {/* Right: Sound Toggle + Clear View Toggle */}
         <View style={styles.topRightContainer}>
           <TouchableOpacity
             onPress={toggleMute}
             style={[
               styles.soundBtn,
-              !isMuted && { backgroundColor: theme.primary, borderColor: theme.primary },
+              !isMuted && { backgroundColor: 'rgba(249, 192, 61, 0.85)', borderColor: 'transparent' },
             ]}
             activeOpacity={0.7}
           >
             <MaterialIcons
               name={isMuted ? 'volume-off' : 'volume-up'}
-              size={18}
-              color={isMuted ? '#ffffff' : '#000000'}
+              size={16}
+              color={isMuted ? 'rgba(255,255,255,0.85)' : '#000000'}
             />
+          </TouchableOpacity>
+
+          {/* Clear View Toggle */}
+          <TouchableOpacity
+            onPress={() => setClearView(true)}
+            style={styles.soundBtn}
+            activeOpacity={0.7}
+          >
+            <MaterialIcons name="visibility" size={16} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
 
           {isMobile && onOpenUpload && (
@@ -1201,14 +1206,15 @@ const VideoItem = ({
               style={[styles.topUploadBtn, { backgroundColor: theme.primary }]}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="add" size={15} color="#000000" />
-              <Text style={styles.topUploadBtnText}>Upload</Text>
+              <MaterialIcons name="add" size={14} color="#000000" />
             </TouchableOpacity>
           )}
         </View>
       </View>
+      )}
 
-      {/* ── Right Social Actions Rail ── */}
+      {/* ── Right Social Actions Rail (Clean, transparent icons - no heavy containers) ── */}
+      {!clearView && (
       <View style={[styles.rightOverlay, { bottom: isMobile ? 66 : 32 }]} pointerEvents="box-none">
         {/* Creator Avatar with follow badge */}
         <View style={styles.creatorRailItem}>
@@ -1239,20 +1245,19 @@ const VideoItem = ({
           )}
         </View>
 
-        {/* Like Button */}
+        {/* Like Button - clean transparent */}
         <TouchableOpacity
           onPress={handleLike}
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <View style={[styles.actionIconContainer, hasLiked && styles.actionIconContainerLiked]}>
-            <MaterialIcons
-              name={hasLiked ? 'favorite' : 'favorite-border'}
-              size={24}
-              color={hasLiked ? '#ff2d55' : '#ffffff'}
-            />
-          </View>
-          <Text style={[styles.actionText, hasLiked && { color: '#ff2d55', fontWeight: '700' }]}>
+          <MaterialIcons
+            name={hasLiked ? 'favorite' : 'favorite-border'}
+            size={28}
+            color={hasLiked ? '#ff2d55' : '#ffffff'}
+            style={styles.actionIconShadow}
+          />
+          <Text style={[styles.actionText, hasLiked && { color: '#ff2d55' }]}>
             {likesCount}
           </Text>
         </TouchableOpacity>
@@ -1263,9 +1268,7 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <View style={styles.actionIconContainer}>
-            <MaterialCommunityIcons name="comment-text-outline" size={23} color="#ffffff" />
-          </View>
+          <MaterialCommunityIcons name="comment-text-outline" size={26} color="#ffffff" style={styles.actionIconShadow} />
           <Text style={styles.actionText}>{comments.length}</Text>
         </TouchableOpacity>
 
@@ -1275,14 +1278,13 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <View style={[styles.actionIconContainer, isSaved && styles.actionIconContainerSaved]}>
-            <MaterialIcons
-              name={isSaved ? 'bookmark' : 'bookmark-border'}
-              size={24}
-              color={isSaved ? theme.primary : '#ffffff'}
-            />
-          </View>
-          <Text style={[styles.actionText, isSaved && { color: theme.primary, fontWeight: '700' }]}>
+          <MaterialIcons
+            name={isSaved ? 'bookmark' : 'bookmark-border'}
+            size={28}
+            color={isSaved ? theme.primary : '#ffffff'}
+            style={styles.actionIconShadow}
+          />
+          <Text style={[styles.actionText, isSaved && { color: theme.primary }]}>
             {isSaved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
@@ -1293,10 +1295,7 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <View style={styles.actionIconContainer}>
-            <MaterialCommunityIcons name="share" size={23} color="#ffffff" />
-          </View>
-          <Text style={styles.actionText}>Share</Text>
+          <MaterialCommunityIcons name="share" size={26} color="#ffffff" style={styles.actionIconShadow} />
         </TouchableOpacity>
 
         {/* Delete button for user's uploaded reels */}
@@ -1307,31 +1306,30 @@ const VideoItem = ({
             activeOpacity={0.7}
             style={styles.actionBtn}
           >
-            <View style={[styles.actionIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
-              {deleting ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <MaterialIcons name="delete-outline" size={22} color="#ef4444" />
-              )}
-            </View>
-            <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
+            {deleting ? (
+              <ActivityIndicator size="small" color="#ffffff" />
+            ) : (
+              <MaterialIcons name="delete-outline" size={24} color="#ef4444" style={styles.actionIconShadow} />
+            )}
           </TouchableOpacity>
         )}
       </View>
+      )}
 
-      {/* ── Bottom Overlay: Author Bar, Title, Location, AI Insight, Music ── */}
+      {/* ── Bottom Overlay: Compact Author, Title, Location, AI Micro-Pill ── */}
+      {!clearView ? (
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.3)', 'rgba(0,0,0,0.72)']}
+        colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.55)']}
         style={[
           styles.bottomOverlay,
           {
             paddingBottom: isMobile ? 64 : 20,
-            paddingRight: isMobile ? 74 : 70,
+            paddingRight: isMobile ? 62 : 60,
           },
         ]}
         pointerEvents="box-none"
       >
-        {/* Author row */}
+        {/* Author row - compact */}
         <View style={styles.authorRow}>
           <TouchableOpacity
             onPress={() => handleGoToProfile(authorId)}
@@ -1339,8 +1337,7 @@ const VideoItem = ({
             activeOpacity={0.8}
           >
             <Text style={styles.authorNameText} numberOfLines={1}>{authorName}</Text>
-            <MaterialIcons name="verified" size={14} color="#38bdf8" style={{ marginLeft: 3 }} />
-            <Text style={styles.authorHandleText} numberOfLines={1}>{authorHandle}</Text>
+            <MaterialIcons name="verified" size={13} color="#38bdf8" style={{ marginLeft: 3 }} />
           </TouchableOpacity>
 
           {!isUploadedByMe && (
@@ -1349,7 +1346,7 @@ const VideoItem = ({
               style={[
                 styles.authorFollowBtn,
                 isFollowing
-                  ? { backgroundColor: 'rgba(255,255,255,0.15)', borderColor: 'rgba(255,255,255,0.3)' }
+                  ? { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.25)' }
                   : { backgroundColor: theme.primary, borderColor: theme.primary },
               ]}
               activeOpacity={0.8}
@@ -1366,62 +1363,84 @@ const VideoItem = ({
           )}
         </View>
 
-        {/* Property Title */}
+        {/* Property Title - reduced size */}
         <Text style={styles.title} numberOfLines={1}>
           {item.title}
         </Text>
 
-        {/* Location Badge */}
+        {/* Location - inline compact */}
         {Boolean(item.location) && (
           <View style={styles.locationContainer}>
-            <MaterialIcons name="location-on" size={14} color={theme.primary} />
+            <MaterialIcons name="location-on" size={13} color={theme.primary} />
             <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
           </View>
         )}
 
-        {/* Expandable AI Insight */}
+        {/* AI Insight - Collapsed micro-pill, expands on tap */}
         {Boolean(item.insight) && (
-          <View style={styles.insightContainer}>
+          <TouchableOpacity
+            onPress={() => setExpandedInsight(!expandedInsight)}
+            activeOpacity={0.8}
+            style={styles.insightContainer}
+          >
             <View style={styles.insightHeader}>
-              <MaterialCommunityIcons name="brain" size={14} color={theme.primary} />
-              <Text style={[styles.insightTitle, { color: theme.primary }]}>AI INSIGHT</Text>
+              <MaterialCommunityIcons name="auto-fix" size={12} color={theme.primary} />
+              <Text style={[styles.insightTitle, { color: theme.primary }]}>AI Insight</Text>
+              <MaterialIcons
+                name={expandedInsight ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+                size={16}
+                color={theme.primary}
+                style={{ marginLeft: 2 }}
+              />
             </View>
-            <Text
-              style={styles.insightText}
-              numberOfLines={expandedInsight ? undefined : 2}
-            >
-              {item.insight}
-            </Text>
-            {item.insight.length > 80 && (
-              <TouchableOpacity
-                onPress={() => setExpandedInsight(!expandedInsight)}
-                style={{ marginTop: 3 }}
-              >
-                <Text style={{ color: theme.primary, fontSize: 11.5, fontWeight: '700' }}>
-                  {expandedInsight ? 'Show less' : '...more'}
-                </Text>
-              </TouchableOpacity>
+            {expandedInsight && (
+              <Text style={styles.insightText} numberOfLines={3}>
+                {item.insight}
+              </Text>
             )}
-          </View>
+          </TouchableOpacity>
         )}
 
-        {/* Audio / Music Track Marquee Pill with Unmute Shortcut */}
-        <TouchableOpacity
-          onPress={toggleMute}
-          activeOpacity={0.8}
-          style={[styles.musicPill, isMuted && { borderColor: 'rgba(249, 192, 61, 0.6)' }]}
-        >
+        {/* Music track - minimal pill */}
+        <View style={styles.musicPill}>
           <MaterialCommunityIcons
-            name={isMuted ? 'volume-off' : 'music-note'}
-            size={13}
-            color={isMuted ? theme.primary : '#ffffff'}
-            style={{ marginRight: 5 }}
+            name="music-note"
+            size={12}
+            color="rgba(255,255,255,0.7)"
+            style={{ marginRight: 4 }}
           />
-          <Text style={[styles.musicText, isMuted && { color: theme.primary, fontWeight: '700' }]} numberOfLines={1}>
-            {isMuted ? '🔇 Muted · Tap for sound' : (item.music || 'Boolok AI · Market Verification Audio')}
+          <Text style={styles.musicText} numberOfLines={1}>
+            {item.music || 'Boolok AI · Original Audio'}
+          </Text>
+        </View>
+      </LinearGradient>
+      ) : (
+        /* Clear View Mode: just a tiny "exit clear view" button at the bottom */
+        <TouchableOpacity
+          onPress={() => setClearView(false)}
+          activeOpacity={0.8}
+          style={{
+            position: 'absolute',
+            bottom: isMobile ? 72 : 28,
+            alignSelf: 'center',
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            paddingHorizontal: 14,
+            paddingVertical: 6,
+            borderRadius: 16,
+            borderWidth: 1,
+            borderColor: 'rgba(255,255,255,0.15)',
+            zIndex: 25,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+          }}
+        >
+          <MaterialIcons name="visibility-off" size={14} color="rgba(255,255,255,0.7)" />
+          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' }}>
+            Tap to show controls
           </Text>
         </TouchableOpacity>
-      </LinearGradient>
+      )}
 
       {/* ── Custom Delete Confirmation Modal ── */}
       <Modal
@@ -2958,18 +2977,18 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: 'rgba(0,0,0,0.12)',
     zIndex: 10,
   },
   playIconContainer: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(249, 192, 61, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(249, 192, 61, 0.4)',
   },
   heartBurstContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -2986,8 +3005,8 @@ const styles = StyleSheet.create({
   // Top Overlay
   topOverlay: {
     position: 'absolute',
-    left: 14,
-    right: 14,
+    left: 12,
+    right: 12,
     zIndex: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2996,55 +3015,55 @@ const styles = StyleSheet.create({
   topLeftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   topRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
   },
   aiMatchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: 'rgba(249, 192, 61, 0.4)',
+    borderColor: 'rgba(249, 192, 61, 0.3)',
   },
   pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 5,
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    marginRight: 4,
   },
   aiMatchText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   soundBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.18)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   topUploadBtn: {
-    flexDirection: 'row',
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 18,
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.35,
-    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
   },
   topUploadBtnText: {
     color: '#000000',
@@ -3052,23 +3071,23 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 2,
   },
-  // Right Social Rail
+  // Right Social Rail - Clean transparent icons (no heavy containers)
   rightOverlay: {
     position: 'absolute',
-    right: 10,
+    right: 8,
     zIndex: 30,
     alignItems: 'center',
-    width: 52,
+    width: 44,
   },
   creatorRailItem: {
     position: 'relative',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   creatorAvatarRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     borderWidth: 2,
     borderColor: '#f9c03d',
     overflow: 'hidden',
@@ -3088,9 +3107,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -5,
     alignSelf: 'center',
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -3098,7 +3117,12 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  actionIconShadow: {
+    textShadowColor: 'rgba(0,0,0,0.7)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   actionIconContainer: {
     width: 42,
@@ -3122,27 +3146,28 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#ffffff',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
+    marginTop: 1,
   },
-  // Bottom Overlay
+  // Bottom Overlay - Lighter gradient, more video visible
   bottomOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingLeft: 14,
-    paddingRight: 74,
-    paddingTop: 24,
+    paddingLeft: 12,
+    paddingRight: 62,
+    paddingTop: 32,
     zIndex: 15,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
+    gap: 6,
+    marginBottom: 4,
     flexWrap: 'nowrap',
   },
   authorProfileLink: {
@@ -3153,9 +3178,12 @@ const styles = StyleSheet.create({
   },
   authorNameText: {
     color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     flexShrink: 0,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   authorHandleText: {
     color: '#94a3b8',
@@ -3165,75 +3193,78 @@ const styles = StyleSheet.create({
   },
   authorFollowBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
+    paddingVertical: 3,
+    borderRadius: 12,
     borderWidth: 1,
     flexShrink: 0,
   },
   authorFollowBtnText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
   },
   title: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 4,
-    textShadowColor: 'rgba(0,0,0,0.8)',
+    marginBottom: 3,
+    textShadowColor: 'rgba(0,0,0,0.6)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    textShadowRadius: 3,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 5,
   },
   locationText: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 4,
+    color: 'rgba(255, 255, 255, 0.85)',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 3,
+    textShadowColor: 'rgba(0,0,0,0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   insightContainer: {
-    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
     borderWidth: 1,
-    borderColor: 'rgba(249, 192, 61, 0.35)',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 8,
+    borderColor: 'rgba(249, 192, 61, 0.2)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    marginBottom: 5,
+    alignSelf: 'flex-start',
   },
   insightHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 3,
   },
   insightTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    marginLeft: 5,
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: '700',
+    marginLeft: 4,
+    letterSpacing: 0.3,
   },
   insightText: {
-    color: '#e2e8f0',
-    fontSize: 12.5,
-    lineHeight: 17,
+    color: 'rgba(255,255,255,0.85)',
+    fontSize: 11.5,
+    lineHeight: 15,
+    marginTop: 4,
   },
   musicPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 2,
   },
   musicText: {
-    color: '#cbd5e1',
-    fontSize: 11,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 10,
     fontWeight: '500',
-    maxWidth: 240,
+    maxWidth: 200,
   },
   // Modal Backdrops
   modalBackdrop: {
