@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
+import axios from 'axios';
 
 const TOKEN_KEY = 'userToken';
 
-const PRODUCTION_FALLBACK_API_URL = 'https://boolok-backend.onrender.com';
+const PRODUCTION_FALLBACK_API_URL = 'https://boolok-backend-zcpn.onrender.com';
 
 function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
@@ -32,40 +33,31 @@ function isRunningUnderMetro(): boolean {
 }
 
 function resolveApiBaseUrl(): string {
+  // Standalone Android / Native release build:
+  // MUST resolve to production Render backend directly without relying on Metro
+  if (Platform.OS !== 'web') {
+    const explicitNative = process.env.EXPO_PUBLIC_API_URL_NATIVE || process.env.EXPO_PUBLIC_API_URL;
+    if (explicitNative && !explicitNative.includes('localhost') && !explicitNative.includes('127.0.0.1')) {
+      return stripTrailingSlash(explicitNative);
+    }
+    return PRODUCTION_FALLBACK_API_URL;
+  }
+
   const webUrl = process.env.EXPO_PUBLIC_API_URL || process.env.EXPO_PUBLIC_API_BASE_URL;
 
-  if (Platform.OS === 'web') {
-    const isNonLocalWeb =
-      typeof window !== 'undefined' &&
-      window.location.hostname !== 'localhost' &&
-      window.location.hostname !== '127.0.0.1';
+  const isNonLocalWeb =
+    typeof window !== 'undefined' &&
+    window.location.hostname !== 'localhost' &&
+    window.location.hostname !== '127.0.0.1';
 
-    if (isNonLocalWeb) {
-      // In remote web environments like Vercel, ensure we don't accidentally try to hit localhost
-      if (webUrl && !webUrl.includes('localhost') && !webUrl.includes('127.0.0.1')) {
-        return stripTrailingSlash(webUrl);
-      }
-      return PRODUCTION_FALLBACK_API_URL;
+  if (isNonLocalWeb) {
+    if (webUrl && !webUrl.includes('localhost') && !webUrl.includes('127.0.0.1')) {
+      return stripTrailingSlash(webUrl);
     }
-
-    return stripTrailingSlash(webUrl || 'http://localhost:5000');
+    return PRODUCTION_FALLBACK_API_URL;
   }
 
-  const explicitNative = process.env.EXPO_PUBLIC_API_URL_NATIVE;
-  if (explicitNative) return stripTrailingSlash(explicitNative);
-
-  if (isRunningUnderMetro()) {
-    const metroHost = getMetroHost();
-    if (metroHost) return `http://${metroHost}:5000`;
-  }
-
-  if (webUrl) return stripTrailingSlash(webUrl);
-
-  console.error(
-    '[api] No EXPO_PUBLIC_API_URL_NATIVE / EXPO_PUBLIC_API_URL set for this native build. ' +
-    `Falling back to ${PRODUCTION_FALLBACK_API_URL} — set the real env var in eas.json instead.`
-  );
-  return PRODUCTION_FALLBACK_API_URL;
+  return stripTrailingSlash(webUrl || 'http://localhost:5000');
 }
 
 export const API_BASE_URL = resolveApiBaseUrl();
@@ -85,7 +77,105 @@ export function resolveImageUrl(path: string | null | undefined): string | null 
     return trimmed;
   }
   const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  if (cleanPath === '/coventry_corporate.jpg') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+      return `${window.location.origin}/coventry_corporate.jpg`;
+    }
+    return 'https://boolokgpt.vercel.app/coventry_corporate.jpg';
+  }
   return `${API_BASE_URL}${cleanPath}`;
+}
+
+const CONFIRMED_STATIC_REEL_VIDEOS: Record<string, string> = {
+  'margaret_river_vineyard.mp4': 'https://boolokgpt.vercel.app/videos/margaret_river_vineyard.mp4',
+  'Margaret River Vineyard.mp4': 'https://boolokgpt.vercel.app/videos/margaret_river_vineyard.mp4',
+  'house_routing_silent.mp4': 'https://boolokgpt.vercel.app/videos/house_routing_silent.mp4',
+  'house_routing_original.mp4': 'https://boolokgpt.vercel.app/videos/house_routing_silent.mp4',
+  'kyoto.mp4': 'https://boolokgpt.vercel.app/videos/kyoto.mp4',
+  'uluwatu_cliffside.mp4': 'https://boolokgpt.vercel.app/videos/uluwatu_cliffside.mp4',
+  'Uluwatu Cliffside.mp4': 'https://boolokgpt.vercel.app/videos/uluwatu_cliffside.mp4',
+  'house_plan_loading.mp4': 'https://boolokgpt.vercel.app/videos/house_plan_loading.mp4',
+  'dubai_downtown.mp4': 'https://boolokgpt.vercel.app/videos/dubai_downtown.mp4',
+  'sheikh_zayed.mp4': 'https://boolokgpt.vercel.app/videos/sheikh_zayed.mp4',
+  'imtiaz_luxury.mp4': 'https://boolokgpt.vercel.app/videos/imtiaz_luxury.mp4',
+  'sobha_hartland.mp4': 'https://boolokgpt.vercel.app/videos/sobha_hartland.mp4',
+  'dubai_townhouse.mp4': 'https://boolokgpt.vercel.app/videos/dubai_townhouse.mp4',
+  'sai_property_1.mp4': 'https://boolokgpt.vercel.app/videos/dubai_downtown.mp4',
+  'sai_property_2.mp4': 'https://boolokgpt.vercel.app/videos/sheikh_zayed.mp4',
+  'dinesh_property.mp4': 'https://boolokgpt.vercel.app/videos/dinesh_property.mp4',
+  'loki.mp4': 'https://boolokgpt.vercel.app/videos/loki.mp4',
+  'alwarpet.mp4': 'https://boolokgpt.vercel.app/videos/alwarpet.mp4',
+  'anna_nagar.mp4': 'https://boolokgpt.vercel.app/videos/anna_nagar.mp4',
+  'mambakkam.mp4': 'https://boolokgpt.vercel.app/videos/mambakkam.mp4',
+  'nanganallur.mp4': 'https://boolokgpt.vercel.app/videos/nanganallur.mp4',
+  'pudupakkam.mp4': 'https://boolokgpt.vercel.app/videos/pudupakkam.mp4',
+  'royapettah.mp4': 'https://boolokgpt.vercel.app/videos/royapettah.mp4',
+  'saidapet.mp4': 'https://boolokgpt.vercel.app/videos/saidapet.mp4',
+  'thirumanviyur.mp4': 'https://boolokgpt.vercel.app/videos/thirumanviyur.mp4',
+  'thirumanviyur2.mp4': 'https://boolokgpt.vercel.app/videos/thirumanviyur2.mp4',
+  'mithulan_property_1.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_1.mp4',
+  'mithulan_property_2.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_2.mp4',
+  'mithulan_property_3.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_3.mp4',
+  'mithulan_property_4.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_4.mp4',
+  'mithulan_property_5.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_5.mp4',
+  'mithulan_property_6.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_6.mp4',
+  'mithulan_property_7.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_7.mp4',
+  'mithulan_property_8.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_8.mp4',
+  'mithulan_property_9.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_9.mp4',
+  'mithulan_property_10.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_10.mp4',
+  'mithulan_property_11.mp4': 'https://boolokgpt.vercel.app/videos/mithulan_property_11.mp4',
+};
+
+const DUMMY_REEL_IDS = new Set([
+  '1',
+  '2',
+  '3',
+  '4',
+  'sai-reel-coventry',
+  '6ae3464eff2e1932b0ec9674',
+  'logesh-reel-1',
+  'logesh-reel-2',
+  'logesh-reel-3',
+  'shree-reel-1',
+  'ajmal-reel-1',
+  'bava-reel-1',
+  'akshat-reel-1',
+  'prasanth-reel-1',
+]);
+
+/**
+ * Centralized reel video URL resolver used across Market Insights, My Profile, and Public Profiles.
+ * Maps only confirmed static video filenames or authoritative HTTP(S)/stream URLs; never substitutes unrelated property videos.
+ */
+export function resolveReelVideoUrl(rawUrl: string | null | undefined): string {
+  if (!rawUrl || typeof rawUrl !== 'string') return '';
+  const clean = rawUrl.trim();
+  if (!clean || clean === 'null' || clean === 'undefined') return '';
+  if (clean.startsWith('blob:') || clean.startsWith('data:') || clean.startsWith('file:')) return clean;
+
+  const m = clean.match(/\/uploads\/reels\/([^/?#]+)/);
+  if (m) {
+    const filename = m[1];
+    if (CONFIRMED_STATIC_REEL_VIDEOS[filename]) {
+      return CONFIRMED_STATIC_REEL_VIDEOS[filename];
+    }
+    return `${API_BASE_URL}/api/reels/stream/${filename}`;
+  }
+
+  if (/^https?:\/\//i.test(clean)) return clean;
+  return `${API_BASE_URL}${clean.startsWith('/') ? clean : `/${clean}`}`;
+}
+
+/**
+ * Centralized reel eligibility filter used across Market Insights and Profiles so list rendering and counts match 1:1.
+ */
+export function isEligibleReelRecord(r: any): boolean {
+  if (!r || typeof r !== 'object') return false;
+  if (r.isDeleted === true || r.isArchived === true) return false;
+  const rid = String(r._id || r.id || '').trim();
+  if (!rid || DUMMY_REEL_IDS.has(rid)) return false;
+  const resolvedVideo = resolveReelVideoUrl(r.videoUrl);
+  return Boolean(resolvedVideo);
 }
 
 async function getStoredToken(): Promise<string | null> {
@@ -171,16 +261,14 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [configurationError, setConfigurationError] = useState<string | null>(null);
 
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '166853460121-jdlugm3ncga9qu4vk3b45lda5onusup2.apps.googleusercontent.com';
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
 
   useEffect(() => {
     try {
       if (!webClientId) {
-        throw new Error('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is missing in your .env or EAS environment variables.');
-      }
-      if (Platform.OS === 'ios' && !iosClientId) {
-        throw new Error('EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS is missing in your .env or EAS environment variables.');
+        setConfigurationError('Google Sign-In configuration is missing. Please set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
+        return;
       }
 
       const { GoogleSignin } = require('@react-native-google-signin/google-signin');
@@ -193,7 +281,7 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
       setConfigurationError(null);
     } catch (error: any) {
       const message = error?.message || 'Google Sign-In configuration failed.';
-      console.error('[GoogleSignin Config Error]:', message);
+      console.warn('[GoogleSignin Config Notice]:', message);
       setConfigurationError(message);
     }
   }, [webClientId, iosClientId]);
@@ -210,6 +298,11 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
 
     try {
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+      // Clear the remembered Google choice on Android before an explicit login.
+      if (Platform.OS === 'android' && GoogleSignin.hasPreviousSignIn()) {
+        await GoogleSignin.signOut();
+      }
 
       const result = await GoogleSignin.signIn();
       const idToken = result?.data?.idToken ?? result?.idToken;
@@ -232,7 +325,13 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
           'The SHA-1 fingerprint of this build does not match the one registered in Google Cloud Console for this package name.'
         );
       } else {
-        onError?.(error?.message || 'Google sign-in failed.');
+        const errDetails = [
+          error?.code ? `code: ${error.code}` : '',
+          error?.message ? `msg: ${error.message}` : '',
+          error?.userInfo ? JSON.stringify(error.userInfo) : '',
+        ].filter(Boolean).join(' | ');
+        console.error('[GoogleSignin Native Error Details]:', errDetails || error);
+        onError?.(errDetails ? `Google sign-in error: ${errDetails}` : (error?.message || 'Google sign-in failed.'));
       }
     } finally {
       setIsGoogleLoading(false);
@@ -260,22 +359,34 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
     });
   }, []);
 
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '166853460121-jdlugm3ncga9qu4vk3b45lda5onusup2.apps.googleusercontent.com';
 
   const [isExchanging, setIsExchanging] = useState(false);
   const [nonce] = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId,
-    redirectUri,
-    responseType: AuthSession.ResponseType.IdToken,
-    scopes: ['openid', 'profile', 'email'],
-    selectAccount: true,
-    extraParams: {
-      nonce,
-      prompt: 'select_account',
-    },
-  });
+  // Guard against throwing during initial render if webClientId is somehow empty
+  const isConfigured = Boolean(webClientId);
+
+  const [request, response, promptAsync] = Google.useAuthRequest(
+    isConfigured
+      ? {
+          webClientId,
+          clientId: webClientId,
+          redirectUri,
+          responseType: AuthSession.ResponseType.IdToken,
+          scopes: ['openid', 'profile', 'email'],
+          selectAccount: true,
+          extraParams: {
+            nonce,
+            prompt: 'select_account',
+          },
+        }
+      : {
+          webClientId: 'unconfigured.apps.googleusercontent.com',
+          clientId: 'unconfigured.apps.googleusercontent.com',
+          redirectUri,
+        }
+  );
 
   useEffect(() => {
     async function processResponse() {
@@ -314,8 +425,8 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
   }, [onError, onSuccess, response]);
 
   const promptGoogleSignIn = useCallback(async () => {
-    if (!webClientId) {
-      onError?.('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is missing.');
+    if (!isConfigured) {
+      onError?.('Google Sign-In is not configured. Please set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID.');
       return;
     }
 
@@ -324,11 +435,15 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
       return;
     }
 
-    await promptAsync({
-      useProxy: false,
-      windowFeatures: { width: 500, height: 650 },
-    });
-  }, [onError, promptAsync, request, webClientId]);
+    try {
+      await promptAsync({
+        useProxy: false,
+        windowFeatures: { width: 500, height: 650 },
+      });
+    } catch (err: any) {
+      onError?.(err?.message || 'Failed to open Google authentication.');
+    }
+  }, [isConfigured, onError, promptAsync, request]);
 
   return {
     promptGoogleSignIn,
@@ -339,3 +454,29 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
 export function useGoogleAuth(options: GoogleAuthOptions) {
   return Platform.OS === 'web' ? useWebGoogleAuth(options) : useNativeGoogleAuth(options);
 }
+
+/**
+ * Safe, READ-ONLY GET for hosts that sleep (Render free tier can take ~50s+ to wake).
+ * Bounded: 60s per attempt, at most 3 attempts, backoff 3s then 8s. Retries only on
+ * network failure/timeout or 502/503/504 (typical wake-up responses). Never use for
+ * POST/PUT/DELETE or uploads.
+ */
+export const COLD_START_TIMEOUT_MS = 60000;
+const COLD_START_BACKOFF_MS = [3000, 8000];
+
+export async function getWithColdStartRetry<T = any>(url: string, config: any = {}) {
+  let lastError: any;
+  for (let attempt = 0; attempt <= COLD_START_BACKOFF_MS.length; attempt++) {
+    try {
+      return await axios.get<T>(url, { ...config, timeout: COLD_START_TIMEOUT_MS });
+    } catch (err: any) {
+      lastError = err;
+      const status = err?.response?.status;
+      const retryable = !status || status === 502 || status === 503 || status === 504;
+      if (!retryable || attempt === COLD_START_BACKOFF_MS.length) break;
+      await new Promise((resolve) => setTimeout(resolve, COLD_START_BACKOFF_MS[attempt]));
+    }
+  }
+  throw lastError;
+}
+

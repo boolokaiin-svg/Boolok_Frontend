@@ -26,6 +26,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import BoolokLogo from '../../components/BoolokLogo';
+import FollowButton, { broadcastFollowChange } from '../../components/FollowButton';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 
@@ -111,6 +112,9 @@ const DEFAULT_REAL_ESTATE_NEWS = [
   },
 ];
 
+import Avatar from '../../components/Avatar';
+import Skeleton from '../../components/Skeleton';
+
 // ── Dynamic Avatar Component ────────────────────────────────────────────────
 const UserAvatar = ({
   user,
@@ -121,45 +125,7 @@ const UserAvatar = ({
   size?: number;
   style?: any;
 }) => {
-  let profilePicture = user?.profilePicture || user?.avatar;
-  const name = user?.fullName || user?.username || 'User';
-  const initial = (name[0] || 'U').toUpperCase();
-
-  const colors = [
-    '#ea580c', '#2563eb', '#059669', '#7c3aed', '#db2777', '#ca8a04', '#0891b2',
-  ];
-  const charCode = (name.charCodeAt(0) || 0) + (name.charCodeAt(name.length - 1) || 0);
-  const bgColor = colors[charCode % colors.length];
-
-  if (profilePicture && typeof profilePicture === 'string' && (profilePicture.startsWith('http') || profilePicture.startsWith('data:') || profilePicture.startsWith('/'))) {
-    const fullUri = profilePicture.startsWith('/') ? `${API_BASE_URL}${profilePicture}` : profilePicture;
-    return (
-      <Image
-        source={{ uri: fullUri }}
-        style={[{ width: size, height: size, borderRadius: size / 2 }, style]}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: bgColor,
-          justifyContent: 'center',
-          alignItems: 'center',
-        },
-        style,
-      ]}
-    >
-      <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: size * 0.44 }}>
-        {initial}
-      </Text>
-    </View>
-  );
+  return <Avatar user={user} size={size} style={style} />;
 };
 
 const FRAME_RATIOS = [
@@ -253,24 +219,20 @@ const DEFAULT_COMMUNITY_ADVISORS = [
     _id: 'shreekutti',
     fullName: 'Shreekutti',
     username: 'shreekutti',
-    headline: 'Tech Park Campus Acquisitions Lead @ Boolok',
-    distance: '0.8 km away',
-    location: 'Outer Ring Road, Bangalore',
-    deals: '18 deals closed',
-    followerCount: 4,
+    headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok',
+    location: 'Bangalore, Karnataka · Tech Parks',
+    followerCount: 3,
     profilePicture: null,
   },
   {
     id: 'logeshwarana',
-    _id: 'logeshwarana',
+    _id: '6ace0e6586b4ca082d9f1432',
     fullName: 'Logeshwaran A',
     username: 'logeshwarana',
     headline: 'Architectural Consultant & Real Estate Lead',
-    distance: '1.4 km away',
-    location: 'Whitefield & Commercial Hubs',
-    deals: '22 deals closed',
-    followerCount: 4,
-    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
+    location: 'Western Australia',
+    followerCount: 5,
+    profilePicture: 'https://boolokgpt.vercel.app/avatars/logeshwaran_doomsday.png',
   },
   {
     id: 'ajmal',
@@ -278,10 +240,18 @@ const DEFAULT_COMMUNITY_ADVISORS = [
     fullName: 'Mohammed Ajmal',
     username: 'ajmal',
     headline: 'Luxury Living & High-End Residential Broker',
-    distance: '2.1 km away',
-    location: 'Indiranagar & Prime Districts',
-    deals: '14 deals closed',
-    followerCount: 4,
+    location: 'Dubai & Kochi · Luxury Villas',
+    followerCount: 3,
+    profilePicture: null,
+  },
+  {
+    id: 'bavadharini_rs',
+    _id: 'bavadharini_rs',
+    fullName: 'Bavadharini RS',
+    username: 'bavadharini_rs',
+    headline: 'Interior Designer & Modern Living Specialist',
+    location: 'Chennai, Tamil Nadu · Modern Living',
+    followerCount: 2,
     profilePicture: null,
   },
   {
@@ -289,12 +259,110 @@ const DEFAULT_COMMUNITY_ADVISORS = [
     _id: 'the_akshtr_estate',
     fullName: 'Akshat Commercials',
     username: 'the_akshtr_estate',
-    headline: 'Commercial Property & Tech Park Lead @ Boolok',
-    distance: '3.2 km away',
-    location: 'OMR IT Corridor, Chennai',
-    deals: '12 deals closed',
+    headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok Network',
+    location: 'Chennai, Tamil Nadu · Prime Assets',
+    followerCount: 1,
+    profilePicture: null,
+  },
+  {
+    id: 'prasanth_properties',
+    _id: 'prasanth_properties',
+    fullName: 'Prasanth Properties',
+    username: 'prasanth_properties',
+    headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates',
+    location: 'Miami, Florida · Coastal Estates',
     followerCount: 3,
     profilePicture: null,
+  },
+  {
+    id: 'aswin',
+    _id: 'aswin',
+    fullName: 'Aswin Real Estate',
+    username: 'aswin',
+    headline: 'Principal Real Estate Broker & Multi-Family Asset Advisor',
+    location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets',
+    followerCount: 2,
+    profilePicture: null,
+  },
+  {
+    id: 'vignesh',
+    _id: 'vignesh',
+    fullName: 'Vigneshwaran',
+    username: 'vignesh',
+    headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist',
+    location: 'Beverly Hills, California · Ultra Luxury',
+    followerCount: 2,
+    profilePicture: null,
+  },
+  {
+    id: 'yashwanth',
+    _id: 'yashwanth',
+    fullName: 'Yashwanth',
+    username: 'yashwanth',
+    headline: 'Prime Commercial Hubs & Institutional Realty Lead',
+    location: 'Chennai & Bangalore · Commercial Hubs',
+    followerCount: 3,
+    profilePicture: null,
+  },
+  {
+    id: 'sophia_luxury',
+    _id: 'sophia_luxury',
+    fullName: 'Sophia Sterling',
+    username: 'sophia_luxury',
+    headline: 'European Family Office Principal & Luxury Syndication Client',
+    location: 'Geneva, Switzerland & London · Private Capital',
+    followerCount: 2,
+    profilePicture: null,
+  },
+  {
+    id: 'david_sterling',
+    _id: 'david_sterling',
+    fullName: 'David Sterling',
+    username: 'david_sterling',
+    headline: 'Managing Director · Sterling Global Capital & Asset Co-Owner',
+    location: 'London, UK & Beverly Hills · Private Equity',
+    followerCount: 2,
+    profilePicture: null,
+  },
+  {
+    id: 'marcus_vance',
+    _id: 'marcus_vance',
+    fullName: 'Marcus Vance',
+    username: 'marcus_vance',
+    headline: 'Institutional Real Estate Syndicate Lead & Co-Ownership Client',
+    location: 'New York, NY · Real Estate Private Equity',
+    followerCount: 2,
+    profilePicture: null,
+  },
+  {
+    id: 'sam',
+    _id: '6ae9bd78b549b88abf72eac1',
+    fullName: 'sampath',
+    username: 'sam',
+    headline: 'Real Estate Professional & Boolok Member',
+    location: 'Chennai, Tamil Nadu',
+    followerCount: 0,
+    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJCq4Z0Xny5-SuXU9lLRLmePrOu5168q94JBNcAJwBT8GahA4Zi=s400-c',
+  },
+  {
+    id: 'subasree',
+    _id: '6ae2f7c95f0594915c812aa3',
+    fullName: 'Subasree',
+    username: 'subasree',
+    headline: 'Commercial Portfolio Lead & Real Estate Advisor',
+    location: 'Chennai, Tamil Nadu',
+    followerCount: 1,
+    profilePicture: null,
+  },
+  {
+    id: 'mithulanr2003',
+    _id: '6addf49b5f3925f54f8491f6',
+    fullName: 'Mithulan R',
+    username: 'mithulanr2003',
+    headline: 'Architectural Director & Skyscraper Asset Syndicate',
+    location: 'Chennai, Tamil Nadu',
+    followerCount: 3,
+    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJNc1F5yHFweMK8qtYRFt_2AJJQqzi4y0P2t7z2a4IHwoWCQYKJ=s400-c',
   },
 ];
 
@@ -319,7 +387,9 @@ export default function ProfessionalSocialFeedScreen() {
   const styles = useMemo(() => getStyles(isDark, width), [isDark, width]);
 
   const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [postsLoading, setPostsLoading] = useState(true);
+  const [postsError, setPostsError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [newsList, setNewsList] = useState(DEFAULT_REAL_ESTATE_NEWS);
   const [showAllNews, setShowAllNews] = useState(false);
@@ -359,7 +429,7 @@ export default function ProfessionalSocialFeedScreen() {
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   const [activeReactionPickerPostId, setActiveReactionPickerPostId] = useState<string | null>(null);
   const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
-  const [followersList, setFollowersList] = useState<any[]>(DEFAULT_COMMUNITY_ADVISORS);
+  const [followersList, setFollowersList] = useState<any[]>([]);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
   const [savedReelsList, setSavedReelsList] = useState<any[]>([]);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
@@ -385,8 +455,15 @@ export default function ProfessionalSocialFeedScreen() {
   };
 
   const _applyLikeCache = (rawPosts: any[]): any[] => {
+    // Authoritative server state takes priority.
+    // For non-ObjectId fallback/mock posts, check cache.
     const cache = _readLikeCache();
     return rawPosts.map((p) => {
+      // If post is a real database post with server-provided counts/state, respect server
+      const isValidObjectId = /^[a-f\d]{24}$/i.test(p._id);
+      if (isValidObjectId && typeof p.likesCount === 'number') {
+        return p;
+      }
       const cached = cache[p._id];
       if (!cached) return p;
       const isLiked = cached.likedByMe;
@@ -501,11 +578,11 @@ export default function ProfessionalSocialFeedScreen() {
         logeshwarana: { fullName: 'Logeshwaran A', headline: 'Architectural Consultant & Real Estate Lead' },
         ajmal: { fullName: 'Mohammed Ajmal', headline: 'Luxury Living & High-End Residential Broker' },
         the_akshtr_estate: { fullName: 'Akshat Commercials', headline: 'Commercial Property & Tech Park Lead @ Boolok' },
-        saivimenthanvl: { fullName: 'Sai Vimenthan', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
+        saivimenthanvl: { fullName: 'Sai Vimenthan V L', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
         bavadharini_rs: { fullName: 'Bavadharini RS', headline: 'Interior Designer & Modern Living Specialist' },
         prasanth_properties: { fullName: 'Prasanth Properties', headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates' },
         vignesh: { fullName: 'Vigneshwaran', headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist' },
-        sai: { fullName: 'Sai Vimenthan', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
+        sai: { fullName: 'Sai Vimenthan V L', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
       };
 
       if (Array.isArray(p.likes)) {
@@ -583,31 +660,53 @@ export default function ProfessionalSocialFeedScreen() {
     [followingMap]
   );
 
-  const fetchPostsAndNews = useCallback(async () => {
+  const fetchPostsOnly = useCallback(async () => {
+    setPostsLoading(true);
+    setPostsError(null);
     try {
       const token = await getToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const [feedRes, newsRes, suggestedRes, myFollowingRes] = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/api/feed`, { headers }),
-        axios.get(`${API_BASE_URL}/api/feed/news`),
-        axios.get(`${API_BASE_URL}/api/users/suggested`, { headers }),
-        token ? axios.get(`${API_BASE_URL}/api/users/self/following`, { headers }) : Promise.reject('No token'),
-      ]);
+      const res = await axios.get(`${API_BASE_URL}/api/feed`, { headers, timeout: 10000 });
+      const raw = res.data;
+      const rawPosts = Array.isArray(raw) ? raw : (Array.isArray(raw?.posts) ? raw.posts : []);
+      const seenCanonicalIds = new Set<string>();
+      const postsList = rawPosts.filter((p: any) => {
+        if (!p || !p._id) return false;
+        if (p._id === 'sai-p-1') return false;
+        const pid = String(p._id);
+        if (seenCanonicalIds.has(pid)) return false;
+        seenCanonicalIds.add(pid);
+        const media = String(p.mediaUrl || p.image || p.imageUrl || '');
+        if (media.includes('photo-1577495508048-b635879837f1')) return false;
+        return true;
+      });
+      setPosts(_applyLikeCache(postsList));
+      setPostsError(null);
+    } catch (err: any) {
+      console.warn('Posts fetch error:', err?.message || err);
+      // Preserve existing posts if any exist
+      setPostsError(err?.message || 'Failed to load feed posts.');
+    } finally {
+      setPostsLoading(false);
+    }
+  }, []);
 
-      if (feedRes.status === 'fulfilled') {
-        const raw = feedRes.value.data;
-        const postsList = Array.isArray(raw) ? raw : (Array.isArray(raw?.posts) ? raw.posts : []);
-        // Apply cached like counts so counts survive page reload
-        setPosts(_applyLikeCache(postsList));
-      } else {
-        setPosts([]);
-      }
+  const fetchAuxiliaryData = useCallback(async () => {
+    try {
+      const token = await getToken();
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+      // Load news, suggested users, and following list in background with individual timeouts
+      const [newsRes, suggestedRes, myFollowingRes] = await Promise.allSettled([
+        axios.get(`${API_BASE_URL}/api/feed/news`, { timeout: 10000 }),
+        axios.get(`${API_BASE_URL}/api/users/suggested`, { headers, timeout: 10000 }),
+        token ? axios.get(`${API_BASE_URL}/api/users/self/following`, { headers, timeout: 10000 }) : Promise.reject('No token'),
+      ]);
 
       if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value.data?.news)) {
         setNewsList(newsRes.value.data.news);
       }
 
-      // Sync following truth directly from MongoDB database
       const dbFollowMap: Record<string, boolean> = {};
       if (myFollowingRes.status === 'fulfilled' && Array.isArray(myFollowingRes.value.data?.following)) {
         const followingArray = myFollowingRes.value.data.following;
@@ -625,8 +724,21 @@ export default function ProfessionalSocialFeedScreen() {
       }
 
       if (suggestedRes.status === 'fulfilled' && Array.isArray(suggestedRes.value.data?.suggested)) {
-        const list = suggestedRes.value.data.suggested;
-        setSuggestedUsers(list);
+        const rawList = suggestedRes.value.data.suggested;
+        const currentUid = (user?.id || (user as any)?._id || '').toString();
+        const currentUname = (user?.username || '').toLowerCase();
+        const list = rawList.filter((u: any) => {
+          const uId = (u.id || u._id || '').toString();
+          const uName = (u.username || '').toLowerCase();
+          if (currentUid && uId === currentUid) return false;
+          if (currentUname && uName === currentUname) return false;
+          if (uId === '6aef086a31b846c03b5ac537' || uName === 'resolveorseeduser') return false;
+          if (u.isArchived === true || u.isTestAccount === true || u.isInternalTester === true) return false;
+          return true;
+        });
+        if (list.length > 0) {
+          setSuggestedUsers(list);
+        }
         list.forEach((u: any) => {
           if (u.isFollowing) {
             if (u.id) dbFollowMap[u.id] = true;
@@ -639,8 +751,7 @@ export default function ProfessionalSocialFeedScreen() {
         });
       }
 
-      // Sync following map strictly with the authenticated user's actual database following
-      setFollowingMap(dbFollowMap);
+      setFollowingMap((prev) => ({ ...prev, ...dbFollowMap }));
       try {
         if (Platform.OS === 'web') {
           localStorage.setItem('boolok_following_users_set', JSON.stringify(dbFollowMap));
@@ -648,17 +759,57 @@ export default function ProfessionalSocialFeedScreen() {
           await SecureStore.setItemAsync('boolok_following_users_set', JSON.stringify(dbFollowMap));
         }
       } catch (_) {}
-    } catch (error) {
-      console.error('Feed fetch error:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+    } catch (err) {
+      console.warn('Auxiliary data fetch error:', err);
     }
-  }, []);
+  }, [user?.id, (user as any)?._id, user?.username]);
+
+  const fetchPostsAndNews = useCallback(async () => {
+    await Promise.all([fetchPostsOnly(), fetchAuxiliaryData()]);
+    setRefreshing(false);
+  }, [fetchPostsOnly, fetchAuxiliaryData]);
 
   useEffect(() => {
     fetchPostsAndNews();
-  }, [fetchPostsAndNews]);
+  }, [fetchPostsAndNews, user?.id, (user as any)?._id, user?.username]);
+
+  // Listen for global follow changes from FollowButton so feed's followingMap stays in sync
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleFollowEvent = (e: any) => {
+        const detail = e.detail;
+        if (!detail) return;
+        const { userId, username, isFollowing: isF } = detail;
+        setFollowingMap((prev) => {
+          const updated = { ...prev };
+          if (userId) updated[String(userId)] = isF;
+          if (username) {
+            updated[String(username)] = isF;
+            updated[String(username).toLowerCase()] = isF;
+          }
+          return updated;
+        });
+        const targetCount = typeof detail.followerCount === 'number' ? detail.followerCount : undefined;
+        setSuggestedUsers((prev) =>
+          prev.map((u) => {
+            const matchesId = (u.id && String(u.id) === String(userId)) || (u._id && String(u._id) === String(userId));
+            const matchesUname = username && u.username && u.username.toLowerCase() === username.toLowerCase();
+            if (matchesId || matchesUname) {
+              return {
+                ...u,
+                isFollowing: isF,
+                ...(typeof targetCount === 'number' ? { followerCount: targetCount } : {}),
+              };
+            }
+            return u;
+          })
+        );
+      };
+
+      window.addEventListener('boolok_follow_changed', handleFollowEvent);
+      return () => window.removeEventListener('boolok_follow_changed', handleFollowEvent);
+    }
+  }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -688,22 +839,6 @@ export default function ProfessionalSocialFeedScreen() {
       return updated;
     });
 
-    // Optimistically update followerCount in the suggested users list
-    setSuggestedUsers((prev) =>
-      prev.map((u) => {
-        const matches = allKeys.includes(u.id) || allKeys.includes(u._id) || allKeys.includes(u.username);
-        if (matches) {
-          const currentCount = typeof u.followerCount === 'number' ? u.followerCount : 0;
-          return {
-            ...u,
-            followerCount: nextState ? currentCount + 1 : Math.max(0, currentCount - 1),
-            isFollowing: nextState,
-          };
-        }
-        return u;
-      })
-    );
-
     // Sync with shared localStorage follow cache
     try {
       if (Platform.OS === 'web') {
@@ -728,8 +863,11 @@ export default function ProfessionalSocialFeedScreen() {
     // Persist to MongoDB database
     try {
       const token = await getToken();
+      const endpoint = nextState
+        ? `${API_BASE_URL}/api/users/${targetId}/follow`
+        : `${API_BASE_URL}/api/users/${targetId}/unfollow`;
       const res = await axios.post(
-        `${API_BASE_URL}/api/users/${targetId}/follow`,
+        endpoint,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -774,6 +912,8 @@ export default function ProfessionalSocialFeedScreen() {
           }
         } catch (_) {}
 
+        broadcastFollowChange(targetId, targetUser?.username || advisor?.username, serverFollowing, res.data?.followerCount);
+
         // Update the accurate followerCount from server
         if (typeof res.data.followerCount === 'number') {
           setSuggestedUsers((prev) =>
@@ -795,20 +935,6 @@ export default function ProfessionalSocialFeedScreen() {
         });
         return updated;
       });
-      setSuggestedUsers((prev) =>
-        prev.map((u) => {
-          const matches = allKeys.includes(u.id) || allKeys.includes(u._id) || allKeys.includes(u.username);
-          if (matches) {
-            const currentCount = typeof u.followerCount === 'number' ? u.followerCount : 0;
-            return {
-              ...u,
-              followerCount: isCurrentlyFollowing ? currentCount + 1 : Math.max(0, currentCount - 1),
-              isFollowing: isCurrentlyFollowing,
-            };
-          }
-          return u;
-        })
-      );
     }
   };
 
@@ -1074,18 +1200,19 @@ export default function ProfessionalSocialFeedScreen() {
     }
   };
 
+  // Only show full-screen LoadingScreen if user explicitly sets loading
   if (loading) return <LoadingScreen />;
 
   const displayedNews = showAllNews ? newsList : newsList.slice(0, 5);
 
-  const bgDark = isDark ? '#060b13' : '#ffffff';
-  const cardBg = isDark ? '#0c1626' : '#ffffff';
-  const borderColor = isDark ? '#1a273c' : '#e2e8f0';
-  const goldPrimary = '#e6b800';
+  const bgCanvas = isDark ? theme.background : '#F8FAFC';
+  const cardBg = isDark ? theme.surface : '#FFFFFF';
+  const borderColor = isDark ? theme.outlineVariant : '#E2E8F0';
+  const goldPrimary = theme.primary;
 
   return (
     <ScrollView
-      style={[styles.root, { backgroundColor: bgDark }]}
+      style={[styles.root, { backgroundColor: bgCanvas }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -1099,89 +1226,15 @@ export default function ProfessionalSocialFeedScreen() {
     >
       <View style={styles.mainLayoutContainer}>
         {/* ═══════════════════════════════════════════════════════════════════════
-            LEFT COLUMN: User Real Estate Profile Card & Quick Links
+            LEFT COLUMN: Manage Network & Quick Links
         ════════════════════════════════════════════════════════════════════════ */}
         {isDesktop && (
           <View style={styles.leftColumn}>
-            {/* User Mini Profile Card */}
-            <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-              {/* Cover Banner */}
-              <LinearGradient
-                colors={['#0f223d', '#1a365d', '#0c1626']}
-                style={styles.profileCoverBanner}
-              >
-                <View style={styles.bannerBadge}>
-                  <BoolokLogo size={18} color="#ffffff" />
-                  <Text style={styles.bannerBadgeText}>BOOLOK ELITE</Text>
-                </View>
-              </LinearGradient>
-
-              {/* Avatar */}
-              <Pressable
-                onPress={() => router.push('/(app)/profile')}
-                style={styles.profileAvatarWrapper}
-              >
-                <UserAvatar user={user} size={64} style={styles.profileAvatar} />
-                <View style={styles.avatarPlusBadge}>
-                  <MaterialIcons name="verified" size={14} color="#000000" />
-                </View>
-              </Pressable>
-
-              {/* Identity & Professional Title */}
-              <View style={styles.profileInfoBox}>
-                <Text
-                  style={styles.profileNameText}
-                  onPress={() => router.push('/(app)/profile')}
-                >
-                  {user?.fullName || user?.username || 'Boolok Member'}
-                </Text>
-                <Text style={styles.profileRoleText}>
-                  {user?.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead'}
-                </Text>
-                <Text style={styles.profileLocationText}>
-                  {user?.location || 'Prime Commercial Assets'}
-                </Text>
-
-                {/* Company Tag */}
-                <View style={styles.companyTag}>
-                  <BoolokLogo size={14} color="#ffffff" />
-                  <Text style={styles.companyTagText}>BOOLOK GPT REAL ESTATE</Text>
-                </View>
-              </View>
-
-              {/* Stats Block */}
-              <View style={[styles.statsDivider, { borderTopColor: borderColor }]}>
-                <View style={styles.statRowItem}>
-                  <Text style={styles.statRowLabel}>Profile viewers</Text>
-                  <Text style={styles.statRowValue}>38</Text>
-                </View>
-                <View style={styles.statRowItem}>
-                  <Text style={styles.statRowLabel}>Properties Listed</Text>
-                  <Text style={styles.statRowValue}>12</Text>
-                </View>
-                <View style={styles.statRowItem}>
-                  <Text style={styles.statRowLabel}>Post Impressions</Text>
-                  <Text style={styles.statRowValue}>148</Text>
-                </View>
-              </View>
-
-              {/* Saved Items */}
-              <Pressable
-                onPress={handleOpenSavedModal}
-                style={[styles.savedItemsBtn, { borderTopColor: borderColor }]}
-              >
-                <MaterialCommunityIcons name="bookmark-outline" size={18} color="#e6b800" />
-                <Text style={[styles.savedItemsText, { color: isDark ? '#ffffff' : '#0f172a', fontWeight: '700' }]}>
-                  Saved Properties
-                </Text>
-              </Pressable>
-            </View>
-
             {/* Quick Access Menu Card */}
-            <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginTop: 12 }]}>
+            <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
               <Text style={styles.quickMenuHeading}>Manage Network</Text>
               <Pressable style={styles.quickMenuItem} onPress={() => setIsBrokerNetworkModalOpen(true)}>
-                <MaterialIcons name="people-outline" size={18} color="#e6b800" />
+                <MaterialIcons name="people-outline" size={18} color="#F5A623" />
                 <Text style={styles.quickMenuText}>Broker Network</Text>
               </Pressable>
               <Pressable style={styles.quickMenuItem} onPress={() => setIsNewslettersModalOpen(true)}>
@@ -1189,8 +1242,16 @@ export default function ProfessionalSocialFeedScreen() {
                 <Text style={styles.quickMenuText}>Market Newsletters</Text>
               </Pressable>
               <Pressable style={styles.quickMenuItem} onPress={() => setIsAuctionsModalOpen(true)}>
-                <MaterialIcons name="event" size={18} color="#ec4899" />
-                <Text style={styles.quickMenuText}>Property Auctions & Events</Text>
+                <MaterialIcons name="gavel" size={18} color="#a855f7" />
+                <Text style={styles.quickMenuText}>Land & Building Auctions</Text>
+              </Pressable>
+              <Pressable style={styles.quickMenuItem} onPress={handleOpenFollowersModal}>
+                <MaterialIcons name="person-add-alt" size={18} color="#10b981" />
+                <Text style={styles.quickMenuText}>Followers & Connections</Text>
+              </Pressable>
+              <Pressable style={styles.quickMenuItem} onPress={handleOpenSavedModal}>
+                <MaterialCommunityIcons name="bookmark-outline" size={18} color="#F5A623" />
+                <Text style={styles.quickMenuText}>Saved Properties</Text>
               </Pressable>
             </View>
           </View>
@@ -1254,7 +1315,61 @@ export default function ProfessionalSocialFeedScreen() {
           </View>
 
           {/* ── Feed Posts Stream ────────────────────────────────────────────── */}
-          {posts.length === 0 ? (
+          {postsLoading && posts.length === 0 ? (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: cardBg,
+                  borderColor,
+                  padding: 36,
+                  alignItems: 'center',
+                  marginBottom: 20,
+                },
+              ]}
+            >
+              <ActivityIndicator size="large" color="#e6b800" />
+              <Text style={{ marginTop: 14, color: isDark ? '#94a3b8' : '#64748b', fontSize: 13, fontWeight: '600' }}>
+                Loading real estate feed...
+              </Text>
+            </View>
+          ) : postsError && posts.length === 0 ? (
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: cardBg,
+                  borderColor,
+                  padding: 32,
+                  alignItems: 'center',
+                  marginBottom: 20,
+                },
+              ]}
+            >
+              <MaterialCommunityIcons name="alert-circle-outline" size={40} color="#f87171" />
+              <Text style={{ fontSize: 15, fontWeight: '700', color: isDark ? '#ffffff' : '#0f172a', marginTop: 10, marginBottom: 4 }}>
+                Unable to load posts
+              </Text>
+              <Text style={{ fontSize: 12.5, color: '#94a3b8', textAlign: 'center', maxWidth: 360, marginBottom: 16 }}>
+                {postsError || 'Network timeout connecting to real estate server.'}
+              </Text>
+              <Pressable
+                onPress={() => fetchPostsOnly()}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 6,
+                  backgroundColor: goldPrimary,
+                  paddingHorizontal: 18,
+                  paddingVertical: 8,
+                  borderRadius: 6,
+                }}
+              >
+                <MaterialIcons name="refresh" size={16} color="#000000" />
+                <Text style={{ color: '#000000', fontWeight: '800', fontSize: 13 }}>Retry Feed</Text>
+              </Pressable>
+            </View>
+          ) : posts.length === 0 ? (
             <View
               style={[
                 styles.card,
@@ -1336,9 +1451,9 @@ export default function ProfessionalSocialFeedScreen() {
                 'Commercial Property & Real Estate Advisor @ Boolok Network';
               const isSelfPost = Boolean(
                 user &&
-                  (author._id === user.id ||
-                    author._id === user._id ||
-                    author.username === user.username)
+                  (String(author._id) === String(user.id || user._id) ||
+                    String(author.id) === String(user.id || user._id) ||
+                    (author.username && user.username && String(author.username).toLowerCase() === String(user.username).toLowerCase()))
               );
               const isLiked = Boolean(
                 post.isLiked ||
@@ -1403,30 +1518,17 @@ export default function ProfessionalSocialFeedScreen() {
                       </View>
                     </Pressable>
 
-                    {!isSelfPost && (
-                      <Pressable
-                        onPress={() => toggleFollowAdvisor(author._id || author.username, author)}
-                        style={[
-                          styles.feedFollowBtn,
-                          isUserFollowed(author) && {
-                            backgroundColor: '#1a273c',
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.feedFollowBtnText,
-                            {
-                              color: isUserFollowed(author)
-                                ? '#ffffff'
-                                : goldPrimary,
-                            },
-                          ]}
-                        >
-                          {isUserFollowed(author) ? '✓ Following' : '+ Follow'}
-                        </Text>
-                      </Pressable>
-                    )}
+                    <FollowButton
+                      targetUserId={author._id || author.id}
+                      targetUsername={author.username}
+                      targetUser={author}
+                      initialIsFollowing={isUserFollowed(author)}
+                      size="sm"
+                      onFollowChange={(newIsF) => {
+                        const targetK = author._id || author.id || author.username;
+                        setFollowingMap((prev) => ({ ...prev, [targetK]: newIsF, [author.username]: newIsF }));
+                      }}
+                    />
                   </View>
 
                   {/* Post Text Description */}
@@ -1783,22 +1885,30 @@ export default function ProfessionalSocialFeedScreen() {
                         </View>
                       </Pressable>
 
-                      <Pressable
-                        onPress={() => toggleFollowAdvisor(advId, adv)}
-                        style={[
-                          styles.advisorFollowBtn,
-                          isF && { backgroundColor: '#1a273c' },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.advisorFollowBtnText,
-                            { color: isF ? '#ffffff' : goldPrimary },
-                          ]}
-                        >
-                          {isF ? '✓ Following' : '+ Follow'}
-                        </Text>
-                      </Pressable>
+                      <FollowButton
+                        targetUserId={advId}
+                        targetUsername={advUsername}
+                        targetUser={adv}
+                        initialIsFollowing={isF}
+                        size="sm"
+                        onFollowChange={(newIsF, newCount) => {
+                          setFollowingMap((prev) => ({ ...prev, [advId]: newIsF, [advUsername]: newIsF }));
+                          if (typeof newCount === 'number') {
+                            setSuggestedUsers((prev) =>
+                              prev.map((u) => {
+                                if ((u.id || u._id) === advId || u.username === advUsername) {
+                                  return {
+                                    ...u,
+                                    isFollowing: newIsF,
+                                    followerCount: newCount,
+                                  };
+                                }
+                                return u;
+                              })
+                            );
+                          }
+                        }}
+                      />
                     </View>
                   );
                 })

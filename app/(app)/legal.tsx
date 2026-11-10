@@ -521,8 +521,8 @@ export default function LegalVerificationScreen() {
               </View>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <MaterialIcons name="search" size={20} color="#000000" />
-                <Text style={[styles.verifyActionBtnText, { color: '#000000' }]}>
+                <MaterialIcons name="search" size={20} color={!saleDeedFile ? (isDark ? '#94A3B8' : '#475569') : '#000000'} />
+                <Text style={[styles.verifyActionBtnText, { color: !saleDeedFile ? (isDark ? '#94A3B8' : '#475569') : '#000000' }]}>
                   Start Title & Encumbrance Verification →
                 </Text>
               </View>

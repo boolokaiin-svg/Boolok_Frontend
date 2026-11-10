@@ -20,6 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
 import { API_BASE_URL } from '../../lib/api';
+import Avatar from '../../components/Avatar';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 
@@ -217,11 +218,7 @@ export default function SettingsScreen() {
               { borderBottomColor: theme.outlineVariant },
             ]}
           >
-            <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
-              <Text style={[typography.headlineMd, { color: '#fff' }]}>
-                {(user?.fullName?.[0] || user?.username?.[0] || 'U').toUpperCase()}
-              </Text>
-            </View>
+            <Avatar user={user} size={52} style={{ marginRight: spacing.md }} />
             <View style={{ flex: 1 }}>
               <Text style={[typography.headlineSm, { color: theme.onSurface }]}>
                 {user?.fullName || 'Your Name'}

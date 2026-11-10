@@ -15,9 +15,6 @@ import {
   Alert,
   Image,
   AppState,
-  Share,
-  Linking,
-  Animated as RNAnimated,
 } from 'react-native';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,46 +30,65 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { API_BASE_URL, resolveImageUrl, resolveReelVideoUrl, isEligibleReelRecord, getWithColdStartRetry } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
+import Avatar from '../../components/Avatar';
+import Skeleton from '../../components/Skeleton';
+import FollowButton, { broadcastFollowChange } from '../../components/FollowButton';
 
 // No hardcoded seeded videos: reels are loaded live from the user and backend
 const DUMMY_VIDEOS: any[] = [];
 
+const SHARE_CONTACTS = [
+  { id: '1', name: 'Shreekutti', role: 'Residential Architect · Chennai', avatar: null },
+  { id: '2', name: 'Mohammed Ajmal', role: 'CRE Advisory & Multi-Family', avatar: null },
+  { id: '3', name: 'Yashwanth', role: 'Commercial Realty · Tech Hubs', avatar: null },
+  { id: '4', name: 'Logeshwaran A', role: 'Architectural Consultant · Tech Parks', avatar: null },
+  { id: '5', name: 'Sai Vimenthan V L', role: 'Principal Broker · Commercial Assets', avatar: null },
+];
+
 const DEFAULT_POSTERS: Record<string, string> = {
   'Uluwatu Cliffside Resort': 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1200',
-  'Kyoto Forest Retreat': 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200',
-  'Coventry Tech Campus': 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200',
-  'Margaret River Vineyard': 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
+  'Kyoto Corporate Retreat': 'https://boolokgpt.vercel.app/videos/kyoto_poster.jpg',
+  'Kyoto Forest Retreat': 'https://boolokgpt.vercel.app/videos/kyoto_poster.jpg',
+  'Coventry Tech Campus': '/coventry_corporate.jpg',
+  'Coventry Corporate Headquarters': '/coventry_corporate.jpg',
+  'Coventry Office': '/coventry_corporate.jpg',
+  'Margaret River Commercial Vineyard Estate': 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200',
+  'Margaret River Vineyard': 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200',
+  'Outer Ring Road Tech Park Campus': 'https://images.pexels.com/photos/323705/pexels-photo-323705.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  'Whitefield Commercial IT SEZ': 'https://images.pexels.com/photos/269077/pexels-photo-269077.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  'Poes Garden Ultra-Luxury Villa': 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200',
+  'house routing': 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200',
+  'Marina Coastal Skyscraper & Penthouse': 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
 };
 
 const PROPERTY_COVER_PRESETS = [
-  { id: 'villa', label: 'Luxury Villa', url: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200' },
+  { id: 'villa', label: 'Luxury Villa', url: 'https://images.pexels.com/photos/106399/pexels-photo-106399.jpeg?auto=compress&cs=tinysrgb&w=1200' },
   { id: 'estate', label: 'Glass Estate', url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200' },
   { id: 'penthouse', label: 'Sky Penthouse', url: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200' },
   { id: 'waterfront', label: 'Coastal Haven', url: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200' },
-  { id: 'commercial', label: 'Commercial HQ', url: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200' },
-  { id: 'alpine', label: 'Zen Retreat', url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200' },
+  { id: 'commercial', label: 'Commercial HQ', url: 'https://images.pexels.com/photos/323705/pexels-photo-323705.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'whitefield', label: 'Commercial IT Campus', url: 'https://images.pexels.com/photos/269077/pexels-photo-269077.jpeg?auto=compress&cs=tinysrgb&w=1200' },
+  { id: 'alpine', label: 'Corporate Tower', url: '/coventry_corporate.jpg' },
 ];
 
 function resolveCoverUrl(item: any): string {
+  const isCoventry = (item?.title || '').toLowerCase().includes('coventry') || (item?.location || '').toLowerCase().includes('coventry') || item?._id === '6ae3464eff2e1932b0ec9674';
+  if (isCoventry) {
+    return resolveImageUrl('/coventry_corporate.jpg') || '/coventry_corporate.jpg';
+  }
   if (item?.poster && typeof item.poster === 'string' && item.poster.trim()) {
     const p = item.poster.trim();
-    if (p.startsWith('http://') || p.startsWith('https://') || p.startsWith('data:') || p.startsWith('blob:') || p.startsWith('file:')) {
-      return p;
-    }
-    return `${API_BASE_URL}${p.startsWith('/') ? p : `/${p}`}`;
+    return resolveImageUrl(p) || p;
   }
   if (item?.thumbnail && typeof item.thumbnail === 'string' && item.thumbnail.trim()) {
     const t = item.thumbnail.trim();
-    if (t.startsWith('http://') || t.startsWith('https://') || t.startsWith('data:') || t.startsWith('blob:') || t.startsWith('file:')) {
-      return t;
-    }
-    return `${API_BASE_URL}${t.startsWith('/') ? t : `/${t}`}`;
+    return resolveImageUrl(t) || t;
   }
   if (item?.title && DEFAULT_POSTERS[item.title]) {
-    return DEFAULT_POSTERS[item.title];
+    return resolveImageUrl(DEFAULT_POSTERS[item.title]) || DEFAULT_POSTERS[item.title];
   }
   const seed = String(item?._id || item?.title || item?.videoUrl || 'boolok_property');
   let hash = 0;
@@ -85,15 +101,7 @@ function resolveCoverUrl(item: any): string {
 }
 
 function resolveVideoUrl(item: any): string {
-  const raw = item?.videoUrl;
-  if (!raw || typeof raw !== 'string' || !raw.trim()) return '';
-  const clean = raw.trim();
-  if (clean.startsWith('blob:') || clean.startsWith('data:')) return clean;
-  // Absolute OR relative uploads always go through the range-aware stream endpoint
-  const m = clean.match(/\/uploads\/reels\/([^/?#]+)/);
-  if (m) return `${API_BASE_URL}/api/reels/stream/${m[1]}`;
-  if (/^https?:\/\//i.test(clean)) return clean;
-  return `${API_BASE_URL}${clean.startsWith('/') ? clean : `/${clean}`}`;
+  return resolveReelVideoUrl(item?.videoUrl);
 }
 
 function withCacheBust(url: string): string {
@@ -147,9 +155,13 @@ function saveLocalUploadedReel(reel: any) {
   } catch (_) {}
 }
 
-const MarketIntelligenceSidebar = ({ theme, isDark }: { theme: any, isDark: boolean }) => {
+const MarketIntelligenceSidebar = ({ theme, isDark, videos = [] }: { theme: any; isDark: boolean; videos?: any[] }) => {
   const cardBg = isDark ? theme.surfaceContainerHigh : theme.surface;
   const [isExpanded, setIsExpanded] = useState(false);
+
+  const uniqueLocations = Array.from(
+    new Set(videos.map((v: any) => (v.location || '').trim()).filter(Boolean))
+  ).slice(0, 4);
 
   if (!isExpanded) {
     return (
@@ -158,7 +170,7 @@ const MarketIntelligenceSidebar = ({ theme, isDark }: { theme: any, isDark: bool
           onPress={() => setIsExpanded(true)}
           style={[styles.miBotIcon, { backgroundColor: theme.primary }]}
         >
-          <MaterialCommunityIcons name="robot-outline" size={24} color={theme.onPrimary} />
+          <MaterialCommunityIcons name="chart-box-outline" size={24} color={theme.onPrimary} />
         </Pressable>
         <View style={{ marginTop: 24, height: 150, width: 24, justifyContent: 'center', alignItems: 'center' }}>
           <Text style={{ color: theme.onSurfaceVariant, fontSize: 12, fontWeight: 'bold', transform: [{ rotate: '90deg' }], width: 150, textAlign: 'center', letterSpacing: 2 }}>
@@ -172,7 +184,7 @@ const MarketIntelligenceSidebar = ({ theme, isDark }: { theme: any, isDark: bool
   return (
     <Animated.View entering={FadeIn} style={[styles.sidebar, { backgroundColor: theme.surfaceContainerLow, borderColor: theme.outlineVariant }]}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Text style={{ color: theme.onSurface, fontSize: 16, fontWeight: 'bold' }}>Market Insights</Text>
+        <Text style={{ color: theme.onSurface, fontSize: 16, fontWeight: 'bold' }}>Market Summary</Text>
         <Pressable onPress={() => setIsExpanded(false)} style={{ padding: 4 }}>
           <MaterialIcons name="close" size={20} color={theme.onSurfaceVariant} />
         </Pressable>
@@ -180,233 +192,52 @@ const MarketIntelligenceSidebar = ({ theme, isDark }: { theme: any, isDark: bool
 
       <ScrollView showsVerticalScrollIndicator={false}>
         <Text style={{ color: theme.onSurfaceVariant, fontSize: 11, fontWeight: 'bold', letterSpacing: 1.5, marginBottom: 12 }}>
-          REAL-TIME RADAR
+          ACTIVE FEED MARKETS ({uniqueLocations.length})
         </Text>
 
-        <View style={[styles.miLocationRow, { backgroundColor: cardBg, borderColor: theme.outlineVariant }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={[styles.miLocationIcon, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
-              <MaterialIcons name="location-on" size={18} color={theme.primary} />
-            </View>
-            <View>
-              <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '600' }}>Western Australia</Text>
-              <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>High Viticulture Yields</Text>
-            </View>
-          </View>
-          <MaterialIcons name="chevron-right" size={20} color={theme.onSurfaceVariant} />
-        </View>
-
-        <View style={[styles.miLocationRow, { backgroundColor: cardBg, borderColor: theme.outlineVariant }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={[styles.miLocationIcon, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
-              <MaterialIcons name="location-on" size={18} color={theme.primary} />
-            </View>
-            <View>
-              <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '600' }}>Bali, Indonesia</Text>
-              <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>+14% YoY Tourism Growth</Text>
+        {uniqueLocations.map((loc: string) => (
+          <View key={loc} style={[styles.miLocationRow, { backgroundColor: cardBg, borderColor: theme.outlineVariant }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={[styles.miLocationIcon, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
+                <MaterialIcons name="location-on" size={18} color={theme.primary} />
+              </View>
+              <View>
+                <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '600' }}>{loc}</Text>
+                <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>Owner-supplied listing showcase</Text>
+              </View>
             </View>
           </View>
-          <MaterialIcons name="chevron-right" size={20} color={theme.onSurfaceVariant} />
-        </View>
-
-        <View style={[styles.miLocationRow, { backgroundColor: cardBg, borderColor: theme.outlineVariant }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <View style={[styles.miLocationIcon, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
-              <MaterialIcons name="location-on" size={18} color={theme.primary} />
-            </View>
-            <View>
-              <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '600' }}>Kyoto, Japan</Text>
-              <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>Thermal Eco-Resort Zone</Text>
-            </View>
-          </View>
-          <MaterialIcons name="chevron-right" size={20} color={theme.onSurfaceVariant} />
-        </View>
+        ))}
 
         <Text style={{ color: theme.onSurfaceVariant, fontSize: 11, fontWeight: 'bold', letterSpacing: 1.5, marginTop: 16, marginBottom: 12 }}>
-          PORTFOLIO PULSE
+          FEED METRICS & DISCLOSURE
         </Text>
 
         <View style={[styles.miCard, { backgroundColor: cardBg, borderColor: theme.outlineVariant }]}>
-          <View style={{ marginBottom: 16 }}>
-            <Text style={{ color: theme.onSurfaceVariant, fontSize: 12, marginBottom: 8 }}>Global Land Liquidity</Text>
-            <View style={[styles.miProgressBarBg, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
-              <View style={[styles.miProgressBarFill, { backgroundColor: theme.primary, width: '78%' }]} />
-            </View>
-          </View>
-          <View style={{ marginBottom: 24 }}>
-            <Text style={{ color: theme.onSurfaceVariant, fontSize: 12, marginBottom: 8 }}>AI Match Accuracy (Avg)</Text>
-            <View style={[styles.miProgressBarBg, { backgroundColor: isDark ? theme.surfaceContainerHighest : theme.surfaceContainerLow }]}>
-              <View style={[styles.miProgressBarFill, { backgroundColor: theme.primary, width: '94%' }]} />
-            </View>
-          </View>
-
-          <Text style={{ color: theme.onSurface, fontSize: 24, fontWeight: 'bold' }}>$14.2B</Text>
-          <Text style={{ color: theme.onSurfaceVariant, fontSize: 12 }}>Total Assets Under Monitoring</Text>
+          <Text style={{ color: theme.onSurface, fontSize: 24, fontWeight: 'bold' }}>{videos.length}</Text>
+          <Text style={{ color: theme.onSurfaceVariant, fontSize: 12, marginBottom: 12 }}>Active Property Reels in Feed</Text>
+          <Text style={{ color: theme.onSurfaceVariant, fontSize: 11.5, lineHeight: 16 }}>
+            Listing specifications, yields, and property notes are supplied by listing authors and are not independently verified AI valuations.
+          </Text>
         </View>
       </ScrollView>
     </Animated.View>
   );
 };
 
-// ── Instagram-Style Bouncy Heart Burst with Particle Stars ────────────────────
-const HeartBurst = ({ visible, onAnimationEnd }: { visible: boolean; onAnimationEnd?: () => void }) => {
-  const scale = useRef(new RNAnimated.Value(0)).current;
-  const opacity = useRef(new RNAnimated.Value(1)).current;
-  const translateY = useRef(new RNAnimated.Value(0)).current;
-  const rotate = useRef(new RNAnimated.Value(-14)).current;
-  const particleDist = useRef(new RNAnimated.Value(0)).current;
-  const particleOpacity = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    if (visible) {
-      scale.setValue(0);
-      opacity.setValue(1);
-      translateY.setValue(12);
-      rotate.setValue(-14);
-      particleDist.setValue(0);
-      particleOpacity.setValue(0);
-
-      RNAnimated.parallel([
-        // Bouncy spring pop & overshoot
-        RNAnimated.sequence([
-          RNAnimated.spring(scale, {
-            toValue: 1.25,
-            friction: 4,
-            tension: 200,
-            useNativeDriver: true,
-          }),
-          RNAnimated.timing(scale, {
-            toValue: 1.0,
-            duration: 120,
-            useNativeDriver: true,
-          }),
-          RNAnimated.delay(200),
-          RNAnimated.timing(scale, {
-            toValue: 1.35,
-            duration: 250,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Straighten rotation
-        RNAnimated.spring(rotate, {
-          toValue: 0,
-          friction: 5,
-          tension: 140,
-          useNativeDriver: true,
-        }),
-        // Upward float
-        RNAnimated.timing(translateY, {
-          toValue: -32,
-          duration: 750,
-          useNativeDriver: true,
-        }),
-        // Smooth fade out
-        RNAnimated.sequence([
-          RNAnimated.delay(420),
-          RNAnimated.timing(opacity, {
-            toValue: 0,
-            duration: 320,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Particle burst outward in radial pattern
-        RNAnimated.sequence([
-          RNAnimated.timing(particleOpacity, {
-            toValue: 1,
-            duration: 100,
-            useNativeDriver: true,
-          }),
-          RNAnimated.parallel([
-            RNAnimated.timing(particleDist, {
-              toValue: 70,
-              duration: 550,
-              useNativeDriver: true,
-            }),
-            RNAnimated.timing(particleOpacity, {
-              toValue: 0,
-              duration: 550,
-              useNativeDriver: true,
-            }),
-          ]),
-        ]),
-      ]).start(() => {
-        onAnimationEnd?.();
-      });
-    }
-  }, [visible]);
-
+// ── Heart burst component for double-tap ─────────────────────────────────────
+const HeartBurst = ({ visible }: { visible: boolean }) => {
   if (!visible) return null;
-
-  const rotateInterpolation = rotate.interpolate({
-    inputRange: [-15, 0, 15],
-    outputRange: ['-15deg', '0deg', '15deg'],
-  });
-
-  const particleAngles = [0, 60, 120, 180, 240, 300];
-
   return (
-    <View style={styles.heartBurstContainer} pointerEvents="none">
-      {/* 6 Surrounding Radial Sparkle/Heart Particles */}
-      {particleAngles.map((deg, i) => {
-        const rad = (deg * Math.PI) / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        return (
-          <RNAnimated.View
-            key={`particle_${i}`}
-            style={{
-              position: 'absolute',
-              opacity: particleOpacity,
-              transform: [
-                { translateX: RNAnimated.multiply(particleDist, cos) },
-                { translateY: RNAnimated.multiply(particleDist, sin) },
-                { scale: particleOpacity },
-              ],
-            }}
-          >
-            <MaterialCommunityIcons
-              name={i % 2 === 0 ? 'heart' : 'star-four-points'}
-              size={i % 2 === 0 ? 18 : 16}
-              color={i % 2 === 0 ? '#ff2d55' : '#f9c03d'}
-              style={{
-                textShadowColor: 'rgba(255, 45, 85, 0.75)',
-                textShadowOffset: { width: 0, height: 0 },
-                textShadowRadius: 8,
-              }}
-            />
-          </RNAnimated.View>
-        );
-      })}
-
-      {/* Main Bouncy Heart with Silhouette Glow (No Square Box Shadow) */}
-      <RNAnimated.View
-        style={{
-          transform: [
-            { scale },
-            { rotate: rotateInterpolation },
-            { translateY },
-          ],
-          opacity,
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <MaterialIcons
-          name="favorite"
-          size={108}
-          color="#ff2d55"
-          style={{
-            textShadowColor: 'rgba(255, 45, 85, 0.85)',
-            textShadowOffset: { width: 0, height: 2 },
-            textShadowRadius: 28,
-          }}
-        />
-        {/* Subtle interior sparkle */}
-        <View style={{ position: 'absolute', top: 30, left: 26, opacity: 0.55 }}>
-          <MaterialCommunityIcons name="star-four-points" size={22} color="#ffffff" />
-        </View>
-      </RNAnimated.View>
-    </View>
+    <Animated.View
+      entering={FadeIn.duration(120)}
+      style={styles.heartBurstContainer}
+      pointerEvents="none"
+    >
+      <View style={styles.heartBurstGlow}>
+        <MaterialIcons name="favorite" size={90} color="#ff2d55" />
+      </View>
+    </Animated.View>
   );
 };
 
@@ -431,7 +262,6 @@ const VideoItem = ({
   const [videoHasError, setVideoHasError] = useState(false);
   const [showHeartBurst, setShowHeartBurst] = useState(false);
   const [expandedInsight, setExpandedInsight] = useState(false);
-  const [clearView, setClearView] = useState(false);
 
   const [videoSrc, setVideoSrc] = useState<string>(() => resolveVideoUrl(item));
   const [coverHasError, setCoverHasError] = useState(false);
@@ -455,6 +285,13 @@ const VideoItem = ({
       if (singleTapTimer.current) clearTimeout(singleTapTimer.current);
     };
   }, []);
+
+  const hasVideo = Boolean(videoSrc && videoSrc.trim());
+  const isKyoto =
+    String(item._id || item.id || '').includes('kyoto') ||
+    String(item._id || item.id || '') === 'logesh-reel-2' ||
+    String(item.title || item.propertyTitle || '').toLowerCase().includes('kyoto') ||
+    String(videoSrc || '').includes('kyoto');
 
   // One automatic retry (cache-busted), then show a real error state instead of
   // silently swapping in a different demo video.
@@ -502,9 +339,17 @@ const VideoItem = ({
     return false;
   });
 
-  // Likes state - use shared boolok_post_likes cache for persistence across sessions
+  // Likes state - server data is authoritative, with cache as secondary fallback
   const initialLikes = (() => {
-    // Try shared post-likes cache first (same key used by feed.tsx)
+    if (typeof item.likesCount === 'number') {
+      return item.likesCount;
+    }
+    if (Array.isArray(item.likes)) {
+      return item.likes.length;
+    }
+    if (typeof item.likes === 'number') {
+      return item.likes;
+    }
     if (Platform.OS === 'web') {
       try {
         const raw = localStorage.getItem('boolok_post_likes');
@@ -516,14 +361,11 @@ const VideoItem = ({
         }
       } catch (_) {}
     }
-    // Fall back to item data
-    return typeof item.likesCount === 'number'
-      ? item.likesCount
-      : (Array.isArray(item.likes) ? item.likes.length : (typeof item.likes === 'number' ? item.likes : 0));
+    return 0;
   })();
   const [likesCount, setLikesCount] = useState<number>(initialLikes);
   const [hasLiked, setHasLiked] = useState<boolean>(() => {
-    if (Boolean(item.isLiked)) return true;
+    if (typeof item.isLiked === 'boolean') return item.isLiked;
     if (Platform.OS === 'web') {
       try {
         // Check shared post-likes cache
@@ -606,14 +448,9 @@ const VideoItem = ({
   const [commentInput, setCommentInput] = useState('');
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
-  // Share state (Real-Time Dynamic Contacts & Messages)
+  // Share state
   const [showShareModal, setShowShareModal] = useState(false);
-  const [realContacts, setRealContacts] = useState<any[]>([]);
-  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
-  const [sendingContacts, setSendingContacts] = useState<Record<string, boolean>>({});
   const [sharedContacts, setSharedContacts] = useState<Record<string, boolean>>({});
-  const [shareSearchQuery, setShareSearchQuery] = useState('');
-  const [shareToast, setShareToast] = useState<string | null>(null);
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -959,8 +796,11 @@ const VideoItem = ({
         : await SecureStore.getItemAsync('userToken');
 
       if (token && authorId) {
+        const endpoint = nextFollow
+          ? `${API_BASE_URL}/api/users/${authorId}/follow`
+          : `${API_BASE_URL}/api/users/${authorId}/unfollow`;
         const res = await axios.post(
-          `${API_BASE_URL}/api/users/${authorId}/follow`,
+          endpoint,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -968,6 +808,7 @@ const VideoItem = ({
           const serverFollowing = typeof res.data.isFollowing === 'boolean' ? res.data.isFollowing : nextFollow;
           setIsFollowing(serverFollowing);
           const targetUser = res.data.targetUser;
+          broadcastFollowChange(authorId, targetUser?.username || item.author?.username, serverFollowing, res.data?.followerCount);
           const confirmedKeys = [
             authorId,
             targetUser?.id,
@@ -1054,251 +895,12 @@ const VideoItem = ({
     }
   };
 
-  // ── Instagram-Style Real-Time Share Handlers ──
-  const getReelShareUrl = () => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      return `${window.location.origin}/(app)/insights?reelId=${item._id}`;
-    }
-    return `https://boolok.com/insights?reelId=${item._id}`;
-  };
-
-  const showToastMsg = (msg: string) => {
-    setShareToast(msg);
+  // Share to contact
+  const handleShareToContact = (contactId: string) => {
+    setSharedContacts((prev) => ({ ...prev, [contactId]: true }));
     setTimeout(() => {
-      setShareToast(null);
-    }, 2400);
-  };
-
-  // Fetch real contacts & recent chat partners when share modal is opened
-  useEffect(() => {
-    if (!showShareModal) return;
-    let isCancelled = false;
-
-    const fetchRealContacts = async () => {
-      setIsLoadingContacts(true);
-      try {
-        const token = Platform.OS === 'web'
-          ? localStorage.getItem('userToken')
-          : await SecureStore.getItemAsync('userToken');
-
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const [suggestedRes, convRes] = await Promise.allSettled([
-          axios.get(`${API_BASE_URL}/api/users/suggested`, { headers }),
-          axios.get(`${API_BASE_URL}/api/messages/conversations`, { headers }),
-        ]);
-
-        const contactList: any[] = [];
-        const seenIds = new Set<string>();
-
-        // 1. Add recent conversation partners first
-        if (convRes.status === 'fulfilled' && Array.isArray(convRes.value.data?.conversations)) {
-          for (const conv of convRes.value.data.conversations) {
-            const other = conv.otherUser;
-            if (other && (other._id || other.id)) {
-              const oId = String(other._id || other.id);
-              if (!seenIds.has(oId) && oId !== user?.id && oId !== user?._id) {
-                seenIds.add(oId);
-                contactList.push({
-                  _id: oId,
-                  id: oId,
-                  name: other.fullName || other.username || 'Member',
-                  role: other.headline || other.location || (other.username ? `@${other.username}` : 'Recent Chat'),
-                  avatar: other.profilePicture,
-                  isRecent: true,
-                });
-              }
-            }
-          }
-        }
-
-        // 2. Add real suggested platform members
-        if (suggestedRes.status === 'fulfilled' && Array.isArray(suggestedRes.value.data?.suggested)) {
-          for (const u of suggestedRes.value.data.suggested) {
-            const uId = String(u._id || u.id);
-            if (uId && !seenIds.has(uId) && uId !== user?.id && uId !== user?._id) {
-              seenIds.add(uId);
-              contactList.push({
-                _id: uId,
-                id: uId,
-                name: u.fullName || u.username || 'Boolok Member',
-                role: u.headline || u.title || u.location || (u.username ? `@${u.username}` : 'Community Member'),
-                avatar: u.avatar || u.profilePicture,
-                isRecent: false,
-              });
-            }
-          }
-        }
-
-        if (!isCancelled) {
-          setRealContacts(contactList);
-        }
-      } catch (err) {
-        console.warn('Failed to load real contacts for sharing:', err);
-      } finally {
-        if (!isCancelled) setIsLoadingContacts(false);
-      }
-    };
-
-    fetchRealContacts();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [showShareModal]);
-
-  // Real-time user search as user types
-  useEffect(() => {
-    if (!showShareModal || !shareSearchQuery.trim() || shareSearchQuery.trim().length < 2) return;
-
-    let isCancelled = false;
-    const timer = setTimeout(async () => {
-      try {
-        const token = Platform.OS === 'web'
-          ? localStorage.getItem('userToken')
-          : await SecureStore.getItemAsync('userToken');
-
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await axios.get(`${API_BASE_URL}/api/users/search?q=${encodeURIComponent(shareSearchQuery.trim())}`, { headers });
-
-        if (!isCancelled && res.data && Array.isArray(res.data.results)) {
-          const results = res.data.results
-            .filter((u: any) => String(u._id || u.id) !== String(user?.id) && String(u._id || u.id) !== String(user?._id))
-            .map((u: any) => ({
-              _id: String(u._id || u.id),
-              id: String(u._id || u.id),
-              name: u.fullName || u.username || 'Member',
-              role: u.headline || u.location || (u.username ? `@${u.username}` : 'Member'),
-              avatar: u.profilePicture,
-            }));
-
-          setRealContacts((prev) => {
-            const map = new Map<string, any>();
-            results.forEach((c: any) => map.set(c.id, c));
-            prev.forEach((c: any) => { if (!map.has(c.id)) map.set(c.id, c); });
-            return Array.from(map.values());
-          });
-        }
-      } catch (_) {}
-    }, 280);
-
-    return () => {
-      isCancelled = true;
-      clearTimeout(timer);
-    };
-  }, [shareSearchQuery, showShareModal]);
-
-  const handleCopyLink = async () => {
-    const url = getReelShareUrl();
-    try {
-      if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-      } else {
-        const RN = require('react-native');
-        if (RN.Clipboard && RN.Clipboard.setString) {
-          RN.Clipboard.setString(url);
-        }
-      }
-      showToastMsg('Link copied to clipboard! 📋');
-    } catch (_) {
-      showToastMsg('Link copied! 📋');
-    }
-  };
-
-  const handleSystemShare = async () => {
-    const url = getReelShareUrl();
-    const shareMessage = `Check out this luxury property reel on Boolok: "${item.title || 'Property Reel'}" by ${authorName}!\n\n${url}`;
-
-    setShowShareModal(false);
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
-      try {
-        await (navigator as any).share({
-          title: item.title || 'Boolok Property Reel',
-          text: shareMessage,
-          url,
-        });
-        return;
-      } catch (e: any) {
-        if (e.name === 'AbortError') return;
-      }
-    }
-
-    try {
-      await Share.share({
-        title: item.title || 'Boolok Property Reel',
-        message: shareMessage,
-        url,
-      });
-    } catch (error) {
-      console.warn('Share error:', error);
-    }
-  };
-
-  const handleWhatsAppShare = () => {
-    const url = getReelShareUrl();
-    const text = encodeURIComponent(`Check out this luxury property reel on Boolok: "${item.title}" by ${authorName}\n\n${url}`);
-    const whatsappUrl = `https://api.whatsapp.com/send?text=${text}`;
-    setShowShareModal(false);
-    Linking.openURL(whatsappUrl).catch(() => {
-      Alert.alert('Notice', 'Unable to open WhatsApp.');
-    });
-  };
-
-  const handleDirectChatShare = () => {
-    setShowShareModal(false);
-    showToastMsg('Opening Boolok Messages... 💬');
-    router.push('/(app)/messages' as any);
-  };
-
-  // Real-time dispatch message via /api/messages/send (Instagram-Style Media Reel Share)
-  const handleShareToContact = async (contact: any) => {
-    const contactId = String(contact._id || contact.id);
-    if (!contactId || sendingContacts[contactId] || sharedContacts[contactId]) return;
-
-    setSendingContacts((prev) => ({ ...prev, [contactId]: true }));
-    const posterUrl = resolveCoverUrl(item);
-    const reelPayload = {
-      type: 'REEL_SHARE',
-      reelId: String(item._id || item.id),
-      title: item.title || 'Luxury Property Reel',
-      authorName: authorName || 'Verified Broker',
-      authorAvatar: authorAvatar || null,
-      thumbnail: posterUrl || null,
-      location: item.location || (item.property?.city ? `${item.property.city}, ${item.property.state || ''}` : '') || 'Featured Property',
-      price: item.price ? `₹${Number(item.price).toLocaleString('en-IN')}` : null,
-    };
-    const shareText = `[REEL_SHARE]:${JSON.stringify(reelPayload)}`;
-
-    try {
-      const token = Platform.OS === 'web'
-        ? localStorage.getItem('userToken')
-        : await SecureStore.getItemAsync('userToken');
-
-      if (!token) {
-        showToastMsg('Please sign in to send messages.');
-        setSendingContacts((prev) => ({ ...prev, [contactId]: false }));
-        return;
-      }
-
-      const payload: any = {
-        recipientId: contactId,
-        text: shareText,
-      };
-
-      await axios.post(
-        `${API_BASE_URL}/api/messages/send`,
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setSharedContacts((prev) => ({ ...prev, [contactId]: true }));
-      showToastMsg(`Sent to ${contact.name}! ✓`);
-    } catch (err: any) {
-      console.error('Failed to send reel in chat:', err.response?.data || err.message);
-      showToastMsg(err.response?.data?.message || `Could not send to ${contact.name}`);
-    } finally {
-      setSendingContacts((prev) => ({ ...prev, [contactId]: false }));
-    }
+      setSharedContacts((prev) => ({ ...prev, [contactId]: false }));
+    }, 2000);
   };
 
   // Add Comment
@@ -1418,6 +1020,7 @@ const VideoItem = ({
   );
 
   const isDeletable = Boolean(onDelete && isUploadedByMe);
+  const isCoventry = (item.title || '').toLowerCase().includes('coventry') || (item.location || '').toLowerCase().includes('coventry');
 
   return (
     <View
@@ -1426,17 +1029,11 @@ const VideoItem = ({
         {
           height: cardHeight,
           width: cardWidth,
-          borderRadius: isMobile ? 0 : 24,
-          marginBottom: isMobile ? 0 : 36,
+          borderRadius: isMobile ? 0 : 20,
+          marginBottom: isMobile ? 0 : 20,
           borderWidth: isMobile ? 0 : 1,
           borderColor: '#1e293b',
         },
-        Platform.OS === 'web'
-          ? ({
-              scrollSnapAlign: 'start',
-              scrollSnapStop: 'always',
-            } as any)
-          : null,
       ]}
     >
       {/* ── Video Background / Tap Layer ── */}
@@ -1445,53 +1042,75 @@ const VideoItem = ({
         onPress={handleVideoPress}
         style={StyleSheet.absoluteFill}
       >
-        {/* Background Cover Image fallback so screen is NEVER black */}
-        <Image
-          source={{
-            uri: coverHasError ? PROPERTY_COVER_PRESETS[0].url : resolveCoverUrl(item),
-          }}
-          onError={() => setCoverHasError(true)}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-        />
-
-        {Platform.OS === 'web' ? (
-          <video
-            ref={webVideoRef}
-            src={videoSrc || undefined}
-            poster={coverHasError ? PROPERTY_COVER_PRESETS[0].url : resolveCoverUrl(item)}
-            loop
-            muted
-            playsInline
-            preload={isActive ? 'auto' : 'metadata'}
-            onLoadedData={() => {
-              setIsVideoLoaded(true);
-              setVideoHasError(false);
-              if (isActiveRef.current) playWeb();
+        {/* Background Cover Image fallback with ambient blur fill for Coventry */}
+        {isCoventry && (
+          <Image
+            source={{
+              uri: resolveCoverUrl(item),
             }}
-            onError={handleVideoError}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              opacity: isVideoLoaded ? 1 : 0.85,
-              pointerEvents: 'none',
-              transition: 'opacity 0.25s ease',
-            }}
-          />
-        ) : (
-          <VideoView
-            player={player}
-            style={{ width: cardWidth, height: cardHeight }}
-            contentFit="cover"
-            nativeControls={false}
+            style={[StyleSheet.absoluteFill, { opacity: 0.35 }]}
+            resizeMode="cover"
+            blurRadius={Platform.OS === 'web' ? 24 : 16}
           />
         )}
+        <Image
+          source={{
+            uri: coverHasError
+              ? (isCoventry ? resolveCoverUrl(item) : PROPERTY_COVER_PRESETS[0].url)
+              : resolveCoverUrl(item),
+          }}
+          onError={() => {
+            if (!isCoventry) setCoverHasError(true);
+          }}
+          style={[
+            StyleSheet.absoluteFill,
+            isCoventry && {
+              transform: [{ scale: 1.15 }],
+            },
+          ]}
+          resizeMode={isCoventry ? "cover" : "cover"}
+        />
+
+        {/* Video Player or 3D Tour Unavailable State */}
+        {Boolean(videoSrc) ? (
+          Platform.OS === 'web' ? (
+            <video
+              ref={webVideoRef}
+              src={videoSrc || undefined}
+              poster={coverHasError ? PROPERTY_COVER_PRESETS[0].url : resolveCoverUrl(item)}
+              loop
+              muted
+              playsInline
+              preload={isActive ? 'auto' : 'metadata'}
+              onLoadedData={() => {
+                setIsVideoLoaded(true);
+                setVideoHasError(false);
+                if (isActiveRef.current) playWeb();
+              }}
+              onError={handleVideoError}
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                opacity: isVideoLoaded ? 1 : 0.85,
+                pointerEvents: 'none',
+                transition: 'opacity 0.25s ease',
+              }}
+            />
+          ) : (
+            <VideoView
+              player={player}
+              style={{ width: cardWidth, height: cardHeight }}
+              contentFit="cover"
+              nativeControls={false}
+            />
+          )
+        ) : null}
 
         {/* Real error state (no silent swap to a different demo video) */}
         {videoHasError && (
@@ -1508,82 +1127,92 @@ const VideoItem = ({
               zIndex: 20,
             }}
           >
-            <MaterialIcons name="error-outline" size={40} color={theme.primary} />
+            <MaterialIcons name={videoSrc ? "error-outline" : "videocam-off"} size={40} color={theme.primary} />
             <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700', marginTop: 10 }}>
-              This video couldn't be loaded
+              {videoSrc ? "This video couldn't be loaded" : "Property video unavailable"}
             </Text>
-            <TouchableOpacity
-              onPress={handleRetry}
-              style={{
-                marginTop: 14,
-                paddingHorizontal: 20,
-                paddingVertical: 9,
-                borderRadius: 20,
-                backgroundColor: theme.primary,
-              }}
-            >
-              <Text style={{ color: '#000000', fontSize: 13, fontWeight: '800' }}>Retry</Text>
-            </TouchableOpacity>
+            {Boolean(videoSrc) && (
+              <TouchableOpacity
+                onPress={handleRetry}
+                style={{
+                  marginTop: 14,
+                  paddingHorizontal: 20,
+                  paddingVertical: 9,
+                  borderRadius: 20,
+                  backgroundColor: theme.primary,
+                }}
+              >
+                <Text style={{ color: '#000000', fontSize: 13, fontWeight: '800' }}>Retry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
         {/* Center Heart Burst on double tap */}
-        <HeartBurst visible={showHeartBurst} onAnimationEnd={() => setShowHeartBurst(false)} />
+        <HeartBurst visible={showHeartBurst} />
 
         {/* Play / Pause Indicator */}
-        {!isPlaying && (
+        {!isPlaying && Boolean(videoSrc) && (
           <View style={styles.playOverlay} pointerEvents="none">
             <View style={styles.playIconContainer}>
-              <MaterialIcons name="play-arrow" size={36} color={theme.primary} />
+              <MaterialIcons name="play-arrow" size={50} color={theme.primary} />
             </View>
           </View>
         )}
       </TouchableOpacity>
 
-      {/* ── Top Bar Overlay: Slim AI Match + Sound + Clear View Toggle ── */}
-      {!clearView && (
+      {/* ── Top Bar Overlay: Insights Branding + AI Match Badge + Sound & Upload Controls ── */}
       <View
         style={[
           styles.topOverlay,
-          { top: isMobile ? (Platform.OS === 'web' ? 14 : 44) : 18 },
+          { top: isMobile ? 14 : 16 },
         ]}
         pointerEvents="box-none"
       >
-        {/* Left: AI Match micro badge */}
+        {/* Left: Brand Title (Mobile) + AI Match Badge + Illustrative Footage Badge */}
         <View style={styles.topLeftContainer}>
-          <View style={styles.aiMatchBadge}>
-            <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
-            <Text style={[styles.aiMatchText, { color: theme.primary }]}>
-              {item.aiMatch || 96}% MATCH
-            </Text>
-          </View>
+          {isMobile && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 2 }}>
+              <Text style={styles.mobileTopTitle}>Insights</Text>
+              <View style={[styles.liveDot, { backgroundColor: theme.primary }]} />
+            </View>
+          )}
+          {isKyoto && (
+            <View style={[styles.aiMatchBadge, { backgroundColor: 'rgba(0, 0, 0, 0.75)', borderColor: '#F5A623' }]}>
+              <MaterialIcons name="info-outline" size={12} color="#F5A623" style={{ marginRight: 4 }} />
+              <Text style={[styles.aiMatchText, { color: '#F5A623' }]}>
+                Illustrative footage
+              </Text>
+            </View>
+          )}
+          {!isCoventry && !isKyoto && typeof item.aiMatch === 'number' && Boolean(item.aiMatchBasis) && (
+            <View style={styles.aiMatchBadge}>
+              <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
+              <Text style={[styles.aiMatchText, { color: theme.primary }]}>
+                {item.aiMatch}% AI MATCH
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* Right: Sound Toggle + Clear View Toggle */}
+        {/* Right: Sound / Mute Toggle (when video exists) + Upload Button */}
         <View style={styles.topRightContainer}>
-          <TouchableOpacity
-            onPress={toggleMute}
-            style={[
-              styles.soundBtn,
-              !isMuted && { backgroundColor: 'rgba(249, 192, 61, 0.85)', borderColor: 'transparent' },
-            ]}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons
-              name={isMuted ? 'volume-off' : 'volume-up'}
-              size={16}
-              color={isMuted ? 'rgba(255,255,255,0.85)' : '#000000'}
-            />
-          </TouchableOpacity>
-
-          {/* Clear View Toggle */}
-          <TouchableOpacity
-            onPress={() => setClearView(true)}
-            style={styles.soundBtn}
-            activeOpacity={0.7}
-          >
-            <MaterialIcons name="visibility" size={16} color="rgba(255,255,255,0.85)" />
-          </TouchableOpacity>
+          {hasVideo && (
+            <TouchableOpacity
+              onPress={toggleMute}
+              style={[
+                styles.soundBtn,
+                !isMuted && { backgroundColor: theme.primary, borderColor: theme.primary },
+              ]}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons
+                name={isMuted ? 'volume-off' : 'volume-up'}
+                size={18}
+                color={isMuted ? '#ffffff' : '#000000'}
+              />
+            </TouchableOpacity>
+          )}
 
           {isMobile && onOpenUpload && (
             <TouchableOpacity
@@ -1591,16 +1220,15 @@ const VideoItem = ({
               style={[styles.topUploadBtn, { backgroundColor: theme.primary }]}
               activeOpacity={0.8}
             >
-              <MaterialIcons name="add" size={14} color="#000000" />
+              <MaterialIcons name="add" size={15} color="#000000" />
+              <Text style={styles.topUploadBtnText}>Upload</Text>
             </TouchableOpacity>
           )}
         </View>
       </View>
-      )}
 
-      {/* ── Right Social Actions Rail (Clean, transparent icons - positioned snugly at bottom) ── */}
-      {!clearView && (
-      <View style={[styles.rightOverlay, { bottom: isMobile ? 12 : 18 }]} pointerEvents="box-none">
+      {/* ── Right Social Actions Rail ── */}
+      <View style={[styles.rightOverlay, { bottom: isMobile ? 20 : 16 }]} pointerEvents="box-none">
         {/* Creator Avatar with follow badge */}
         <View style={styles.creatorRailItem}>
           <TouchableOpacity
@@ -1608,15 +1236,7 @@ const VideoItem = ({
             activeOpacity={0.8}
             style={styles.creatorAvatarRing}
           >
-            {authorAvatar && (authorAvatar.startsWith('http') || authorAvatar.startsWith('data:')) ? (
-              <Image source={{ uri: authorAvatar }} style={styles.creatorAvatarImg} resizeMode="cover" />
-            ) : (
-              <View style={[styles.creatorAvatarFallback, { backgroundColor: theme.primary }]}>
-                <Text style={{ color: '#000', fontWeight: '800', fontSize: 13 }}>
-                  {(authorName || 'V').charAt(0).toUpperCase()}
-                </Text>
-              </View>
-            )}
+            <Avatar user={item.author || { fullName: authorName, profilePicture: authorAvatar }} size={40} showBorder borderColor="#F5A623" />
           </TouchableOpacity>
 
           {!isFollowing && !isUploadedByMe && (
@@ -1630,19 +1250,20 @@ const VideoItem = ({
           )}
         </View>
 
-        {/* Like Button - clean transparent */}
+        {/* Like Button */}
         <TouchableOpacity
           onPress={handleLike}
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <MaterialIcons
-            name={hasLiked ? 'favorite' : 'favorite-border'}
-            size={28}
-            color={hasLiked ? '#ff2d55' : '#ffffff'}
-            style={styles.actionIconShadow}
-          />
-          <Text style={[styles.actionText, hasLiked && { color: '#ff2d55' }]}>
+          <View style={[styles.actionIconContainer, hasLiked && styles.actionIconContainerLiked]}>
+            <MaterialIcons
+              name={hasLiked ? 'favorite' : 'favorite-border'}
+              size={24}
+              color={hasLiked ? '#ff2d55' : '#ffffff'}
+            />
+          </View>
+          <Text style={[styles.actionText, hasLiked && { color: '#ff2d55', fontWeight: '700' }]}>
             {likesCount}
           </Text>
         </TouchableOpacity>
@@ -1653,7 +1274,9 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <MaterialCommunityIcons name="comment-text-outline" size={26} color="#ffffff" style={styles.actionIconShadow} />
+          <View style={styles.actionIconContainer}>
+            <MaterialCommunityIcons name="comment-text-outline" size={23} color="#ffffff" />
+          </View>
           <Text style={styles.actionText}>{comments.length}</Text>
         </TouchableOpacity>
 
@@ -1663,13 +1286,14 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <MaterialIcons
-            name={isSaved ? 'bookmark' : 'bookmark-border'}
-            size={28}
-            color={isSaved ? theme.primary : '#ffffff'}
-            style={styles.actionIconShadow}
-          />
-          <Text style={[styles.actionText, isSaved && { color: theme.primary }]}>
+          <View style={[styles.actionIconContainer, isSaved && styles.actionIconContainerSaved]}>
+            <MaterialIcons
+              name={isSaved ? 'bookmark' : 'bookmark-border'}
+              size={24}
+              color={isSaved ? theme.primary : '#ffffff'}
+            />
+          </View>
+          <Text style={[styles.actionText, isSaved && { color: theme.primary, fontWeight: '700' }]}>
             {isSaved ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
@@ -1680,7 +1304,10 @@ const VideoItem = ({
           activeOpacity={0.7}
           style={styles.actionBtn}
         >
-          <MaterialCommunityIcons name="share" size={26} color="#ffffff" style={styles.actionIconShadow} />
+          <View style={styles.actionIconContainer}>
+            <MaterialCommunityIcons name="share" size={23} color="#ffffff" />
+          </View>
+          <Text style={styles.actionText}>Share</Text>
         </TouchableOpacity>
 
         {/* Delete button for user's uploaded reels */}
@@ -1691,30 +1318,31 @@ const VideoItem = ({
             activeOpacity={0.7}
             style={styles.actionBtn}
           >
-            {deleting ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <MaterialIcons name="delete-outline" size={24} color="#ef4444" style={styles.actionIconShadow} />
-            )}
+            <View style={[styles.actionIconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
+              {deleting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <MaterialIcons name="delete-outline" size={22} color="#ef4444" />
+              )}
+            </View>
+            <Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
           </TouchableOpacity>
         )}
       </View>
-      )}
 
-      {/* ── Bottom Overlay: Compact Author, Title, Location, AI Micro-Pill ── */}
-      {!clearView ? (
+      {/* ── Bottom Overlay: Author Bar, Title, Location, AI Insight, Music ── */}
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.15)', 'rgba(0,0,0,0.55)']}
+        colors={['transparent', 'rgba(0,0,0,0.45)', 'rgba(0,0,0,0.88)']}
         style={[
           styles.bottomOverlay,
           {
-            paddingBottom: isMobile ? 12 : 16,
-            paddingRight: isMobile ? 54 : 56,
+            paddingBottom: isMobile ? 18 : 14,
+            paddingRight: isMobile ? 74 : 70,
           },
         ]}
         pointerEvents="box-none"
       >
-        {/* Author row - compact */}
+        {/* Author row */}
         <View style={styles.authorRow}>
           <TouchableOpacity
             onPress={() => handleGoToProfile(authorId)}
@@ -1722,110 +1350,91 @@ const VideoItem = ({
             activeOpacity={0.8}
           >
             <Text style={styles.authorNameText} numberOfLines={1}>{authorName}</Text>
-            <MaterialIcons name="verified" size={13} color="#38bdf8" style={{ marginLeft: 3 }} />
+            <MaterialIcons name="verified" size={14} color="#38bdf8" style={{ marginLeft: 3 }} />
+            <Text style={styles.authorHandleText} numberOfLines={1}>{authorHandle}</Text>
           </TouchableOpacity>
 
-          {!isUploadedByMe && (
-            <TouchableOpacity
-              onPress={handleToggleFollow}
-              style={[
-                styles.authorFollowBtn,
-                isFollowing
-                  ? { backgroundColor: 'rgba(255,255,255,0.12)', borderColor: 'rgba(255,255,255,0.25)' }
-                  : { backgroundColor: theme.primary, borderColor: theme.primary },
-              ]}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.authorFollowBtnText,
-                  { color: isFollowing ? '#ffffff' : '#000000' },
-                ]}
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </Text>
-            </TouchableOpacity>
-          )}
+          <FollowButton
+            targetUserId={authorId}
+            targetUsername={authorHandle?.replace('@', '')}
+            initialIsFollowing={isFollowing}
+            size="sm"
+            onFollowChange={(newIsF) => setIsFollowing(newIsF)}
+          />
         </View>
 
-        {/* Property Title - reduced size */}
-        <Text style={styles.title} numberOfLines={1}>
+        {/* Property Title */}
+        <Text style={styles.title} numberOfLines={2}>
           {item.title}
         </Text>
 
-        {/* Location - inline compact */}
-        {Boolean(item.location) && (
-          <View style={styles.locationContainer}>
-            <MaterialIcons name="location-on" size={13} color={theme.primary} />
-            <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+        {/* Location & Price Row */}
+        {(Boolean(item.location) || (item.price !== undefined && item.price !== null && String(item.price).trim() !== '' && String(item.price).trim() !== 'undefined' && String(item.price).trim() !== 'null') || isCoventry) && (
+          <View style={[styles.locationContainer, { flexWrap: 'wrap', gap: 6 }]}>
+            {Boolean(item.location) && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1 }}>
+                <MaterialIcons name="location-on" size={14} color={theme.primary} />
+                <Text style={styles.locationText} numberOfLines={1}>{item.location}</Text>
+              </View>
+            )}
+            {((item.price !== undefined && item.price !== null && String(item.price).trim() !== '' && String(item.price).trim() !== 'undefined' && String(item.price).trim() !== 'null') || isCoventry) && (
+              <View style={{ backgroundColor: 'rgba(249, 192, 61, 0.18)', borderColor: 'rgba(249, 192, 61, 0.5)', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
+                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '800' }}>
+                  {item.price !== undefined && item.price !== null && String(item.price).trim() !== '' && String(item.price).trim() !== 'undefined' && String(item.price).trim() !== 'null' ? String(item.price) : '£12,242,788'}
+                </Text>
+              </View>
+            )}
           </View>
         )}
 
-        {/* AI Insight - Collapsed micro-pill, expands on tap */}
+        {/* Expandable Property Overview (Owner Supplied) */}
         {Boolean(item.insight) && (
-          <TouchableOpacity
-            onPress={() => setExpandedInsight(!expandedInsight)}
-            activeOpacity={0.8}
-            style={styles.insightContainer}
-          >
+          <View style={styles.insightContainer}>
             <View style={styles.insightHeader}>
-              <MaterialCommunityIcons name="auto-fix" size={12} color={theme.primary} />
-              <Text style={[styles.insightTitle, { color: theme.primary }]}>AI Insight</Text>
-              <MaterialIcons
-                name={expandedInsight ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-                size={16}
-                color={theme.primary}
-                style={{ marginLeft: 2 }}
-              />
+              <MaterialIcons name="info-outline" size={13} color={theme.primary} />
+              <Text style={[styles.insightTitle, { color: theme.primary }]}>PROPERTY OVERVIEW · OWNER SUPPLIED</Text>
             </View>
-            {expandedInsight && (
-              <Text style={styles.insightText} numberOfLines={3}>
+            {expandedInsight ? (
+              <ScrollView style={{ maxHeight: 84 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                <Text style={styles.insightText}>{item.insight}</Text>
+              </ScrollView>
+            ) : (
+              <Text style={styles.insightText} numberOfLines={2}>
                 {item.insight}
               </Text>
             )}
-          </TouchableOpacity>
+            {item.insight.length > 70 && (
+              <TouchableOpacity
+                onPress={() => setExpandedInsight(!expandedInsight)}
+                style={{ marginTop: 3 }}
+              >
+                <Text style={{ color: theme.primary, fontSize: 11.5, fontWeight: '700' }}>
+                  {expandedInsight ? 'Show less' : '...more'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
-        {/* Music track - minimal pill */}
-        <View style={styles.musicPill}>
-          <MaterialCommunityIcons
-            name="music-note"
-            size={12}
-            color="rgba(255,255,255,0.7)"
-            style={{ marginRight: 4 }}
-          />
-          <Text style={styles.musicText} numberOfLines={1}>
-            {item.music || 'Boolok AI · Original Audio'}
-          </Text>
-        </View>
+        {/* Only show Mute / Sound status pill if video media exists */}
+        {hasVideo && (
+          <TouchableOpacity
+            onPress={isKyoto ? undefined : toggleMute}
+            activeOpacity={isKyoto ? 1 : 0.8}
+            style={[styles.musicPill, (isMuted || isKyoto) && { borderColor: 'rgba(249, 192, 61, 0.6)' }]}
+          >
+            <MaterialCommunityIcons
+              name={isKyoto ? 'volume-mute' : (isMuted ? 'volume-off' : 'volume-high')}
+              size={13}
+              color={(isMuted || isKyoto) ? theme.primary : '#ffffff'}
+              style={{ marginRight: 5 }}
+            />
+            <Text style={[styles.musicText, (isMuted || isKyoto) && { color: theme.primary, fontWeight: '700' }]} numberOfLines={1}>
+              {isKyoto ? '🔇 Silent video' : (isMuted ? '🔇 Muted · Tap for sound' : '🔊 Original Property Audio')}
+            </Text>
+          </TouchableOpacity>
+        )}
       </LinearGradient>
-      ) : (
-        /* Clear View Mode: just a tiny "exit clear view" button at the bottom */
-        <TouchableOpacity
-          onPress={() => setClearView(false)}
-          activeOpacity={0.8}
-          style={{
-            position: 'absolute',
-            bottom: isMobile ? 18 : 20,
-            alignSelf: 'center',
-            backgroundColor: 'rgba(0,0,0,0.45)',
-            paddingHorizontal: 14,
-            paddingVertical: 6,
-            borderRadius: 16,
-            borderWidth: 1,
-            borderColor: 'rgba(255,255,255,0.15)',
-            zIndex: 25,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 5,
-          }}
-        >
-          <MaterialIcons name="visibility-off" size={14} color="rgba(255,255,255,0.7)" />
-          <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' }}>
-            Tap to show controls
-          </Text>
-        </TouchableOpacity>
-      )}
 
       {/* ── Custom Delete Confirmation Modal ── */}
       <Modal
@@ -1869,172 +1478,72 @@ const VideoItem = ({
         </Pressable>
       </Modal>
 
-      {/* ── Instagram-Style Floating Share Toast ── */}
-      {Boolean(shareToast) && (
-        <View style={styles.shareToastBadge} pointerEvents="none">
-          <MaterialIcons name="check-circle" size={16} color="#10b981" />
-          <Text style={styles.shareToastText}>{shareToast}</Text>
-        </View>
-      )}
-
-      {/* ── Instagram-Style Smooth Share Bottom Sheet ── */}
+      {/* ── Share Modal ── */}
       <Modal
         visible={showShareModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowShareModal(false)}
       >
         <Pressable
           onPress={() => setShowShareModal(false)}
-          style={styles.shareBackdrop}
+          style={styles.modalBackdrop}
         >
           <Pressable
             onPress={(e) => e.stopPropagation()}
-            style={[
-              styles.shareSheet,
-              {
-                maxHeight: isMobile ? '82%' : '72%',
-                height: isMobile ? '78%' : 560,
-              },
-            ]}
+            style={styles.shareCard}
           >
-            {/* Sheet Handle */}
-            <View style={styles.sheetHandle} />
-
-            {/* Header */}
-            <View style={styles.shareSheetHeader}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <MaterialCommunityIcons name="share-variant" size={20} color={theme.primary} />
+            <View style={styles.shareCardHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialIcons name="send" size={20} color={theme.primary} />
                 <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '800' }}>
-                  Share Reel
+                  Share Property Reel
                 </Text>
               </View>
               <TouchableOpacity onPress={() => setShowShareModal(false)} style={{ padding: 4 }}>
-                <MaterialIcons name="close" size={22} color="#94a3b8" />
+                <MaterialIcons name="close" size={22} color="#8b9bb4" />
               </TouchableOpacity>
             </View>
 
-            {/* Search Input (Instagram style) */}
-            <View style={styles.shareSearchBox}>
-              <MaterialIcons name="search" size={19} color="#94a3b8" style={{ marginRight: 6 }} />
-              <TextInput
-                value={shareSearchQuery}
-                onChangeText={setShareSearchQuery}
-                placeholder="Search advisors, brokers, or friends..."
-                placeholderTextColor="#64748b"
-                style={styles.shareSearchInput}
-              />
-              {shareSearchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setShareSearchQuery('')}>
-                  <MaterialIcons name="cancel" size={16} color="#94a3b8" />
-                </TouchableOpacity>
-              )}
-            </View>
+            <Text style={{ color: '#8b9bb4', fontSize: 12.5, marginBottom: 14 }}>
+              Select a certified broker or advisor to send this video insight:
+            </Text>
 
-            {/* Real-time Contacts List */}
-            {isLoadingContacts && realContacts.length === 0 ? (
-              <View style={{ paddingVertical: 36, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator size="small" color={theme.primary} />
-                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 10 }}>Loading community contacts...</Text>
-              </View>
-            ) : realContacts.length === 0 ? (
-              <View style={{ paddingVertical: 28, alignItems: 'center' }}>
-                <MaterialCommunityIcons name="account-search-outline" size={32} color="#64748b" />
-                <Text style={{ color: '#94a3b8', fontSize: 12.5, marginTop: 8 }}>
-                  No members found. Use quick actions below to share!
-                </Text>
-              </View>
-            ) : (
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-                {realContacts.filter((c) => {
-                  if (!shareSearchQuery.trim()) return true;
-                  const q = shareSearchQuery.toLowerCase();
-                  return (c.name && c.name.toLowerCase().includes(q)) || (c.role && c.role.toLowerCase().includes(q));
-                }).map((contact) => {
-                  const contactId = String(contact._id || contact.id);
-                  const isSent = sharedContacts[contactId];
-                  const isSending = sendingContacts[contactId];
-
-                  return (
-                    <View key={contactId} style={styles.shareContactRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
-                        {contact.avatar && (contact.avatar.startsWith('http') || contact.avatar.startsWith('data:')) ? (
-                          <Image source={{ uri: contact.avatar }} style={styles.shareAvatar} resizeMode="cover" />
-                        ) : (
-                          <View style={[styles.shareAvatarFallback, { backgroundColor: theme.primary }]}>
-                            <Text style={{ color: '#000000', fontWeight: '800', fontSize: 14 }}>
-                              {(contact.name || 'U').charAt(0).toUpperCase()}
-                            </Text>
-                          </View>
-                        )}
-                        <View style={{ flex: 1 }}>
-                          <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
-                            {contact.name}
-                          </Text>
-                          <Text style={{ color: '#8b9bb4', fontSize: 11.5 }} numberOfLines={1}>
-                            {contact.role}
-                          </Text>
-                        </View>
+            <ScrollView style={{ maxHeight: 280 }} showsVerticalScrollIndicator={false}>
+              {SHARE_CONTACTS.map((contact) => {
+                const isSent = sharedContacts[contact.id];
+                return (
+                  <View key={contact.id} style={styles.shareContactRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1 }}>
+                      <Avatar
+                        user={{ fullName: contact.name, profilePicture: contact.avatar || null }}
+                        size={38}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: '#ffffff', fontSize: 14, fontWeight: '700' }} numberOfLines={1}>
+                          {contact.name}
+                        </Text>
+                        <Text style={{ color: '#8b9bb4', fontSize: 11.5 }} numberOfLines={1}>
+                          {contact.role}
+                        </Text>
                       </View>
-
-                      <TouchableOpacity
-                        onPress={() => handleShareToContact(contact)}
-                        disabled={isSending || isSent}
-                        activeOpacity={0.8}
-                        style={[
-                          styles.shareSendBtn,
-                          isSent && { backgroundColor: '#10b981' },
-                          isSending && { opacity: 0.7 },
-                        ]}
-                      >
-                        {isSending ? (
-                          <ActivityIndicator size="small" color="#000000" />
-                        ) : (
-                          <Text style={[styles.shareSendBtnText, isSent && { color: '#ffffff' }]}>
-                            {isSent ? '✓ Sent' : 'Send'}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
                     </View>
-                  );
-                })}
-              </ScrollView>
-            )}
 
-            {/* Instagram Quick Actions Bar (Bottom Row) */}
-            <View style={styles.shareQuickActionsRow}>
-              {/* 1. Copy Link */}
-              <TouchableOpacity onPress={handleCopyLink} style={styles.quickActionItem} activeOpacity={0.7}>
-                <View style={styles.quickActionIconCircle}>
-                  <MaterialIcons name="link" size={22} color="#ffffff" />
-                </View>
-                <Text style={styles.quickActionLabel}>Copy Link</Text>
-              </TouchableOpacity>
-
-              {/* 2. WhatsApp Direct */}
-              <TouchableOpacity onPress={handleWhatsAppShare} style={styles.quickActionItem} activeOpacity={0.7}>
-                <View style={[styles.quickActionIconCircle, { backgroundColor: '#25D366' }]}>
-                  <MaterialCommunityIcons name="whatsapp" size={24} color="#ffffff" />
-                </View>
-                <Text style={styles.quickActionLabel}>WhatsApp</Text>
-              </TouchableOpacity>
-
-              {/* 3. System Share (Android / iOS / Web Sheet) */}
-              <TouchableOpacity onPress={handleSystemShare} style={styles.quickActionItem} activeOpacity={0.7}>
-                <View style={[styles.quickActionIconCircle, { backgroundColor: 'rgba(249, 192, 61, 0.2)', borderColor: theme.primary, borderWidth: 1 }]}>
-                  <MaterialIcons name="share" size={22} color={theme.primary} />
-                </View>
-                <Text style={styles.quickActionLabel}>Share to...</Text>
-              </TouchableOpacity>
-
-              {/* 4. Direct Messages */}
-              <TouchableOpacity onPress={handleDirectChatShare} style={styles.quickActionItem} activeOpacity={0.7}>
-                <View style={styles.quickActionIconCircle}>
-                  <MaterialCommunityIcons name="chat-processing-outline" size={22} color="#ffffff" />
-                </View>
-                <Text style={styles.quickActionLabel}>Messages</Text>
-              </TouchableOpacity>
-            </View>
+                    <TouchableOpacity
+                      onPress={() => handleShareToContact(contact.id)}
+                      style={[
+                        styles.shareSendBtn,
+                        { backgroundColor: isSent ? '#10b981' : theme.primary },
+                      ]}
+                    >
+                      <Text style={{ color: '#000000', fontWeight: '700', fontSize: 12 }}>
+                        {isSent ? '✓ Sent' : 'Send'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -2102,15 +1611,7 @@ const VideoItem = ({
                         onPress={() => handleGoToProfile(targetId)}
                         style={styles.commentAvatarBtn}
                       >
-                        {photoUri && (photoUri.startsWith('http') || photoUri.startsWith('data:')) ? (
-                          <Image source={{ uri: photoUri }} style={styles.commentAvatarImg} resizeMode="cover" />
-                        ) : (
-                          <View style={[styles.commentAvatarFallback, { backgroundColor: theme.primary }]}>
-                            <Text style={{ color: '#000000', fontWeight: '800', fontSize: 13 }}>
-                              {(cName || 'U').charAt(0).toUpperCase()}
-                            </Text>
-                          </View>
-                        )}
+                        <Avatar user={cUser || { fullName: cName, profilePicture: photoUri }} size={36} />
                       </TouchableOpacity>
 
                       <View style={styles.commentContentBox}>
@@ -2134,15 +1635,7 @@ const VideoItem = ({
 
             {/* Comment Input Row with Real-Time Enter & Submit */}
             <View style={styles.commentInputContainer}>
-              {user?.profilePicture && resolveImageUrl(user.profilePicture) ? (
-                <Image source={{ uri: resolveImageUrl(user.profilePicture)! }} style={styles.myCommentAvatar} />
-              ) : (
-                <View style={[styles.myCommentAvatarFallback, { backgroundColor: theme.primary }]}>
-                  <Text style={{ color: '#000', fontWeight: '700', fontSize: 12 }}>
-                    {(user?.fullName || 'Y').charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
+              <Avatar user={user} size={34} style={{ marginRight: 8 }} />
 
               <TextInput
                 value={commentInput}
@@ -2190,6 +1683,7 @@ const VideoItem = ({
 function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any) {
   const [video, setVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [selectedPresetUrl, setSelectedPresetUrl] = useState<string>(PROPERTY_COVER_PRESETS[0].url);
   const [authorName, setAuthorName] = useState<string>(user?.fullName || '');
   const [title, setTitle] = useState('');
   const [location, setLocation] = useState('');
@@ -2203,16 +1697,23 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
     if (uploading) {
       interval = setInterval(() => {
         setUploadProgress((prev) => {
-          if (prev >= 90 && prev < 97) {
-            setUploadStageText('Processing on server & optimizing streams…');
-            return prev + 1;
+          if (prev < 40) {
+            setUploadStageText('Uploading high-definition property video...');
+            return prev + 6;
+          }
+          if (prev < 75) {
+            setUploadStageText('Optimizing bitrate & cover streams...');
+            return prev + 4;
+          }
+          if (prev < 92) {
+            setUploadStageText('Generating AI Property Intelligence match...');
+            return prev + 2;
           }
           return prev;
         });
-      }, 700);
+      }, 300);
     } else {
       setUploadProgress(0);
-      setUploadStageText('Preparing video & property media...');
     }
     return () => clearInterval(interval);
   }, [uploading]);
@@ -2226,6 +1727,7 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
   const reset = () => {
     setVideo(null);
     setCoverAsset(null);
+    setSelectedPresetUrl(PROPERTY_COVER_PRESETS[0].url);
     setTitle('');
     setLocation('');
     setCaption('');
@@ -2265,7 +1767,7 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
     }
   };
 
-  const currentCoverUri = coverAsset ? coverAsset.uri : null;
+  const currentCoverUri = coverAsset ? coverAsset.uri : selectedPresetUrl;
 
   const handleUpload = async () => {
     if (!video) {
@@ -2278,7 +1780,7 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
     }
 
     setUploading(true);
-    setUploadProgress(5);
+    setUploadProgress(15);
     setUploadStageText('Preparing video & property media...');
     try {
       const token = Platform.OS === 'web'
@@ -2333,6 +1835,9 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
             type: coverAsset.mimeType || 'image/jpeg',
           });
         }
+      } else if (selectedPresetUrl) {
+        formData.append('thumbnail', selectedPresetUrl);
+        formData.append('poster', selectedPresetUrl);
       }
 
       const effectiveAuthor = authorName.trim() || user?.fullName || 'Boolok Creator';
@@ -2352,15 +1857,8 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
         onUploadProgress: (evt: any) => {
           if (evt?.total) {
             const pct = Math.round((evt.loaded / evt.total) * 100);
-            // Real network progress maps monotonically from 10% to 90%
-            const current = Math.min(90, 10 + Math.round(pct * 0.8));
-            setUploadProgress((prev) => Math.max(prev, current));
-            if (pct < 100) {
-              setUploadStageText(`Uploading video… ${pct}%`);
-            } else {
-              setUploadProgress((prev) => Math.max(prev, 90));
-              setUploadStageText('Processing on server & optimizing streams…');
-            }
+            setUploadProgress(Math.min(95, 15 + Math.round(pct * 0.8)));
+            setUploadStageText(pct < 100 ? `Uploading video… ${pct}%` : 'Processing on server…');
           }
         },
       });
@@ -2467,7 +1965,7 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
             <View style={{ marginTop: 14 }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <Text style={[uploadStyles.label, { color: theme.onSurfaceVariant, marginBottom: 0 }]}>
-                  Reel Cover Picture (Optional)
+                  Reel Cover Picture *
                 </Text>
                 <TouchableOpacity onPress={pickCoverImage} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                   <MaterialIcons name="photo-library" size={14} color={theme.primary} />
@@ -2477,83 +1975,72 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
                 </TouchableOpacity>
               </View>
 
-              {/* Cover Preview Card or Empty Optional Placeholder */}
-              {currentCoverUri ? (
-                <View style={[uploadStyles.coverPreviewCard, { borderColor: theme.outlineVariant }]}>
-                  <Image
-                    source={{ uri: currentCoverUri }}
-                    style={StyleSheet.absoluteFill}
-                    resizeMode="cover"
-                  />
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.8)']}
-                    style={StyleSheet.absoluteFill}
-                  />
-                  <View style={uploadStyles.coverPreviewBadge}>
-                    <MaterialIcons name="person" size={12} color="#000" />
-                    <Text style={{ color: '#000', fontSize: 10, fontWeight: '800' }}>
-                      {authorName.trim() || user?.fullName || 'CREATOR'}
-                    </Text>
-                  </View>
-
-                  {/* Remove Selected Cover Button */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCoverAsset(null);
-                    }}
-                    style={{
-                      position: 'absolute',
-                      top: 8,
-                      right: 8,
-                      backgroundColor: 'rgba(0,0,0,0.75)',
-                      borderRadius: 14,
-                      padding: 4,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 2,
-                      paddingHorizontal: 8,
-                      borderWidth: 1,
-                      borderColor: 'rgba(255,255,255,0.25)',
-                    }}
-                  >
-                    <MaterialIcons name="close" size={14} color="#ffffff" />
-                    <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '700' }}>Remove</Text>
-                  </TouchableOpacity>
-
-                  <View style={uploadStyles.coverPreviewBottom}>
-                    <Text style={uploadStyles.coverPreviewTitle} numberOfLines={1}>
-                      {title.trim() || 'Property Reel Preview'}
-                    </Text>
-                    <Text style={uploadStyles.coverPreviewSubtitle} numberOfLines={1}>
-                      {location.trim() || 'Location'} · {authorName.trim() || user?.fullName || 'Boolok Member'}
-                    </Text>
-                  </View>
+              {/* Cover Preview Card */}
+              <View style={[uploadStyles.coverPreviewCard, { borderColor: theme.outlineVariant }]}>
+                <Image
+                  source={{ uri: currentCoverUri }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                />
+                <LinearGradient
+                  colors={['rgba(0,0,0,0.25)', 'rgba(0,0,0,0.8)']}
+                  style={StyleSheet.absoluteFill}
+                />
+                <View style={uploadStyles.coverPreviewBadge}>
+                  <MaterialIcons name="person" size={12} color="#000" />
+                  <Text style={{ color: '#000', fontSize: 10, fontWeight: '800' }}>
+                    {authorName.trim() || user?.fullName || 'CREATOR'}
+                  </Text>
                 </View>
-              ) : (
-                <TouchableOpacity
-                  onPress={pickCoverImage}
-                  activeOpacity={0.8}
-                  style={{
-                    height: 90,
-                    borderRadius: 12,
-                    borderWidth: 1.5,
-                    borderStyle: 'dashed',
-                    borderColor: theme.outlineVariant,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
-                  }}
-                >
-                  <MaterialIcons name="add-photo-alternate" size={24} color={theme.primary} />
-                  <Text style={{ color: theme.onSurface, fontSize: 12, fontWeight: '600', marginTop: 3 }}>
-                    Upload Custom Cover Image (Optional)
-                  </Text>
-                  <Text style={{ color: theme.onSurfaceVariant, fontSize: 10.5, marginTop: 1 }}>
-                    If none chosen, video's first frame will be used
-                  </Text>
-                </TouchableOpacity>
-              )}
 
+                <View style={uploadStyles.coverPreviewBottom}>
+                  <Text style={uploadStyles.coverPreviewTitle} numberOfLines={1}>
+                    {title.trim() || 'Property Reel Preview'}
+                  </Text>
+                  <Text style={uploadStyles.coverPreviewSubtitle} numberOfLines={1}>
+                    {location.trim() || 'Location'} · {authorName.trim() || user?.fullName || 'Boolok Member'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Architectural Presets */}
+              <Text style={{ color: theme.onSurfaceVariant, fontSize: 11, marginTop: 8, marginBottom: 6 }}>
+                Or tap a distinct architectural cover:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {PROPERTY_COVER_PRESETS.map((preset) => {
+                  const isSelected = !coverAsset && selectedPresetUrl === preset.url;
+                  return (
+                    <TouchableOpacity
+                      key={preset.id}
+                      onPress={() => {
+                        setCoverAsset(null);
+                        setSelectedPresetUrl(preset.url);
+                      }}
+                      activeOpacity={0.8}
+                      style={[
+                        uploadStyles.presetChip,
+                        {
+                          borderColor: isSelected ? theme.primary : theme.outlineVariant,
+                          backgroundColor: isSelected ? 'rgba(249, 192, 61, 0.15)' : 'transparent',
+                        },
+                      ]}
+                    >
+                      <Image source={{ uri: preset.url }} style={uploadStyles.presetMiniImg} />
+                      <Text
+                        style={{
+                          color: isSelected ? theme.primary : theme.onSurface,
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? '700' : '500',
+                          marginLeft: 6,
+                        }}
+                      >
+                        {preset.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
 
             {/* Creator / Broker Name Input */}
@@ -2734,15 +2221,12 @@ function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any)
                 }}
               >
                 <View
-                  style={[
-                    {
-                      height: '100%',
-                      width: `${uploadProgress}%`,
-                      backgroundColor: theme.primary,
-                      borderRadius: 3,
-                    },
-                    Platform.OS === 'web' ? ({ transition: 'width 0.3s ease-out' } as any) : null,
-                  ]}
+                  style={{
+                    height: '100%',
+                    width: `${uploadProgress}%`,
+                    backgroundColor: theme.primary,
+                    borderRadius: 3,
+                  }}
                 />
               </View>
 
@@ -2770,18 +2254,20 @@ export default function InsightsScreen() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
-  const { reelId } = useLocalSearchParams<{ reelId?: string }>();
   const isMobile = width < 768; // Standard responsive breakpoint
-  const initialMobileHeight = Math.max(300, height - ((isMobile ? 64 : 80) + insets.top));
+  const initialMobileHeight = Math.max(320, height - (120 + insets.top + insets.bottom));
   const [listHeight, setListHeight] = useState(initialMobileHeight);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
 
   // Initialize strictly with real uploaded reels
   const [videos, setVideos] = useState<any[]>(() => {
-    return getLocalUploadedReels();
+    return getLocalUploadedReels().filter((r: any) => isEligibleReelRecord(r));
   });
 
   const [showUpload, setShowUpload] = useState(false);
+  const [reelsLoading, setReelsLoading] = useState(true);
+  const [reelsError, setReelsError] = useState<string | null>(null);
+  const reelsReqRef = useRef(0);
   const flatListRef = useRef<FlatList>(null);
 
   // Pause everything (and silence audio) when leaving the tab, backgrounding the app,
@@ -2801,10 +2287,10 @@ export default function InsightsScreen() {
   const canPlay = screenFocused && appActive && !showUpload;
 
   // Layout sizing
-  const cardWidth = isMobile ? width : 420;
   const cardHeight = isMobile
     ? (listHeight > 200 ? listHeight : initialMobileHeight)
-    : Math.min(height - 120, 750);
+    : Math.max(420, Math.min(height - 170, 620));
+  const cardWidth = isMobile ? width : Math.min(370, Math.round(cardHeight * 0.58));
 
   const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
     if (viewableItems && viewableItems.length > 0 && typeof viewableItems[0].index === 'number') {
@@ -2822,63 +2308,73 @@ export default function InsightsScreen() {
     fetchReels();
   }, []);
 
-  // Jump to specific reel if shared via chat or URL link
-  useEffect(() => {
-    if (reelId && videos.length > 0) {
-      const targetIdx = videos.findIndex((v) => String(v._id || v.id) === String(reelId));
-      if (targetIdx !== -1) {
-        setActiveVideoIndex(targetIdx);
-        setTimeout(() => {
-          try {
-            flatListRef.current?.scrollToIndex({ index: targetIdx, animated: true });
-          } catch (_) {
-            const itemH = cardHeight + 36;
-            flatListRef.current?.scrollToOffset({ offset: targetIdx * itemH, animated: true });
-          }
-        }, 220);
-      }
-    }
-  }, [reelId, videos.length, cardHeight]);
-
   const fetchReels = async () => {
+    const reqId = ++reelsReqRef.current;
+    setReelsLoading(true);
+    setReelsError(null);
     try {
       const token = Platform.OS === 'web'
         ? localStorage.getItem('userToken')
         : await SecureStore.getItemAsync('userToken');
 
-      const response = await axios.get(`${API_BASE_URL}/api/reels`, {
+      const response = await getWithColdStartRetry(`${API_BASE_URL}/api/reels?limit=100`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
+      // A newer fetch started while this one was pending: discard this stale result.
+      if (reqId !== reelsReqRef.current) return;
+
       const localReels = getLocalUploadedReels();
 
-      if (response.data && response.data.length > 0) {
-        const dbReels = response.data.map((r: any) => ({
-          _id: r._id,
-          title: r.title || r.caption || 'Untitled',
-          location: r.location || '',
-          authorName: r.authorName || r.author?.fullName || '',
-          caption: r.caption || '',
-          aiMatch: r.aiMatch ?? 95,
-          insight: r.insight || r.caption || '',
-          likes: r.likesCount ?? (Array.isArray(r.likes) ? r.likes.length : 0),
-          likesCount: r.likesCount ?? (Array.isArray(r.likes) ? r.likes.length : 0),
-          isLiked: Boolean(r.isLiked),
-          comments: Array.isArray(r.comments) ? r.comments : [],
-          commentsCount: Array.isArray(r.comments) ? r.comments.length : 0,
-          author: {
-            _id: r.author?._id || null,
-            fullName: r.authorName || r.author?.fullName || 'Boolok Member',
-            username: r.author?.username || 'member',
-            profilePicture: r.author?.profilePicture || null,
-            isVerified: true,
-          },
-          poster: r.poster || r.thumbnail || resolveCoverUrl(r),
-          thumbnail: r.thumbnail || r.poster || resolveCoverUrl(r),
-          videoUrl: r.videoUrl,
-          music: 'Boolok AI · Market Verification Audio',
-          createdAt: r.createdAt,
-        }));
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        const seenReelIds = new Set<string>();
+        const eligibleRawReels = response.data.filter((r: any) => {
+          if (!isEligibleReelRecord(r)) return false;
+          const rid = String(r._id || r.id || '').trim();
+          if (!rid || seenReelIds.has(rid)) return false;
+          seenReelIds.add(rid);
+          return true;
+        });
+
+        const dbReels = eligibleRawReels.map((r: any) => {
+          const cleanPrice =
+            r.price !== undefined &&
+            r.price !== null &&
+            String(r.price).trim() !== '' &&
+            String(r.price).trim().toLowerCase() !== 'undefined' &&
+            String(r.price).trim().toLowerCase() !== 'null'
+              ? String(r.price).trim()
+              : (r.title || '').toLowerCase().includes('coventry')
+              ? '£12,242,788'
+              : '';
+          return {
+            _id: r._id,
+            title: r.title || r.caption || 'Untitled',
+            location: r.location || '',
+            authorName: r.authorName || r.author?.fullName || '',
+            caption: r.caption || '',
+            price: cleanPrice,
+            aiMatch: typeof r.aiMatch === 'number' ? r.aiMatch : null,
+            insight: (r.insight || r.caption || '').replace(/(?:\$16)?,500,000\./g, '£12,242,788.'),
+            likes: r.likesCount ?? (Array.isArray(r.likes) ? r.likes.length : 0),
+            likesCount: r.likesCount ?? (Array.isArray(r.likes) ? r.likes.length : 0),
+            isLiked: Boolean(r.isLiked),
+            comments: Array.isArray(r.comments) ? r.comments : [],
+            commentsCount: Array.isArray(r.comments) ? r.comments.length : 0,
+            author: {
+              _id: r.author?._id || r.author?.id || null,
+              fullName: r.authorName || r.author?.fullName || 'Boolok Member',
+              username: r.author?.username || 'member',
+              profilePicture: r.author?.profilePicture || null,
+              isVerified: true,
+            },
+            poster: r.poster || r.thumbnail || resolveCoverUrl(r),
+            thumbnail: r.thumbnail || r.poster || resolveCoverUrl(r),
+            videoUrl: r.videoUrl,
+            music: 'Boolok AI · Market Verification Audio',
+            createdAt: r.createdAt,
+          };
+        });
 
         // Server is the source of truth. Old behaviour merged stale localStorage copies on
         // top, which resurrected deleted reels and kept dead video URLs / old like counts.
@@ -2926,8 +2422,18 @@ export default function InsightsScreen() {
           }
         } catch (_) {}
       }
-    } catch (err) {
-      console.warn('Could not load reels from server, using demo/local data.');
+    } catch (err: any) {
+      if (reqId !== reelsReqRef.current) return;
+      // A failed request is NOT "no reels": keep loaded reels and show an error + retry.
+      console.warn('Could not load reels from server.', err?.message);
+      const status = err?.response?.status;
+      setReelsError(
+        status
+          ? `The server responded with an error (HTTP ${status}).`
+          : 'Could not reach the server. Please check your connection.'
+      );
+    } finally {
+      if (reqId === reelsReqRef.current) setReelsLoading(false);
     }
   };
 
@@ -2940,8 +2446,9 @@ export default function InsightsScreen() {
       location: newReel.location || 'Verified Property',
       authorName: authorDisplayName,
       caption: newReel.caption || '',
-      aiMatch: newReel.aiMatch ?? 96,
-      insight: newReel.insight || newReel.caption || 'Verified high-yield architectural listing.',
+      price: newReel.price !== undefined && newReel.price !== null ? String(newReel.price).trim() : '',
+      aiMatch: typeof newReel.aiMatch === 'number' ? newReel.aiMatch : null,
+      insight: newReel.insight || newReel.caption || '',
       likes: newReel.likesCount ?? 0,
       likesCount: newReel.likesCount ?? 0,
       isLiked: false,
@@ -3011,7 +2518,7 @@ export default function InsightsScreen() {
       try {
         flatListRef.current?.scrollToIndex({ index: nextIdx, animated: true });
       } catch (_) {
-        const itemH = cardHeight + 36;
+        const itemH = cardHeight + 20;
         flatListRef.current?.scrollToOffset({ offset: nextIdx * itemH, animated: true });
       }
     }
@@ -3024,7 +2531,7 @@ export default function InsightsScreen() {
       try {
         flatListRef.current?.scrollToIndex({ index: prevIdx, animated: true });
       } catch (_) {
-        const itemH = cardHeight + 36;
+        const itemH = cardHeight + 20;
         flatListRef.current?.scrollToOffset({ offset: prevIdx * itemH, animated: true });
       }
     }
@@ -3092,7 +2599,26 @@ export default function InsightsScreen() {
     };
   }, [scrollToNext, scrollToPrev]);
 
-  const renderEmptyReels = () => (
+  const renderEmptyReels = () => reelsLoading ? (
+    <View style={{ flex: 1, minHeight: Math.max(340, cardHeight * 0.7), justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color={theme.primary} />
+    </View>
+  ) : reelsError ? (
+    <View style={{ flex: 1, minHeight: Math.max(340, cardHeight * 0.7), justifyContent: 'center', alignItems: 'center', padding: 28 }}>
+      <Text style={{ color: theme.onSurface, fontSize: 18, fontWeight: '800', marginBottom: 8, textAlign: 'center' }}>
+        Couldn't load property reels
+      </Text>
+      <Text style={{ color: theme.onSurfaceVariant, fontSize: 13, textAlign: 'center', maxWidth: 320, lineHeight: 18, marginBottom: 22 }}>
+        {reelsError}
+      </Text>
+      <TouchableOpacity
+        onPress={fetchReels}
+        style={{ backgroundColor: theme.primary, paddingHorizontal: 22, paddingVertical: 11, borderRadius: 24 }}
+      >
+        <Text style={{ color: '#000000', fontSize: 13, fontWeight: '800' }}>Retry</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
     <View
       style={{
         flex: 1,
@@ -3163,10 +2689,7 @@ export default function InsightsScreen() {
           <FlatList
             ref={flatListRef}
             data={videos}
-            style={[
-              { flex: 1, width: '100%' },
-              Platform.OS === 'web' ? ({ scrollSnapType: 'y mandatory' } as any) : null,
-            ]}
+            style={{ flex: 1, width: '100%' }}
             contentContainerStyle={{ flexGrow: 1 }}
             renderItem={({ item, index }) => (
               <VideoItem
@@ -3188,7 +2711,7 @@ export default function InsightsScreen() {
               });
             }}
             ListEmptyComponent={renderEmptyReels}
-            pagingEnabled={true}
+            pagingEnabled={Platform.OS === 'ios'}
             snapToInterval={cardHeight}
             snapToAlignment="start"
             decelerationRate="fast"
@@ -3270,8 +2793,8 @@ export default function InsightsScreen() {
                 showsVerticalScrollIndicator={false}
                 onViewableItemsChanged={onViewableItemsChanged}
                 viewabilityConfig={viewabilityConfig}
-                contentContainerStyle={{ alignItems: 'center', paddingVertical: 10 }}
-                snapToInterval={cardHeight + 36}
+                contentContainerStyle={{ alignItems: 'center', paddingVertical: 8 }}
+                snapToInterval={cardHeight + 20}
                 snapToAlignment="start"
                 decelerationRate="fast"
                 disableIntervalMomentum={true}
@@ -3281,8 +2804,8 @@ export default function InsightsScreen() {
                 maxToRenderPerBatch={2}
                 initialNumToRender={2}
                 getItemLayout={(_, index) => ({
-                  length: cardHeight + 36,
-                  offset: (cardHeight + 36) * index,
+                  length: cardHeight + 20,
+                  offset: (cardHeight + 20) * index,
                   index,
                 })}
               />
@@ -3327,7 +2850,7 @@ export default function InsightsScreen() {
           </View>
 
           {/* Market Intelligence Sidebar on wide desktop */}
-          <MarketIntelligenceSidebar theme={theme} isDark={isDark} />
+          <MarketIntelligenceSidebar theme={theme} isDark={isDark} videos={videos} />
         </View>
       )}
 
@@ -3397,8 +2920,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 32,
-    paddingTop: 24,
-    paddingBottom: 12,
+    paddingTop: 14,
+    paddingBottom: 8,
     width: '100%',
     maxWidth: 900,
   },
@@ -3476,18 +2999,18 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: 'rgba(0,0,0,0.25)',
     zIndex: 10,
   },
   playIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(249, 192, 61, 0.4)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(249, 192, 61, 0.6)',
   },
   heartBurstContainer: {
     ...StyleSheet.absoluteFillObject,
@@ -3495,11 +3018,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 25,
   },
+  heartBurstGlow: {
+    shadowColor: '#ff2d55',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.9,
+    shadowRadius: 24,
+  },
   // Top Overlay
   topOverlay: {
     position: 'absolute',
-    left: 12,
-    right: 12,
+    left: 14,
+    right: 14,
     zIndex: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -3508,55 +3037,55 @@ const styles = StyleSheet.create({
   topLeftContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   topRightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   aiMatchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 14,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(249, 192, 61, 0.3)',
+    borderColor: 'rgba(249, 192, 61, 0.4)',
   },
   pulseDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    marginRight: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
   },
   aiMatchText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.4,
   },
   soundBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   topUploadBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    elevation: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 18,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.35,
+    shadowRadius: 3,
   },
   topUploadBtnText: {
     color: '#000000',
@@ -3564,27 +3093,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 2,
   },
-  // Right Social Rail - Clean transparent icons (no heavy containers)
+  // Right Social Rail
   rightOverlay: {
     position: 'absolute',
     right: 8,
     zIndex: 30,
     alignItems: 'center',
-    width: 44,
+    width: 58,
   },
   creatorRailItem: {
     position: 'relative',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   creatorAvatarRing: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: '#f9c03d',
-    overflow: 'hidden',
-    backgroundColor: '#0f172a',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   creatorAvatarImg: {
     width: '100%',
@@ -3600,9 +3127,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -5,
     alignSelf: 'center',
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -3610,12 +3137,7 @@ const styles = StyleSheet.create({
   },
   actionBtn: {
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  actionIconShadow: {
-    textShadowColor: 'rgba(0,0,0,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+    marginBottom: 8,
   },
   actionIconContainer: {
     width: 42,
@@ -3639,44 +3161,41 @@ const styles = StyleSheet.create({
   actionText: {
     color: '#ffffff',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
     textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
-    marginTop: 1,
+    textShadowRadius: 3,
   },
-  // Bottom Overlay - Lighter gradient, more video visible
+  // Bottom Overlay
   bottomOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingLeft: 12,
-    paddingRight: 62,
-    paddingTop: 32,
+    paddingLeft: 14,
+    paddingRight: 74,
+    paddingTop: 24,
     zIndex: 15,
   },
   authorRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 4,
-    flexWrap: 'nowrap',
+    gap: 8,
+    marginBottom: 6,
+    flexWrap: 'wrap',
   },
   authorProfileLink: {
     flexDirection: 'row',
     alignItems: 'center',
     flexShrink: 1,
-    marginRight: 2,
+    flexWrap: 'wrap',
+    marginRight: 4,
   },
   authorNameText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '800',
     flexShrink: 0,
-    textShadowColor: 'rgba(0,0,0,0.6)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   authorHandleText: {
     color: '#94a3b8',
@@ -3686,78 +3205,77 @@ const styles = StyleSheet.create({
   },
   authorFollowBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
+    paddingVertical: 4,
+    borderRadius: 14,
     borderWidth: 1,
     flexShrink: 0,
   },
   authorFollowBtnText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 17,
+    lineHeight: 22,
+    fontWeight: '800',
     color: '#ffffff',
-    marginBottom: 3,
-    textShadowColor: 'rgba(0,0,0,0.6)',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0,0,0,0.8)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   locationText: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 12,
-    fontWeight: '500',
-    marginLeft: 3,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 4,
   },
   insightContainer: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     borderWidth: 1,
-    borderColor: 'rgba(249, 192, 61, 0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    marginBottom: 5,
-    alignSelf: 'flex-start',
+    borderColor: 'rgba(249, 192, 61, 0.35)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+    maxWidth: '100%',
   },
   insightHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 3,
   },
   insightTitle: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginLeft: 4,
-    letterSpacing: 0.3,
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 5,
+    letterSpacing: 0.5,
   },
   insightText: {
-    color: 'rgba(255,255,255,0.85)',
-    fontSize: 11.5,
-    lineHeight: 15,
-    marginTop: 4,
+    color: '#e2e8f0',
+    fontSize: 12.5,
+    lineHeight: 17,
   },
   musicPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginTop: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   musicText: {
-    color: 'rgba(255,255,255,0.55)',
-    fontSize: 10,
+    color: '#cbd5e1',
+    fontSize: 11,
     fontWeight: '500',
-    maxWidth: 200,
+    maxWidth: 240,
   },
   // Modal Backdrops
   modalBackdrop: {
@@ -3832,60 +3350,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
-  // Instagram-Style Share Sheet
-  shareBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.72)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-  },
-  shareSheet: {
+  // Share Card
+  shareCard: {
     width: '100%',
-    maxWidth: 540,
-    backgroundColor: '#0c1322',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    maxWidth: 440,
+    backgroundColor: '#0f172a',
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#1e293b',
-    borderBottomWidth: 0,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 22,
-    display: 'flex',
-    flexDirection: 'column',
+    padding: 22,
   },
-  shareSheetHeader: {
+  shareCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  shareSearchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#162033',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 9 : 6,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
-  shareSearchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 13,
+    marginBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e293b',
+    paddingBottom: 12,
   },
   shareContactRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 9,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     backgroundColor: '#162033',
     borderRadius: 14,
-    marginBottom: 7,
+    marginBottom: 8,
   },
   shareAvatar: {
     width: 38,
@@ -3900,68 +3392,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   shareSendBtn: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#f9c03d',
-  },
-  shareSendBtnText: {
-    color: '#000000',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-  shareQuickActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    paddingTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
-    marginTop: 6,
-  },
-  quickActionItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
-  quickActionIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#162033',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  quickActionLabel: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  shareToastBadge: {
-    position: 'absolute',
-    top: 50,
-    alignSelf: 'center',
-    backgroundColor: 'rgba(15, 23, 42, 0.95)',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    zIndex: 100,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-  },
-  shareToastText: {
-    color: '#ffffff',
-    fontSize: 12.5,
-    fontWeight: '700',
   },
   // Comments Sheet
   commentsBackdrop: {

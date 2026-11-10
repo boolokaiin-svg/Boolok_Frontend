@@ -2,7 +2,7 @@
   "expo": {
     "name": "boolokgpt",
     "slug": "boolok-gpt",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "scheme": "boolokgpt",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.boolokgpt",
+      "googleServicesFile": "./google-services.json",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -27,7 +28,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "softwareKeyboardLayoutMode": "resize"
+      "softwareKeyboardLayoutMode": "resize",
+      "versionCode": 6
     },
     "web": {
       "favicon": "./assets/favicon.png",

@@ -22,6 +22,9 @@ import Animated, { FadeIn } from 'react-native-reanimated';
 import axios from 'axios';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { router, useLocalSearchParams } from 'expo-router';
+import Avatar from '../../components/Avatar';
+import AISearchLoadingAnimation from '../../components/AISearchLoadingAnimation';
+import FollowButton from '../../components/FollowButton';
 
 export interface SearchItem {
   id: string;
@@ -45,6 +48,8 @@ export interface SearchItem {
   description?: string;
   amenities?: string[];
   seller?: {
+    id?: string;
+    userId?: string;
     name: string;
     title: string;
     agency: string;
@@ -67,37 +72,59 @@ export interface SearchItem {
 
 const COMMUNITY_PROFILES: any[] = [
   {
-    id: 'shreekutti',
-    _id: 'shreekutti',
+    id: '6ace0e6486b4ca082d9f1431',
+    _id: '6ace0e6486b4ca082d9f1431',
     fullName: 'Shreekutti',
     username: 'shreekutti',
     headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok',
     location: 'Bangalore, Karnataka · Tech Parks',
     profilePicture: null,
-    followerCount: 4,
-    closedDeals: '6',
+    followerCount: 2,
+    closedDeals: '4',
   },
   {
-    id: '6a8af34812ef34aed25ae8d2',
-    _id: '6a8af34812ef34aed25ae8d2',
+    id: '6ace0e6586b4ca082d9f1432',
+    _id: '6ace0e6586b4ca082d9f1432',
     fullName: 'Logeshwaran A',
     username: 'logeshwarana',
     headline: 'Architectural Consultant & Real Estate Lead',
     location: 'Western Australia · Vineyard Estates',
-    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
+    profilePicture: 'https://boolokgpt.vercel.app/avatars/logeshwaran_doomsday.png',
     followerCount: 2,
     closedDeals: '3',
   },
   {
-    id: 'ajmal',
-    _id: 'ajmal',
+    id: '6addf49b5f3925f54f8491f6',
+    _id: '6addf49b5f3925f54f8491f6',
+    fullName: 'Mithulan R',
+    username: 'mithulanr2003',
+    headline: 'Architectural Director & Skyscraper Asset Syndicate',
+    location: 'Marina Coastal District, Singapore',
+    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJNc1F5yHFweMK8qtYRFt_2AJJQqzi4y0P2t7z2a4IHwoWCQYKJ=s400-c',
+    followerCount: 0,
+    closedDeals: '2',
+  },
+  {
+    id: '6aed5f1234567890abcdef01',
+    _id: '6aed5f1234567890abcdef01',
+    fullName: 'G Dinesh',
+    username: 'pgma251',
+    headline: 'Real Estate Professional & Boolok Member',
+    location: 'Chennai, Tamil Nadu · Prime Assets',
+    profilePicture: 'data:image/png;base64,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',
+    followerCount: 0,
+    closedDeals: '0',
+  },
+  {
+    id: '6ace0e6586b4ca082d9f1433',
+    _id: '6ace0e6586b4ca082d9f1433',
     fullName: 'Mohammed Ajmal',
     username: 'ajmal',
     headline: 'Luxury Living & High-End Residential Broker',
     location: 'Dubai & Kochi · Luxury Villas',
     profilePicture: null,
-    followerCount: 4,
-    closedDeals: '8',
+    followerCount: 3,
+    closedDeals: '3',
   },
   {
     id: 'bavadharini_rs',
@@ -107,7 +134,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Interior Designer & Modern Living Specialist',
     location: 'Chennai, Tamil Nadu · Modern Living',
     profilePicture: null,
-    followerCount: 4,
+    followerCount: 2,
     closedDeals: '2',
   },
   {
@@ -118,7 +145,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Commercial Property & Tech Park Portfolio Lead',
     location: 'Chennai, Tamil Nadu · Prime Assets',
     profilePicture: null,
-    followerCount: 4,
+    followerCount: 2,
     closedDeals: '5',
   },
   {
@@ -129,7 +156,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates',
     location: 'Miami, Florida · Coastal Estates',
     profilePicture: null,
-    followerCount: 4,
+    followerCount: 2,
     closedDeals: '4',
   },
   {
@@ -140,8 +167,8 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Principal Real Estate Broker & Multi-Family Asset Advisor',
     location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets',
     profilePicture: null,
-    followerCount: 3,
-    closedDeals: '7',
+    followerCount: 2,
+    closedDeals: '1',
   },
   {
     id: 'vignesh',
@@ -151,7 +178,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist',
     location: 'Beverly Hills, California · Ultra Luxury',
     profilePicture: null,
-    followerCount: 3,
+    followerCount: 2,
     closedDeals: '5',
   },
   {
@@ -162,7 +189,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Prime Commercial Hubs & Institutional Realty Lead',
     location: 'Chennai & Bangalore · Commercial Hubs',
     profilePicture: null,
-    followerCount: 4,
+    followerCount: 2,
     closedDeals: '4',
   },
   {
@@ -173,7 +200,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'European Family Office Principal & Luxury Syndication Client',
     location: 'Geneva, Switzerland & London · Private Capital',
     profilePicture: null,
-    followerCount: 5,
+    followerCount: 2,
     closedDeals: '9',
   },
   {
@@ -184,7 +211,7 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Managing Director · Sterling Global Capital & Asset Co-Owner',
     location: 'London, UK & Beverly Hills · Private Equity',
     profilePicture: null,
-    followerCount: 6,
+    followerCount: 2,
     closedDeals: '3',
   },
   {
@@ -195,15 +222,26 @@ const COMMUNITY_PROFILES: any[] = [
     headline: 'Institutional Real Estate Syndicate Lead & Co-Ownership Client',
     location: 'New York, NY · Real Estate Private Equity',
     profilePicture: null,
-    followerCount: 4,
+    followerCount: 2,
     closedDeals: '2',
+  },
+  {
+    id: '6ae2f7c95f0594915c812aa3',
+    _id: '6ae2f7c95f0594915c812aa3',
+    fullName: 'Subasree',
+    username: 'subasree',
+    headline: 'Architectural Designer & Sustainable Living Lead',
+    location: 'Chennai & Bangalore · Green Architecture',
+    profilePicture: null,
+    followerCount: 0,
+    closedDeals: '3',
   },
 ];
 
 const SEARCH_DATABASE: SearchItem[] = [
-  // ─── 1. PROPERTIES ────────────────────────────────────────────────────────
+  // ─── 1. PROPERTIES (Curated Institutional Real Estate Registry) ────────────
   {
-    id: 'prop-1',
+    id: 'prop-nyc-office',
     type: 'property',
     title: '1240 Commercial Ave, NY',
     subtitle: 'Office Space • 12,000 sqft • $45k/mo',
@@ -219,7 +257,7 @@ const SEARCH_DATABASE: SearchItem[] = [
     gallery: [
       'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
       'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
-      'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200',
+      '/coventry_corporate.jpg',
     ],
     description:
       'Premier commercial corporate floor situated in the heart of Midtown Manhattan. Features open-plan collaborative work areas, high-speed fiber optic backbone, private executive boardrooms, floor-to-ceiling double glazed acoustic windows, and LEED Gold certification. Ready for immediate enterprise occupancy with flexible triple net lease covenants.',
@@ -232,7 +270,9 @@ const SEARCH_DATABASE: SearchItem[] = [
       'High-Speed Elevators',
     ],
     seller: {
-      name: 'Sai Vimenthan',
+      id: '6a7a0dbb51a42123f22c4edf',
+      userId: '6a7a0dbb51a42123f22c4edf',
+      name: 'Sai Vimenthan V L',
       title: 'Principal Commercial Broker & Asset Syndicate Lead',
       agency: 'Boolok Elite Commercial Advisors',
       phone: '+1 (212) 555-0194',
@@ -245,77 +285,76 @@ const SEARCH_DATABASE: SearchItem[] = [
     sourceUrl: 'https://www.cbre.com',
   },
   {
-    id: 'prop-2',
+    id: 'prop-marina-tower',
     type: 'property',
-    title: 'Luxury Waterfront Villa, Palm Jumeirah',
-    subtitle: 'Residential Estate • 7 Beds • 9 Baths • $18.5M',
-    category: 'Ultra-Luxury Residential',
-    price: '$18,500,000',
-    pricePerSqft: '$1,850 / sqft',
-    propertyType: 'Turnkey Waterfront Mansion',
-    location: 'Frond N, Palm Jumeirah, Dubai, UAE',
-    specs: '10,000 sqft • 7 Beds • 9 Baths • Private Beach',
-    beds: 7,
-    baths: 9,
-    sqft: '10,000 sq ft',
-    capRate: '8.4% Short-Stay Yield',
-    image: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
+    title: 'Marina Coastal Skyscraper & Penthouse',
+    subtitle: 'High-Rise Commercial & Residential • 65 Stories • ₹123.6 Cr',
+    category: 'Commercial High-Rise & Luxury Penthouse',
+    price: '₹123.6 Cr',
+    pricePerSqft: '$1,420 / sqft',
+    propertyType: 'Turnkey Architectural Skyscraper',
+    location: 'Marina Coastal District, Singapore 018989',
+    specs: '38,000 sqft • 65 Stories • Sky Atrium & Helipad',
+    sqft: '38,000 sq ft',
+    capRate: '8.1% Net Yield',
+    image: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
     gallery: [
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
-      'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200',
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
+      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
+      '/coventry_corporate.jpg',
     ],
     description:
-      'Architectural masterpiece located on an exclusive private frond in Palm Jumeirah. Boasts private white sand beach frontage, zero-edge infinity pool overlooking the Dubai Marina skyline, bespoke Italian marble flooring, high-ceiling reception salon, and a dedicated yacht slip. Handcrafted smart automation system controlling climate, lighting, and entertainment.',
+      'Iconic waterfront commercial skyscraper and ultra-luxury sky penthouse positioned along Marina Coastal. Designed by world-renowned structural architects, offering column-free office plates, panoramic harbor views, private high-speed elevator banks, and a rooftop sky lounge with certified private helipad.',
     amenities: [
-      'Private White Sand Beach',
-      'Private Mega-Yacht Berth',
-      'Infinity Pool & Cabana',
-      'Smart Home Automation',
-      'Sub-Zero & Miele Kitchen',
-      'Private Spa & Sauna',
+      'Private Rooftop Helipad',
+      'Sky Lounge & Executive Dining',
+      'Double-Glazed Low-E Glass Façade',
+      'BCA Green Mark Platinum Certified',
+      'Smart Destination Elevators',
+      'Column-Free Flexible Floorplates',
     ],
     seller: {
-      name: 'Mohammed Ajmal',
-      title: 'Senior Luxury Residential Broker',
-      agency: 'Gulf Prime Waterfront Real Estate',
-      phone: '+971 4 388 9200',
-      email: 'ajmal@boolok.ai',
+      id: '6addf49b5f3925f54f8491f6',
+      userId: '6addf49b5f3925f54f8491f6',
+      name: 'Mithulan R',
+      title: 'Architectural Director & Skyscraper Asset Syndicate',
+      agency: 'Boolok Asia-Pacific Institutional Partners',
+      phone: '+65 6789 0122',
+      email: 'mithulan@boolok.ai',
       verified: true,
-      avatar: null,
-      rating: '5.0 ★ (42 luxury acquisitions)',
+      avatar: 'https://lh3.googleusercontent.com/a/ACg8ocJNc1F5yHFweMK8qtYRFt_2AJJQqzi4y0P2t7z2a4IHwoWCQYKJ=s400-c',
+      rating: '4.9 ★ (26 high-rise acquisitions)',
     },
-    sourceName: 'Dubai Land Department Verified Listing',
-    sourceUrl: 'https://dubailand.gov.ae',
+    sourceName: 'Singapore Urban Redevelopment Authority (URA)',
+    sourceUrl: 'https://www.ura.gov.sg',
   },
   {
-    id: 'prop-3',
+    id: 'prop-whitefield-sez',
     type: 'property',
-    title: 'Grade-A Tech Park Campus, Outer Ring Road',
-    subtitle: 'Commercial SEZ • 92,000 sqft • $42.0M',
-    category: 'Institutional Tech Park',
-    price: '$42,000,000',
-    pricePerSqft: '$456 / sqft',
-    propertyType: 'Tech Park SEZ Development',
-    location: 'Outer Ring Road (ORR), Bellandur, Bangalore, India',
-    specs: '92,000 sqft • 100% Occupancy • Fortune 500 Tenants',
-    sqft: '92,000 sq ft',
-    capRate: '8.6% Cap Rate',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
+    title: 'Whitefield Commercial IT SEZ',
+    subtitle: 'Enterprise Tech Corridor • 78,000 sqft • ₹28.0 Cr',
+    category: 'Enterprise Tech Corridor Hub',
+    price: '₹28.0 Cr',
+    pricePerSqft: '$358 / sqft',
+    propertyType: 'Special Economic Zone (SEZ) Campus',
+    location: 'EPIP Zone, Whitefield, Bangalore, India',
+    specs: '78,000 sqft • Fully Leased • N+1 Infrastructure',
+    sqft: '78,000 sq ft',
+    capRate: '8.8% Cap Rate',
+    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
     gallery: [
+      'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200',
       'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200',
-      'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200',
     ],
     description:
-      'Institutional Grade-A LEED Platinum IT campus situated in Bangalore’s high-velocity Outer Ring Road tech corridor. Pre-leased to multinational cloud and enterprise software conglomerates with 9-year weighted average lease expiry (WALE). 100% dual DG power backup, integrated food courts, metro station connectivity, and dedicated multi-level car parking.',
+      'High-specification commercial office development in the prime EPIP Zone of Whitefield. Purpose-built for multinational technology firms with 100% captive solar power integration, high-capacity server rooms, redundant fiber rings, and campus security amenities.',
     amenities: [
-      'LEED Platinum Certified',
-      '100% Power Backup Dual DG',
-      'Direct Metro Linkage',
-      'Multi-Level Parking (650 Bays)',
-      'Enterprise Cafeteria & Gym',
-      'Triple Net Lease Structure',
+      'Captive Solar Power Array',
+      'Redundant Tier-3 Data Connectivity',
+      'SEZ Tax Incentive Covenants',
+      'Executive Auditorium (250 Seats)',
+      'Multi-Level Covered Parking',
+      '24/7 Monitored Access Control',
     ],
     seller: {
       name: 'Shreekutti',
@@ -331,46 +370,47 @@ const SEARCH_DATABASE: SearchItem[] = [
     sourceUrl: 'https://rera.karnataka.gov.in',
   },
   {
-    id: 'prop-4',
+    id: 'prop-coventry-hq',
     type: 'property',
-    title: 'Margaret River Commercial Vineyard Estate',
-    subtitle: 'Agricultural & Hospitality • 140 Acres • $18.5M',
-    category: 'Commercial Vineyard & Estate',
-    price: '$18,500,000',
-    pricePerSqft: '140 Acres Prime Terroir',
-    propertyType: 'Boutique Winery & Luxury Estate',
-    location: 'Caves Road, Margaret River, Western Australia 6285',
-    specs: '140 Acres • Cellar Door • Certified Water Licenses',
-    sqft: '140 Acres (6,098,400 sq ft)',
-    capRate: '7.9% Blended Cap Rate',
-    image: 'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=1200',
+    title: 'Coventry Corporate Headquarters',
+    subtitle: 'Institutional Office Hub • 52,000 sqft • £12,242,788',
+    category: 'Corporate Headquarters Office',
+    price: '£12,242,788',
+    pricePerSqft: '$317 / sqft',
+    propertyType: 'Single-Tenant Enterprise HQ',
+    location: 'Business Park, Coventry, United Kingdom CV3 4PW',
+    specs: '52,000 sqft • 100% Occupancy • Long-Term Blue-Chip Covenant',
+    sqft: '52,000 sq ft',
+    capRate: '8.2% Cap Rate',
+    image: '/coventry_corporate.jpg',
     gallery: [
-      'https://images.unsplash.com/photo-1500651230702-0e2d8a49d4ad?w=1200',
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
-      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
+      '/coventry_corporate.jpg',
+      'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
     ],
     description:
-      'Premier commercial vineyard and boutique hospitality estate in Western Australia’s globally acclaimed Margaret River region. Features 140 acres of mature Cabernet Sauvignon and Chardonnay vines, an award-winning cellar door facility, commercial bottling plant, and unencumbered annual water allocation licenses.',
+      'Flagship institutional office headquarters building located in the premier Coventry business park corridor. Fully occupied by blue-chip enterprise tenant on an unexpired 12-year FRI lease term, providing robust sovereign-grade cash yields with upward-only rent reviews.',
     amenities: [
-      'State-of-the-Art Cellar Door',
-      'Annual 220 Megalitre Water License',
-      'Full Commercial Fermentation Suite',
-      'Private Owner Residence',
-      'Tourism Hospitality Permit',
-      'Global Export Distribution Covenants',
+      'BREEAM Excellent Rating',
+      'Unexpired 12-Year FRI Lease',
+      'Secure Underground Car Park (320 Bays)',
+      'High-Efficiency VRF Climate Systems',
+      'Landscaped Corporate Campus Grounds',
+      'Direct Access to A45 & M42 Motorways',
     ],
     seller: {
-      name: 'Logeshwaran A',
-      title: 'Architectural Consultant & Real Estate Lead',
-      agency: 'Boolok Global Agricultural Syndicate',
-      phone: '+61 8 9200 4511',
-      email: 'waranlogesh0406@gmail.com',
+      id: '6a7a0dbb51a42123f22c4edf',
+      userId: '6a7a0dbb51a42123f22c4edf',
+      name: 'Sai Vimenthan V L',
+      title: 'Principal Commercial Broker & Asset Syndicate Lead',
+      agency: 'Boolok Elite Commercial Advisors',
+      phone: '+44 20 7946 0912',
+      email: 'saivimenthanvl@gmail.com',
       verified: true,
-      avatar: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
-      rating: '5.0 ★ (Verified Google Profile)',
+      avatar: 'https://lh3.googleusercontent.com/a/ACg8ocK0o5SZUMa-JTOuTUTxS6t1Bl20HPwVkbFAz98dCG6e1rbpGA=s96-c',
+      rating: '5.0 ★ (Verified Asset Owner)',
     },
-    sourceName: 'Western Australia Landgate Registry',
-    sourceUrl: 'https://www.landgate.wa.gov.au',
+    sourceName: 'HM Land Registry UK Official Title',
+    sourceUrl: 'https://www.gov.uk/government/organisations/land-registry',
   },
 
   // ─── 2. LEGAL (Global Affairs & Real Estate Laws) ──────────────────────────
@@ -604,6 +644,50 @@ export default function AISearchHubScreen() {
   const [activeGalleryIndex, setActiveGalleryIndex] = useState(0);
   const [isSaved, setIsSaved] = useState<Record<string, boolean>>({});
   const [apiUsers, setApiUsers] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [profileOverrides, setProfileOverrides] = useState<Record<string, { isFollowing: boolean; followerCount?: number }>>({});
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleFollowChange = (e: any) => {
+        const detail = e.detail;
+        if (!detail) return;
+        const keys = [
+          detail.userId ? String(detail.userId).toLowerCase() : null,
+          detail.username ? String(detail.username).toLowerCase() : null,
+        ].filter(Boolean) as string[];
+
+        setProfileOverrides((prev) => {
+          const next = { ...prev };
+          keys.forEach((k) => {
+            next[k] = {
+              isFollowing: detail.isFollowing,
+              followerCount: detail.followerCount,
+            };
+          });
+          return next;
+        });
+
+        setApiUsers((prev) =>
+          prev.map((u) => {
+            const uid = String(u.id || u._id || '').toLowerCase();
+            const uname = String(u.username || '').toLowerCase();
+            if (keys.includes(uid) || keys.includes(uname)) {
+              return {
+                ...u,
+                isFollowing: detail.isFollowing,
+                followerCount: typeof detail.followerCount === 'number' ? detail.followerCount : u.followerCount,
+              };
+            }
+            return u;
+          })
+        );
+      };
+
+      window.addEventListener('boolok_follow_changed', handleFollowChange);
+      return () => window.removeEventListener('boolok_follow_changed', handleFollowChange);
+    }
+  }, []);
 
   useEffect(() => {
     if (routeParams.q) {
@@ -619,17 +703,25 @@ export default function AISearchHubScreen() {
     const q = query.trim();
     if (!q) {
       setApiUsers([]);
+      setIsSearching(false);
       return;
     }
+    setIsSearching(true);
     const timer = setTimeout(async () => {
       try {
         const res = await axios.get(`${API_BASE_URL}/api/users/search?q=${encodeURIComponent(q)}`);
         if (res.data && Array.isArray(res.data.results)) {
           setApiUsers(res.data.results);
         }
-      } catch (e) {}
-    }, 200);
-    return () => clearTimeout(timer);
+      } catch (e) {
+      } finally {
+        setIsSearching(false);
+      }
+    }, 350);
+    return () => {
+      clearTimeout(timer);
+      setIsSearching(false);
+    };
   }, [query]);
 
   const { width } = useWindowDimensions();
@@ -644,19 +736,92 @@ export default function AISearchHubScreen() {
         if (res.data && Array.isArray(res.data.posts)) {
           const mapped: SearchItem[] = res.data.posts.map((p: any) => {
             const author = p.author || {};
+            // Resolve canonical cover image based on property title or author
+            let fallbackImage = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200';
+            const titleLower = (p.title || '').toLowerCase();
+            if (titleLower.includes('coventry')) {
+              fallbackImage = '/coventry_corporate.jpg';
+            } else if (titleLower.includes('commercial it campus') || titleLower.includes('tech park')) {
+              fallbackImage = 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200';
+            } else if (titleLower.includes('vineyard') || titleLower.includes('margaret river')) {
+              fallbackImage = 'https://images.unsplash.com/photo-1506377247377-2a5b3b417ebb?w=1200';
+            } else if (titleLower.includes('poes garden') || titleLower.includes('mansion') || (titleLower.includes('villa') && !titleLower.includes('waterfront'))) {
+              fallbackImage = 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200';
+            } else if (titleLower.includes('waterfront') || titleLower.includes('palm jumeirah')) {
+              fallbackImage = 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200';
+            } else if (titleLower.includes('whitefield') || titleLower.includes('sez')) {
+              fallbackImage = 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=1200';
+            } else if (titleLower.includes('marina coastal') || titleLower.includes('skyscraper')) {
+              fallbackImage = 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200';
+            }
+
+            const chosenImage = (p.mediaUrls?.[0] || p.mediaUrl || p.image || fallbackImage);
+
+            const cLower = (p.content || '').toLowerCase();
+            let resolvedTitle = p.title;
+            let resolvedPrice = p.price;
+            let resolvedLoc = p.location;
+
+            if (!resolvedTitle) {
+              if (cLower.includes('turnkey institutional it campus') || cLower.includes('leed platinum')) {
+                resolvedTitle = 'Grade-A Commercial IT Campus';
+                resolvedPrice = '₹34.5 Cr';
+                resolvedLoc = 'Outer Ring Road, Bangalore';
+              } else if (cLower.includes('vineyard') || cLower.includes('agricultural')) {
+                resolvedTitle = 'Margaret River Commercial Vineyard Estate';
+                resolvedPrice = 'A$3,485,000';
+                resolvedLoc = 'Margaret River, Western Australia';
+              } else if (cLower.includes('poes garden') || cLower.includes('residential mansion')) {
+                resolvedTitle = 'Poes Garden Ultra-Luxury Bespoke Mansion';
+                resolvedPrice = '₹22.0 Cr';
+                resolvedLoc = 'Poes Garden, Chennai';
+              } else if (cLower.includes('waterfront villa') || cLower.includes('palm jumeirah')) {
+                resolvedTitle = 'Waterfront Panoramic Luxury Villa';
+                resolvedPrice = 'AED 8,320,000';
+                resolvedLoc = 'Palm Jumeirah, Dubai';
+              } else if (cLower.includes('coventry') || cLower.includes('grade-a institutional office')) {
+                resolvedTitle = 'Coventry Corporate Headquarters';
+                resolvedPrice = '£12,242,788';
+                resolvedLoc = 'Coventry, United Kingdom';
+              } else if (cLower.includes('omr it corridor') || cLower.includes('modern commercial tower') || cLower.includes('grade-a office hub')) {
+                resolvedTitle = 'Institutional Grade-A Office Hub';
+                resolvedPrice = '₹292.3 Cr';
+                resolvedLoc = 'OMR IT Corridor, Chennai';
+              } else if (p.content) {
+                resolvedTitle = p.content.slice(0, 55);
+                resolvedLoc = 'Global Real Estate Network';
+              } else {
+                resolvedTitle = 'Exclusive Member Property';
+                resolvedLoc = 'Global Real Estate Network';
+              }
+            }
+
+            if (!resolvedPrice) {
+              if (resolvedLoc.toLowerCase().includes('bangalore') || resolvedLoc.toLowerCase().includes('chennai') || resolvedLoc.toLowerCase().includes('india')) {
+                resolvedPrice = '₹34.5 Cr';
+              } else if (resolvedLoc.toLowerCase().includes('coventry') || resolvedLoc.toLowerCase().includes('united kingdom')) {
+                resolvedPrice = '£12,242,788';
+              } else {
+                resolvedPrice = '$1,450,000';
+              }
+            }
+
             return {
               id: `live-${p._id}`,
               type: 'property' as const,
-              title: p.title || (p.content ? p.content.slice(0, 45) : 'Exclusive Member Property'),
-              subtitle: p.price ? `${p.price} • ${p.location || 'Prime Asset'}` : (p.content ? p.content.slice(0, 50) : 'Verified Listing'),
+              title: resolvedTitle,
+              subtitle: `${resolvedPrice} • ${resolvedLoc}`,
               category: 'Member Property Listing',
-              price: p.price || '$1,450,000',
+              price: resolvedPrice,
               propertyType: 'Prime Real Estate Asset',
-              location: p.location || 'Global Real Estate Network',
+              location: resolvedLoc,
+              specs: p.specs || '',
               description: p.content || 'Prime real estate asset listed directly on the Boolok AI network.',
-              image: p.mediaUrls?.[0] || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
-              gallery: p.mediaUrls && p.mediaUrls.length > 0 ? p.mediaUrls : ['https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200'],
+              image: chosenImage,
+              gallery: p.mediaUrls && p.mediaUrls.length > 0 ? p.mediaUrls : [chosenImage],
               seller: {
+                id: author._id || author.id,
+                userId: author._id || author.id,
                 name: author.fullName || 'Boolok Broker',
                 title: author.headline || 'Elite Real Estate Advisor',
                 agency: 'Boolok Real Estate Advisors',
@@ -677,50 +842,17 @@ export default function AISearchHubScreen() {
 
   const renderSellerAvatar = (seller: any, size = 52) => {
     if (!seller) return null;
-    const name = seller.name || 'Advisor';
-    const isSai = name.toLowerCase().includes('sai');
-    const isLogesh = name.toLowerCase().includes('logesh');
-
-    let photoUri: string | null = null;
-    if (isSai) {
-      photoUri = resolveImageUrl(user?.profilePicture);
-    } else if (isLogesh) {
-      photoUri = resolveImageUrl(seller.profilePicture || seller.avatar || user?.profilePicture);
-    } else if (seller.avatar && typeof seller.avatar === 'string' && !seller.avatar.includes('images.unsplash.com')) {
-      photoUri = resolveImageUrl(seller.avatar);
-    }
-
-    const initial = (name[0] || 'A').toUpperCase();
-    const colors = ['#ea580c', '#2563eb', '#059669', '#7c3aed', '#db2777', '#ca8a04', '#0891b2'];
-    const charCode = (name.charCodeAt(0) || 0) + (name.charCodeAt(name.length - 1) || 0);
-    const bgColor = colors[charCode % colors.length];
-
-    if (photoUri) {
-      return (
-        <Image
-          source={{ uri: photoUri }}
-          style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 1.5, borderColor: '#daa520' }}
-        />
-      );
-    }
-
     return (
-      <View
-        style={{
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: bgColor,
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderWidth: 1.5,
-          borderColor: '#daa520',
+      <Avatar
+        user={{
+          id: seller.id || seller.userId,
+          _id: seller.id || seller.userId,
+          username: seller.username,
+          fullName: seller.name,
+          profilePicture: seller.avatar || seller.profilePicture,
         }}
-      >
-        <Text style={{ color: '#ffffff', fontSize: Math.floor(size * 0.44), fontWeight: '800' }}>
-          {initial}
-        </Text>
-      </View>
+        size={size}
+      />
     );
   };
 
@@ -732,42 +864,116 @@ export default function AISearchHubScreen() {
       allUsers.unshift({
         id: user.id || user._id || 'self',
         _id: user.id || user._id || 'self',
-        fullName: user.fullName || 'Sai Vimenthan',
-        username: user.username || 'saivimenthanvl',
+        fullName: user.fullName || 'Boolok Member',
+        username: user.username || 'member',
         headline: user.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead',
         location: user.location || 'Chennai, Tamil Nadu · Prime Assets',
         profilePicture: user.profilePicture || null,
         followerCount: user.followerCount || 0,
-        closedDeals: '12',
+        closedDeals: String(user.closedDeals || '3'),
       });
     }
 
+    const EXCLUDED_SEARCH_IDS = new Set([
+      '6aed46c6c434745e57daa204', // @brokers
+      '6ae9bc64b549b88abf72eabf', // @logesh
+      '6ae9bd78b549b88abf72eac0', // @mithulan_r_archived
+      '6ae95fadfc368c444958f948', // @profile
+      '6ae831133794c3dc22c0673b', // @advisor
+      '6ae8317d3794c3dc22c0673c',
+      '6ae831c93794c3dc22c0673d',
+      '6aeddcf9b640ccc8aeca4191',
+    ]);
+    const EXCLUDED_SEARCH_USERNAMES = new Set([
+      'brokers',
+      'logesh',
+      'mithulan_r_archived',
+      'profile',
+      'advisor',
+    ]);
+
     if (apiUsers.length > 0) {
-      const seen = new Set(allUsers.map((u) => (u.username || u.id || u._id || '').toLowerCase()));
       apiUsers.forEach((u) => {
-        const key = (u.username || u.id || u._id || '').toLowerCase();
-        if (!seen.has(key)) {
+        const uId = String(u.id || u._id || '').toLowerCase();
+        const uName = String(u.username || '').toLowerCase();
+        if (EXCLUDED_SEARCH_IDS.has(uId) || EXCLUDED_SEARCH_USERNAMES.has(uName) || u.isArchived || u.isTestAccount) {
+          return;
+        }
+        const existingIdx = allUsers.findIndex(
+          (x) =>
+            (x.id && String(x.id).toLowerCase() === uId) ||
+            (x._id && String(x._id).toLowerCase() === uId) ||
+            (x.username && String(x.username).toLowerCase() === uName)
+        );
+        if (existingIdx !== -1) {
+          // Update with live authoritative values from backend
+          allUsers[existingIdx] = { ...allUsers[existingIdx], ...u };
+        } else {
           allUsers.push(u);
         }
       });
     }
 
-    return allUsers.map((u): SearchItem => ({
-      id: `profile-${u.id || u._id || u.username}`,
-      type: 'profile',
-      title: u.fullName || u.username,
-      subtitle: `@${u.username} • ${u.headline || 'Real Estate Advisor'}`,
-      category: 'Verified Member Profile',
-      location: u.location || 'Global Real Estate Network',
-      description: u.bio || u.headline || 'Verified member on Boolok AI Real Estate network.',
-      image: u.profilePicture || null,
-      profileUser: u,
-    }));
+    return allUsers
+      .filter((u) => {
+        const uId = String(u.id || u._id || '').toLowerCase();
+        const uName = String(u.username || '').toLowerCase();
+        return !EXCLUDED_SEARCH_IDS.has(uId) && !EXCLUDED_SEARCH_USERNAMES.has(uName) && !u.isArchived && !u.isTestAccount;
+      })
+      .map((u): SearchItem => ({
+        id: `profile-${u.id || u._id || u.username}`,
+        type: 'profile',
+        title: u.fullName || u.username,
+        subtitle: `@${u.username} • ${u.headline || 'Real Estate Advisor'}`,
+        category: 'Verified Member Profile',
+        location: u.location || 'Global Real Estate Network',
+        description: u.bio || u.headline || 'Verified member on Boolok AI Real Estate network.',
+        image: u.profilePicture || null,
+        profileUser: u,
+      }));
   }, [user, apiUsers]);
 
   const filteredResults = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const allItems = [...profileItems, ...liveMemberPosts, ...SEARCH_DATABASE];
+    // Deduplicate items by canonical title / id across live posts and static registry
+    const seenPropertyTitles = new Set<string>();
+    const dedupedLivePosts = liveMemberPosts.filter((item) => {
+      const key = (item.title || '').trim().toLowerCase();
+      if (!key || seenPropertyTitles.has(key)) return false;
+      seenPropertyTitles.add(key);
+      return true;
+    });
+
+    const currentUserId = user?.id || user?._id || '6a7a0dbb51a42123f22c4edf';
+    const currentUserFullName = user?.fullName || 'Boolok Member';
+
+    const dedupedDatabase = SEARCH_DATABASE.filter((item) => {
+      if (item.type !== 'property') return true;
+      const key = (item.title || '').trim().toLowerCase();
+      if (!key || seenPropertyTitles.has(key)) return false;
+      seenPropertyTitles.add(key);
+      return true;
+    }).map((item) => {
+      if (item.type === 'property' && item.seller) {
+        const s = item.seller;
+        const isAuthUserListing = (s.userId && (s.userId === currentUserId || s.userId === '6a7a0dbb51a42123f22c4edf')) ||
+          s.name.toLowerCase().includes('sai vimenthan') ||
+          s.email === 'saivimenthanvl@gmail.com' ||
+          s.email === 'sai.vimenthan@boolok.ai';
+        if (isAuthUserListing) {
+          return {
+            ...item,
+            seller: {
+              ...s,
+              name: currentUserFullName,
+            },
+          };
+        }
+      }
+      return item;
+    });
+
+    const allItems = [...profileItems, ...dedupedLivePosts, ...dedupedDatabase];
     return allItems.filter((item) => {
       const matchesFilter =
         activeFilter === 'All' ||
@@ -825,6 +1031,15 @@ export default function AISearchHubScreen() {
       const u = item.profileUser || {};
       const avatarUrl = resolveImageUrl(u.profilePicture || item.image);
       const initial = (item.title || 'U')[0]?.toUpperCase();
+      const uIdKey = String(u.id || u._id || '').toLowerCase();
+      const uNameKey = String(u.username || '').toLowerCase();
+      const override = profileOverrides[uIdKey] || profileOverrides[uNameKey];
+      const effectiveFollowerCount = override && typeof override.followerCount === 'number'
+        ? override.followerCount
+        : (typeof u.followerCount === 'number' ? u.followerCount : 0);
+      const effectiveIsFollowing = override && typeof override.isFollowing === 'boolean'
+        ? override.isFollowing
+        : u.isFollowing;
 
       return (
         <Pressable
@@ -834,23 +1049,17 @@ export default function AISearchHubScreen() {
             styles.profileCard,
             {
               backgroundColor: theme.surface,
-              borderColor: hovered || pressed ? '#daa520' : theme.outlineVariant,
+              borderColor: hovered || pressed ? '#F5A623' : theme.outlineVariant,
               transform: [{ scale: pressed ? 0.99 : hovered ? 1.01 : 1 }],
             },
           ]}
         >
           <View style={styles.profileCardHeader}>
-            {avatarUrl ? (
-              <Image source={{ uri: avatarUrl }} style={styles.profileAvatar} />
-            ) : (
-              <View style={[styles.profileAvatarFallback, { backgroundColor: isDark ? '#162338' : '#FEF3C7', borderColor: '#daa520' }]}>
-                <Text style={{ color: '#daa520', fontWeight: '800', fontSize: 18 }}>{initial}</Text>
-              </View>
-            )}
+            <Avatar user={u} size={48} />
             <View style={{ flex: 1, marginLeft: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
                 <Text style={[styles.profileName, { color: theme.onSurface }]}>{item.title}</Text>
-                <MaterialIcons name="verified" size={16} color="#daa520" style={{ marginLeft: 5 }} />
+                <MaterialIcons name="verified" size={16} color="#F5A623" style={{ marginLeft: 5 }} />
                 <View style={styles.profileBadge}>
                   <Text style={styles.profileBadgeText}>PROFILE</Text>
                 </View>
@@ -874,11 +1083,11 @@ export default function AISearchHubScreen() {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Text style={{ fontSize: 11, color: theme.onSurfaceVariant }}>
-                <Text style={{ fontWeight: '800', color: theme.onSurface }}>{u.followerCount || 0}</Text> followers
+                <Text style={{ fontWeight: '800', color: theme.onSurface }}>{effectiveFollowerCount}</Text> followers
               </Text>
               {u.closedDeals && (
                 <Text style={{ fontSize: 11, color: theme.onSurfaceVariant }}>
-                  <Text style={{ fontWeight: '800', color: '#daa520' }}>{u.closedDeals}</Text> deals
+                  <Text style={{ fontWeight: '800', color: '#F5A623' }}>{u.closedDeals}</Text> deals
                 </Text>
               )}
             </View>
@@ -886,12 +1095,21 @@ export default function AISearchHubScreen() {
 
           {/* Action Buttons */}
           <View style={styles.profileActionRow}>
+            <FollowButton
+              targetUserId={u.id || u._id}
+              targetUsername={u.username}
+              targetUser={{ ...u, followerCount: effectiveFollowerCount, isFollowing: effectiveIsFollowing }}
+              initialIsFollowing={effectiveIsFollowing}
+              size="sm"
+              style={{ flex: 1, minWidth: 95, flexShrink: 0 }}
+            />
+
             <TouchableOpacity
               onPress={() => router.push({ pathname: '/(app)/profile', params: { id: u.id || u._id || u.username } } as any)}
-              style={[styles.profileBtnPrimary, { backgroundColor: '#daa520' }]}
+              style={[styles.profileBtnPrimary, { backgroundColor: '#F5A623', flex: 1 }]}
             >
               <MaterialIcons name="person" size={15} color="#000000" style={{ marginRight: 4 }} />
-              <Text style={{ color: '#000000', fontSize: 12, fontWeight: '800' }}>View Profile</Text>
+              <Text style={{ color: '#000000', fontSize: 12, fontWeight: '800' }}>Profile</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -922,15 +1140,23 @@ export default function AISearchHubScreen() {
         onPress={() => handleOpenItem(item)}
         style={({ pressed, hovered }: any) => [
           styles.resultCard,
+          !isWide && { flexDirection: 'column' },
           {
             backgroundColor: theme.surface,
-            borderColor: hovered || pressed ? '#daa520' : theme.outlineVariant,
+            borderColor: hovered || pressed ? '#F5A623' : theme.outlineVariant,
             transform: [{ scale: pressed ? 0.99 : hovered ? 1.01 : 1 }],
           },
         ]}
       >
         {item.image && (
-          <Image source={{ uri: item.image }} style={styles.resultImage} resizeMode="cover" />
+          <Image
+            source={{ uri: resolveImageUrl(item.image) || item.image }}
+            style={[
+              styles.resultImage,
+              !isWide && { width: '100%', height: 180, minHeight: 180 },
+            ]}
+            resizeMode="cover"
+          />
         )}
         <View style={styles.resultInfo}>
           {/* Header Row with Badge and Price / Date */}
@@ -961,9 +1187,13 @@ export default function AISearchHubScreen() {
           </View>
 
           {/* Title */}
-          <Text style={[typography.headlineSm, { color: theme.onSurface, marginBottom: 6, fontWeight: '700' }]}>
-            {item.title}
-          </Text>
+          <Text
+    style={[typography.headlineSm, { color: theme.onSurface, marginBottom: 6, fontWeight: '700', flexShrink: 1, lineHeight: 22 }]}
+    numberOfLines={2}
+    ellipsizeMode="tail"
+  >
+    {item.title}
+  </Text>
 
           {/* Subtitle / Specs */}
           <Text style={[styles.cardSubtitle, { color: theme.onSurfaceVariant }]}>
@@ -999,7 +1229,7 @@ export default function AISearchHubScreen() {
 
             <View style={styles.tapToOpenBadge}>
               <Text style={styles.tapToOpenText}>Open Section</Text>
-              <MaterialIcons name="chevron-right" size={16} color="#daa520" />
+              <MaterialIcons name="chevron-right" size={16} color="#F5A623" />
             </View>
           </View>
         </View>
@@ -1036,7 +1266,12 @@ export default function AISearchHubScreen() {
           </View>
 
           {/* Filters */}
-          <View style={styles.filterRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}
+            style={{ marginBottom: spacing.sm, minHeight: 50 }}
+          >
             {filters.map((f) => {
               const active = activeFilter === f;
               return (
@@ -1046,16 +1281,21 @@ export default function AISearchHubScreen() {
                   style={[
                     styles.filterChip,
                     {
-                      backgroundColor: active ? '#daa520' : theme.surfaceContainerHigh,
+                      backgroundColor: active ? '#F5A623' : theme.surfaceContainerHigh,
                       borderColor: active ? '#ffd700' : 'transparent',
                     },
                   ]}
                 >
                   <Text
+                    allowFontScaling={false}
+                    numberOfLines={1}
                     style={{
-                      color: active ? '#000000' : theme.onSurfaceVariant,
-                      fontWeight: active ? '800' : '600',
-                      fontSize: 14,
+                      color: active ? '#000000' : (isDark ? '#E2E8F0' : '#1E293B'),
+                      fontWeight: active ? '800' : '700',
+                      fontSize: 13,
+                      lineHeight: 18,
+                      includeFontPadding: false,
+                      textAlign: 'center',
                     }}
                   >
                     {f}
@@ -1063,7 +1303,7 @@ export default function AISearchHubScreen() {
                 </Pressable>
               );
             })}
-          </View>
+          </ScrollView>
 
           {/* Results Area Header */}
           <View style={styles.resultsCounterRow}>
@@ -1072,10 +1312,17 @@ export default function AISearchHubScreen() {
             </Text>
             {activeFilter !== 'All' && (
               <Pressable onPress={() => setActiveFilter('All')}>
-                <Text style={{ color: '#daa520', fontSize: 12, fontWeight: '700' }}>Show All</Text>
+                <Text style={{ color: '#F5A623', fontSize: 12, fontWeight: '700' }}>Show All</Text>
               </Pressable>
             )}
           </View>
+
+          {isSearching && (
+            <AISearchLoadingAnimation
+              isDark={isDark}
+              query={query}
+            />
+          )}
 
           <FlatList
             data={filteredResults}
@@ -1140,11 +1387,11 @@ export default function AISearchHubScreen() {
                       },
                     ]}
                   >
-                    {selectedItem?.type.toUpperCase()} SECTION
+                    {selectedItem?.type.toUpperCase()}
                   </Text>
                 </View>
                 {selectedItem?.category && (
-                  <Text style={styles.modalCategoryText} numberOfLines={1}>
+                  <Text style={[styles.modalCategoryText, { flex: 1 }]} numberOfLines={1}>
                     • {selectedItem.category}
                   </Text>
                 )}
@@ -1156,7 +1403,7 @@ export default function AISearchHubScreen() {
                     <MaterialCommunityIcons
                       name={isSaved[selectedItem.id] ? 'bookmark' : 'bookmark-outline'}
                       size={20}
-                      color={isSaved[selectedItem.id] ? '#daa520' : '#8b9bb4'}
+                      color={isSaved[selectedItem.id] ? '#F5A623' : '#8b9bb4'}
                     />
                   </Pressable>
                 )}
@@ -1183,7 +1430,7 @@ export default function AISearchHubScreen() {
                       {selectedItem.gallery && selectedItem.gallery.length > 0 && (
                         <View style={styles.galleryContainer}>
                           <Image
-                            source={{ uri: selectedItem.gallery[activeGalleryIndex] || selectedItem.image }}
+                            source={{ uri: resolveImageUrl(selectedItem.gallery[activeGalleryIndex] || selectedItem.image) || (selectedItem.gallery[activeGalleryIndex] || selectedItem.image) }}
                             style={styles.galleryMainImage}
                             resizeMode="cover"
                           />
@@ -1197,7 +1444,7 @@ export default function AISearchHubScreen() {
                                   activeGalleryIndex === idx && styles.galleryThumbActive,
                                 ]}
                               >
-                                <Image source={{ uri: img }} style={styles.thumbImage} resizeMode="cover" />
+                                <Image source={{ uri: resolveImageUrl(img) || img }} style={styles.thumbImage} resizeMode="cover" />
                               </Pressable>
                             ))}
                           </View>
@@ -1225,7 +1472,7 @@ export default function AISearchHubScreen() {
                       <View style={styles.specsGrid}>
                         {selectedItem.location && (
                           <View style={styles.specGridItemFull}>
-                            <MaterialIcons name="location-on" size={16} color="#daa520" style={{ marginRight: 6 }} />
+                            <MaterialIcons name="location-on" size={16} color="#F5A623" style={{ marginRight: 6 }} />
                             <Text style={styles.specLocationText}>{selectedItem.location}</Text>
                           </View>
                         )}
@@ -1268,7 +1515,7 @@ export default function AISearchHubScreen() {
                           <View style={styles.amenitiesWrap}>
                             {selectedItem.amenities.map((amenity, idx) => (
                               <View key={idx} style={styles.amenityChip}>
-                                <MaterialIcons name="check-circle" size={14} color="#daa520" style={{ marginRight: 5 }} />
+                                <MaterialIcons name="check-circle" size={14} color="#F5A623" style={{ marginRight: 5 }} />
                                 <Text style={styles.amenityText}>{amenity}</Text>
                               </View>
                             ))}
@@ -1280,7 +1527,7 @@ export default function AISearchHubScreen() {
                       {selectedItem.seller && (
                         <View style={styles.sellerCardContainer}>
                           <View style={styles.sellerCardHeader}>
-                            <MaterialIcons name="verified-user" size={16} color="#daa520" style={{ marginRight: 6 }} />
+                            <MaterialIcons name="verified-user" size={16} color="#F5A623" style={{ marginRight: 6 }} />
                             <Text style={styles.sellerCardHeaderTitle}>
                               LISTED BY PROPERTY OWNER / ADVISOR
                             </Text>
@@ -1439,7 +1686,7 @@ export default function AISearchHubScreen() {
                   {selectedItem.sourceUrl && (
                     <View style={styles.sourceReferenceBox}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                        <MaterialIcons name="link" size={18} color="#daa520" style={{ marginRight: 6 }} />
+                        <MaterialIcons name="link" size={18} color="#F5A623" style={{ marginRight: 6 }} />
                         <Text style={styles.sourceReferenceHeading}>OFFICIAL SOURCE & REFERENCE</Text>
                       </View>
                       <Text style={styles.sourceReferenceName}>{selectedItem.sourceName}</Text>
@@ -1450,7 +1697,7 @@ export default function AISearchHubScreen() {
                         <Text style={styles.sourceLinkBtnText} numberOfLines={1}>
                           View Source ({selectedItem.sourceUrl})
                         </Text>
-                        <MaterialIcons name="open-in-new" size={15} color="#daa520" style={{ marginLeft: 6 }} />
+                        <MaterialIcons name="open-in-new" size={15} color="#F5A623" style={{ marginLeft: 6 }} />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1475,7 +1722,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 860,
     flex: 1,
-    padding: spacing.xl,
+    paddingHorizontal: 16,
+    paddingVertical: spacing.md,
   },
   searchWrap: {
     position: 'relative',
@@ -1502,16 +1750,23 @@ const styles = StyleSheet.create({
     paddingRight: 48,
     fontSize: 16,
   },
-  filterRow: {
+  filterScroll: {
     flexDirection: 'row',
-    marginBottom: spacing.lg,
     gap: spacing.sm,
+    paddingRight: spacing.md,
+    paddingVertical: 6,
+    alignItems: 'center',
   },
   filterChip: {
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
+    minHeight: 38,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'visible',
   },
   resultsCounterRow: {
     flexDirection: 'row',
@@ -1596,6 +1851,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     paddingRight: 8,
+    gap: 8,
   },
   sellerMiniAvatar: {
     width: 18,
@@ -1613,7 +1869,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tapToOpenText: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 12,
     fontWeight: '700',
     marginRight: 2,
@@ -1713,7 +1969,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   galleryThumbActive: {
-    borderColor: '#daa520',
+    borderColor: '#F5A623',
   },
   thumbImage: {
     width: '100%',
@@ -1754,7 +2010,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#daa520',
+    borderColor: '#F5A623',
     alignItems: 'center',
   },
   capRateBadgeLabel: {
@@ -1849,7 +2105,7 @@ const styles = StyleSheet.create({
   sellerCardContainer: {
     backgroundColor: '#0f1a2c',
     borderWidth: 1,
-    borderColor: '#daa520',
+    borderColor: '#F5A623',
     borderRadius: 14,
     padding: 18,
     marginBottom: 16,
@@ -1863,7 +2119,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sellerCardHeaderTitle: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -1878,7 +2134,7 @@ const styles = StyleSheet.create({
     height: 64,
     borderRadius: 32,
     borderWidth: 2,
-    borderColor: '#daa520',
+    borderColor: '#F5A623',
   },
   sellerNameLarge: {
     color: '#ffffff',
@@ -1897,19 +2153,22 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sellerRatingText: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 12,
     fontWeight: '700',
     marginTop: 4,
   },
   sellerActionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
   },
   sellerPrimaryBtn: {
-    flex: 1,
-    backgroundColor: '#daa520',
-    paddingVertical: 11,
+    flexGrow: 1,
+    minWidth: 140,
+    backgroundColor: '#F5A623',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1922,11 +2181,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   sellerSecondaryBtn: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 140,
     backgroundColor: '#1b283d',
     borderWidth: 1,
     borderColor: '#2e3f5b',
-    paddingVertical: 11,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -2057,7 +2318,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   sourceReferenceHeading: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 0.5,
@@ -2080,12 +2341,13 @@ const styles = StyleSheet.create({
     ...Platform.select({ web: { cursor: 'pointer' } as any }),
   },
   sourceLinkBtnText: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 12,
     fontWeight: '700',
     flex: 1,
   },
   profileCard: {
+    flexDirection: 'column',
     padding: 16,
     borderRadius: 14,
     borderWidth: 1,
@@ -2100,7 +2362,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 24,
     borderWidth: 1.5,
-    borderColor: '#daa520',
+    borderColor: '#F5A623',
   },
   profileAvatarFallback: {
     width: 48,
@@ -2122,7 +2384,7 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   profileBadgeText: {
-    color: '#daa520',
+    color: '#F5A623',
     fontSize: 9,
     fontWeight: '800',
   },
@@ -2130,30 +2392,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    marginTop: 12,
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingTop: 10,
+    marginTop: 10,
     borderTopWidth: 1,
   },
   profileActionRow: {
     flexDirection: 'row',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
     marginTop: 12,
   },
   profileBtnPrimary: {
     flex: 1,
+    minWidth: 95,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 9,
+    paddingHorizontal: 8,
     borderRadius: 8,
   },
   profileBtnSecondary: {
     flex: 1,
+    minWidth: 95,
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 9,
+    paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
   },
 });
+

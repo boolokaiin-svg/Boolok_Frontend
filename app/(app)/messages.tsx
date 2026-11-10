@@ -25,7 +25,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
@@ -33,219 +32,20 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useSocket } from '../../context/SocketContext';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
-import { formatSmartDateTime, formatConversationTime, formatLastSeen, getMessageDateSeparator, isSameCalendarDay } from '../../lib/dateTime';
+import { formatSmartDateTime, formatConversationTime, getMessageDateSeparator, isSameCalendarDay } from '../../lib/dateTime';
 import BoolokLogo from '../../components/BoolokLogo';
+import Avatar from '../../components/Avatar';
 
 const COMMUNITY_MEMBERS_DIRECTORY = [
   { id: 'shreekutti', fullName: 'Shreekutti', username: 'shreekutti', headline: 'Tech Park Portfolio Lead' },
   { id: 'ajmal', fullName: 'Mohammed Ajmal', username: 'ajmal', headline: 'Luxury Living & Villas Lead' },
   { id: 'logeshwarana', fullName: 'Logeshwaran A', username: 'logeshwarana', headline: 'Architectural Consultant' },
-  { id: 'saivimenthanvl', fullName: 'Sai Vimenthan', username: 'saivimenthanvl', headline: 'Elite Real Estate Broker' },
+  { id: 'saivimenthanvl', fullName: 'Sai Vimenthan V L', username: 'saivimenthanvl', headline: 'Elite Real Estate Broker' },
   { id: 'vignesh', fullName: 'Vigneshwaran', username: 'vignesh', headline: 'Beverly Hills & OMR Acquisitions' },
   { id: 'aswin', fullName: 'Aswin Real Estate', username: 'aswin', headline: 'Commercial Assets Lead' },
   { id: 'bavadharini_rs', fullName: 'Bavadharini RS', username: 'bavadharini_rs', headline: 'Interior Architecture Lead' },
   { id: 'the_akshtr_estate', fullName: 'Akshat Commercials', username: 'the_akshtr_estate', headline: 'Institutional Syndications' },
 ];
-
-export interface ReelShareData {
-  reelId: string;
-  title: string;
-  authorName: string;
-  authorAvatar?: string | null;
-  thumbnail?: string | null;
-  location?: string | null;
-  price?: string | null;
-}
-
-export function parseReelMessage(text?: string): ReelShareData | null {
-  if (!text || typeof text !== 'string') return null;
-  const trimmed = text.trim();
-
-  // 1. Structured JSON format: [REEL_SHARE]:{...}
-  if (trimmed.startsWith('[REEL_SHARE]:')) {
-    try {
-      const jsonStr = trimmed.slice('[REEL_SHARE]:'.length);
-      const parsed = JSON.parse(jsonStr);
-      if (parsed && (parsed.reelId || parsed.id)) {
-        return {
-          reelId: String(parsed.reelId || parsed.id),
-          title: parsed.title || 'Luxury Property Reel',
-          authorName: parsed.authorName || 'Verified Broker',
-          authorAvatar: parsed.authorAvatar || null,
-          thumbnail: parsed.thumbnail || null,
-          location: parsed.location || 'Featured Listing',
-          price: parsed.price || null,
-        };
-      }
-    } catch (e) {
-      console.warn('Failed to parse [REEL_SHARE] payload:', e);
-    }
-  }
-
-  // 2. Legacy / link format (e.g. from user screenshot:
-  // "Check out this property reel: "Loki" by G Dinesh\n\nhttp://localhost:8081/(app)/insights?reelId=6aed73836a2f4fe59eac7fd5")
-  // Or any link with reelId=...
-  if (trimmed.includes('reelId=')) {
-    const reelIdMatch = trimmed.match(/reelId=([a-zA-Z0-9_-]+)/i);
-    if (reelIdMatch && reelIdMatch[1]) {
-      const reelId = reelIdMatch[1];
-      const titleMatch = trimmed.match(/reel:\s*"([^"]+)"/i) || trimmed.match(/"([^"]+)"/);
-      const authorMatch = trimmed.match(/by\s+([^\n\r]+)/i);
-
-      // High-quality default covers for property reels
-      const fallbackThumbnail = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80';
-
-      return {
-        reelId,
-        title: titleMatch ? titleMatch[1] : 'Property Reel',
-        authorName: authorMatch ? authorMatch[1].trim() : 'Boolok Creator',
-        authorAvatar: null,
-        thumbnail: fallbackThumbnail,
-        location: 'Verified Property',
-        price: null,
-      };
-    }
-  }
-
-  return null;
-}
-
-export function formatMessageSnippet(rawText?: string): string {
-  if (!rawText) return 'Started a conversation';
-  const reel = parseReelMessage(rawText);
-  if (reel) {
-    return `📹 Reel: "${reel.title}"`;
-  }
-  return rawText;
-}
-
-interface ReelMessageCardProps {
-  reel: ReelShareData;
-  isMe: boolean;
-  timeStr: string;
-  isSending?: boolean;
-  isRead?: boolean;
-  onPress: () => void;
-}
-
-const ReelMessageCard: React.FC<ReelMessageCardProps> = ({
-  reel,
-  isMe,
-  timeStr,
-  isSending,
-  isRead,
-  onPress,
-}) => {
-  const [imageFailed, setImageFailed] = useState(false);
-  const fallbackImage = 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80';
-  const coverUri = (!imageFailed && reel.thumbnail) ? (resolveImageUrl(reel.thumbnail) || reel.thumbnail) : fallbackImage;
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed, hovered }: any) => [
-        styles.reelCardContainer,
-        {
-          borderColor: isMe ? 'rgba(218, 165, 32, 0.45)' : 'rgba(255, 255, 255, 0.12)',
-          opacity: pressed ? 0.92 : 1,
-        },
-        hovered && { borderColor: '#daa520' },
-      ]}
-    >
-      {/* ── Top Header: Creator Avatar + Name + REEL tag ── */}
-      <View style={styles.reelCardHeader}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-          {reel.authorAvatar ? (
-            <Image
-              source={{ uri: resolveImageUrl(reel.authorAvatar) || reel.authorAvatar }}
-              style={styles.reelCardAuthorAvatar}
-            />
-          ) : (
-            <View style={styles.reelCardAuthorAvatarFallback}>
-              <Text style={{ color: '#DAA520', fontSize: 10, fontWeight: '800' }}>
-                {(reel.authorName || 'B')[0]?.toUpperCase()}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.reelCardAuthorName} numberOfLines={1}>
-            {reel.authorName}
-          </Text>
-          <MaterialIcons name="verified" size={12} color="#38bdf8" />
-        </View>
-
-        <View style={styles.reelCardTag}>
-          <MaterialCommunityIcons name="movie-play-outline" size={11} color="#FFFFFF" />
-          <Text style={styles.reelCardTagText}>REEL</Text>
-        </View>
-      </View>
-
-      {/* ── Media Preview with Play Button Overlay ── */}
-      <View style={styles.reelCardMediaWrap}>
-        <Image
-          source={{ uri: coverUri }}
-          style={styles.reelCardImage}
-          resizeMode="cover"
-          onError={() => setImageFailed(true)}
-        />
-        {/* Subtle Dark Gradient Overlay */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.15)', 'transparent', 'rgba(0,0,0,0.9)']}
-          style={StyleSheet.absoluteFillObject}
-        />
-
-        {/* Center Circular Play Button */}
-        <View style={styles.reelCardPlayCenter}>
-          <View style={styles.reelCardPlayCircle}>
-            <MaterialIcons name="play-arrow" size={26} color="#FFFFFF" style={{ marginLeft: 2 }} />
-          </View>
-        </View>
-
-        {/* Video Overlay Text */}
-        <View style={styles.reelCardMediaOverlay}>
-          <Text style={styles.reelCardTitle} numberOfLines={2}>
-            {reel.title}
-          </Text>
-          <View style={styles.reelCardMetaRow}>
-            {Boolean(reel.location) && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 }}>
-                <MaterialIcons name="location-on" size={11} color="#CBD5E1" />
-                <Text style={styles.reelCardLocation} numberOfLines={1}>
-                  {reel.location}
-                </Text>
-              </View>
-            )}
-            {Boolean(reel.price) && (
-              <View style={styles.reelCardPricePill}>
-                <Text style={styles.reelCardPriceText}>{reel.price}</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* ── Footer CTA Bar ── */}
-      <View style={styles.reelCardFooter}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-          <MaterialIcons name="play-circle-fill" size={14} color="#daa520" />
-          <Text style={styles.reelCardFooterText}>Watch on Boolok Reels</Text>
-        </View>
-        <MaterialIcons name="arrow-forward" size={14} color="#daa520" />
-      </View>
-
-      {/* ── Time & Tick Status ── */}
-      <View style={styles.reelCardTimeRow}>
-        <Text style={styles.reelCardTimeText}>{timeStr}</Text>
-        {isMe && (
-          <MaterialIcons
-            name={isSending ? 'access-time' : isRead ? 'done-all' : 'done'}
-            size={13}
-            color="#daa520"
-          />
-        )}
-      </View>
-    </Pressable>
-  );
-};
 
 export default function MessagesScreen() {
   const { width, height: windowHeight } = useWindowDimensions();
@@ -256,22 +56,23 @@ export default function MessagesScreen() {
   const params = useLocalSearchParams();
   const { user: currentUser, token } = useAuth();
   const { theme, isDark } = useTheme();
-  const { socket, isConnected, onlineUserIds, isUserOnline, joinConversation, leaveConversation, sendTyping, sendStopTyping, markConversationRead } = useSocket();
+  const { socket, isConnected, joinConversation, leaveConversation, sendTyping, sendStopTyping, markConversationRead } = useSocket();
 
-  // Color tokens
-  const bgDark = isDark ? '#050a14' : '#F1F5F9';
-  const cardBg = isDark ? '#0c1626' : '#FFFFFF';
-  const innerCardBg = isDark ? '#111d33' : '#F8FAFC';
-  const borderColor = isDark ? '#1a273c' : '#E2E8F0';
-  const textPrimary = isDark ? '#ffffff' : '#0f172a';
-  const textMuted = isDark ? '#8b9bb4' : '#64748b';
-  const goldPrimary = '#daa520';
+  // Color tokens responsive to current theme (Dark vs Light)
+  const bgDark = isDark ? '#080D17' : '#FFFFFF';
+  const cardBg = isDark ? '#0B1424' : '#FFFFFF';
+  const innerCardBg = isDark ? '#111D30' : '#F8FAFC';
+  const borderColor = isDark ? '#232D42' : '#E2E8F0';
+  const textPrimary = isDark ? '#F8FAFC' : '#111827';
+  const textMuted = isDark ? '#94A3B8' : '#64748B';
+  const goldPrimary = isDark ? '#F5A623' : '#D97706';
 
   // State
   const [conversations, setConversations] = useState<any[]>([]);
   const [activeConversation, setActiveConversation] = useState<any>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [conversationError, setConversationError] = useState<string | null>(null);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -371,17 +172,25 @@ export default function MessagesScreen() {
 
   // 1. Fetch conversations list
   const fetchConversations = useCallback(async () => {
+    setIsLoadingConversations(true);
+    setConversationError(null);
     try {
       const authToken = await getToken();
-      if (!authToken) return;
+      if (!authToken) {
+        setIsLoadingConversations(false);
+        return;
+      }
       const res = await axios.get(`${API_BASE_URL}/api/messages/conversations`, {
         headers: { Authorization: `Bearer ${authToken}` },
+        timeout: 10000,
       });
       if (Array.isArray(res.data?.conversations)) {
         setConversations(res.data.conversations);
       }
-    } catch (error) {
+      setConversationError(null);
+    } catch (error: any) {
       console.error('Failed to fetch conversations:', error);
+      setConversationError(error?.message || 'Failed to load conversations.');
     } finally {
       setIsLoadingConversations(false);
     }
@@ -479,18 +288,6 @@ export default function MessagesScreen() {
             return prev;
           });
         }
-        if (res.data?.otherUser) {
-          setActiveConversation((prev: any) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              otherUser: {
-                ...prev.otherUser,
-                ...res.data.otherUser,
-              },
-            };
-          });
-        }
       } catch (_) {}
     }, 3000);
 
@@ -540,56 +337,16 @@ export default function MessagesScreen() {
       }
     };
 
-    const handleUserStatusChanged = (payload: any) => {
-      if (!payload?.userId) return;
-      const targetId = String(payload.userId);
-
-      setConversations((prev) =>
-        prev.map((conv) => {
-          const oId = String(conv.otherUser?._id || conv.otherUser?.id || '');
-          if (oId === targetId) {
-            return {
-              ...conv,
-              otherUser: {
-                ...conv.otherUser,
-                isOnline: Boolean(payload.isOnline),
-                lastSeen: payload.lastSeen,
-              },
-            };
-          }
-          return conv;
-        })
-      );
-
-      setActiveConversation((prev: any) => {
-        if (!prev) return prev;
-        const oId = String(prev.otherUser?._id || prev.otherUser?.id || '');
-        if (oId === targetId) {
-          return {
-            ...prev,
-            otherUser: {
-              ...prev.otherUser,
-              isOnline: Boolean(payload.isOnline),
-              lastSeen: payload.lastSeen,
-            },
-          };
-        }
-        return prev;
-      });
-    };
-
     socket.on('new_message', handleNewMessage);
     socket.on('message_notification', handleMessageNotification);
     socket.on('user_typing', handleUserTyping);
     socket.on('user_stop_typing', handleUserStopTyping);
-    socket.on('user_status_changed', handleUserStatusChanged);
 
     return () => {
       socket.off('new_message', handleNewMessage);
       socket.off('message_notification', handleMessageNotification);
       socket.off('user_typing', handleUserTyping);
       socket.off('user_stop_typing', handleUserStopTyping);
-      socket.off('user_status_changed', handleUserStatusChanged);
     };
   }, [socket, markConversationRead, fetchConversations]);
 
@@ -804,9 +561,7 @@ export default function MessagesScreen() {
                       (pressed || hovered) && { borderColor: goldPrimary },
                     ]}
                   >
-                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 9, fontWeight: '800', color: goldPrimary }}>{b.fullName[0]}</Text>
-                    </View>
+                    <Avatar user={b} size={20} />
                     <Text style={{ color: textPrimary, fontSize: 12, fontWeight: '600' }}>{b.fullName.split(' ')[0]}</Text>
                   </Pressable>
                 ))}
@@ -840,9 +595,7 @@ export default function MessagesScreen() {
                       (pressed || hovered) && { borderColor: goldPrimary },
                     ]}
                   >
-                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                      <Text style={{ color: goldPrimary, fontWeight: '800' }}>{b.fullName[0]}</Text>
-                    </View>
+                    <Avatar user={b} size={34} style={{ marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ color: textPrimary, fontWeight: '700', fontSize: 13 }}>{b.fullName}</Text>
                       <Text style={{ color: textMuted, fontSize: 11 }}>@{b.username} · {b.headline}</Text>
@@ -854,10 +607,31 @@ export default function MessagesScreen() {
             )}
 
             {/* Active Conversation List */}
-            {isLoadingConversations ? (
+            {isLoadingConversations && conversations.length === 0 ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
                 <ActivityIndicator size="small" color={goldPrimary} />
                 <Text style={{ color: textMuted, fontSize: 12, marginTop: 8 }}>Loading encrypted conversations...</Text>
+              </View>
+            ) : conversationError && conversations.length === 0 ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={40} color="#f87171" />
+                <Text style={{ color: textPrimary, fontSize: 14, fontWeight: '700', marginTop: 10 }}>
+                  Unable to load conversations
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 12, textAlign: 'center', marginTop: 4, marginBottom: 14 }}>
+                  {conversationError}
+                </Text>
+                <Pressable
+                  onPress={() => fetchConversations()}
+                  style={{
+                    backgroundColor: goldPrimary,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    borderRadius: 6,
+                  }}
+                >
+                  <Text style={{ color: '#000000', fontWeight: '800', fontSize: 12.5 }}>Retry</Text>
+                </Pressable>
               </View>
             ) : filteredConversations.length === 0 ? (
               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
@@ -877,15 +651,8 @@ export default function MessagesScreen() {
                 renderItem={({ item }) => {
                   const isSelected = activeConversation?._id === item._id;
                   const other = item.otherUser || {};
-                  const otherId = String(other._id || other.id || '');
                   const otherInitial = (other.fullName || other.username || 'U')[0]?.toUpperCase();
                   const photoUrl = resolveImageUrl(other.profilePicture);
-                  const isOnline =
-                    isUserOnline(other._id) ||
-                    isUserOnline(other.id) ||
-                    isUserOnline(other.username) ||
-                    Boolean(other.isOnline);
-                  const statusText = formatLastSeen(isOnline, other.lastSeen);
 
                   return (
                     <Pressable
@@ -899,22 +666,8 @@ export default function MessagesScreen() {
                     >
                       {/* Avatar */}
                       <View style={{ position: 'relative', marginRight: 12 }}>
-                        {photoUrl ? (
-                          <Image source={{ uri: photoUrl }} style={styles.convAvatar} />
-                        ) : (
-                          <View style={[styles.convAvatar, { backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: goldPrimary }]}>
-                            <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: 15 }}>{otherInitial}</Text>
-                          </View>
-                        )}
-                        <View
-                          style={[
-                            styles.onlineStatusBadge,
-                            {
-                              backgroundColor: isOnline ? '#22c55e' : '#64748b',
-                              borderColor: cardBg,
-                            },
-                          ]}
-                        />
+                        <Avatar user={other} size={44} />
+                        <View style={styles.onlineStatusBadge} />
                       </View>
 
                       {/* Info & Snippet */}
@@ -927,25 +680,12 @@ export default function MessagesScreen() {
                             {formatConversationTime(item.updatedAt || item.lastMessage?.createdAt)}
                           </Text>
                         </View>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 1 }}>
-                          {isOnline ? (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#22c55e' }} />
-                              <Text style={{ fontSize: 11, color: '#22c55e', fontWeight: '700' }}>Active now</Text>
-                            </View>
-                          ) : other.lastSeen ? (
-                            <Text style={{ fontSize: 11, color: textMuted }} numberOfLines={1}>
-                              {statusText}
-                            </Text>
-                          ) : (
-                            <Text style={[styles.convHeadline, { color: textMuted }]} numberOfLines={1}>
-                              {other.headline || 'Verified Real Estate Specialist'}
-                            </Text>
-                          )}
-                        </View>
+                        <Text style={[styles.convHeadline, { color: textMuted }]} numberOfLines={1}>
+                          {other.headline || 'Verified Real Estate Specialist'}
+                        </Text>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
                           <Text style={[styles.convSnippet, { color: item.unreadCount > 0 ? textPrimary : textMuted, fontWeight: item.unreadCount > 0 ? '700' : '400' }]} numberOfLines={1}>
-                            {formatMessageSnippet(item.lastMessage?.text)}
+                            {item.lastMessage?.text || 'Started a conversation'}
                           </Text>
                           {item.unreadCount > 0 && (
                             <View style={styles.unreadPill}>
@@ -992,39 +732,8 @@ export default function MessagesScreen() {
                       </Pressable>
                     )}
 
-                    {/* Participant Avatar with Live Active Indicator */}
-                    {(() => {
-                      const other = activeConversation.otherUser || {};
-                      const otherId = String(other._id || other.id || '');
-                      const photoUrl = resolveImageUrl(other.profilePicture);
-                      const initial = (other.fullName || other.username || 'U')[0]?.toUpperCase();
-                      const isOnline =
-                        isUserOnline(other._id) ||
-                        isUserOnline(other.id) ||
-                        isUserOnline(other.username) ||
-                        Boolean(other.isOnline);
-
-                      return (
-                        <View style={{ position: 'relative' }}>
-                          {photoUrl ? (
-                            <Image source={{ uri: photoUrl }} style={styles.chatHeaderAvatar} />
-                          ) : (
-                            <View style={[styles.chatHeaderAvatar, { backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: goldPrimary }]}>
-                              <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: 16 }}>{initial}</Text>
-                            </View>
-                          )}
-                          <View
-                            style={[
-                              styles.headerOnlineBadge,
-                              {
-                                backgroundColor: isOnline ? '#22c55e' : '#64748b',
-                                borderColor: cardBg,
-                              },
-                            ]}
-                          />
-                        </View>
-                      );
-                    })()}
+                    {/* Participant Avatar */}
+                    <Avatar user={activeConversation.otherUser} size={40} style={{ marginRight: 10 }} />
 
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1033,47 +742,9 @@ export default function MessagesScreen() {
                         </Text>
                         <MaterialIcons name="verified" size={16} color={goldPrimary} />
                       </View>
-
-                      {/* Active Status & Last Seen Subtitle */}
-                      {(() => {
-                        const other = activeConversation.otherUser || {};
-                        const otherId = String(other._id || other.id || '');
-                        const isOnline =
-                          isUserOnline(other._id) ||
-                          isUserOnline(other.id) ||
-                          isUserOnline(other.username) ||
-                          Boolean(other.isOnline);
-
-                        if (isTyping) {
-                          return (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                              <Text style={{ color: goldPrimary, fontSize: 12, fontWeight: '700' }}>
-                                typing...
-                              </Text>
-                            </View>
-                          );
-                        }
-
-                        if (isOnline) {
-                          return (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                              <View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#22c55e' }} />
-                              <Text style={{ color: '#22c55e', fontSize: 12, fontWeight: '700' }}>
-                                Active now
-                              </Text>
-                            </View>
-                          );
-                        }
-
-                        return (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                            <MaterialIcons name="access-time" size={12} color={textMuted} />
-                            <Text style={[styles.chatHeaderSubtitle, { color: textMuted }]} numberOfLines={1}>
-                              {formatLastSeen(false, other.lastSeen)}
-                            </Text>
-                          </View>
-                        );
-                      })()}
+                      <Text style={[styles.chatHeaderSubtitle, { color: textMuted }]} numberOfLines={1}>
+                        @{activeConversation.otherUser?.username || 'member'} · {activeConversation.otherUser?.location || 'Boolok Real Estate Network'}
+                      </Text>
                     </View>
                   </View>
 
@@ -1149,69 +820,43 @@ export default function MessagesScreen() {
 
                             <View style={[styles.messageRow, isMe ? styles.messageRowMe : styles.messageRowOther]}>
                               {!isMe && (
-                                photoUrl ? (
-                                  <Image source={{ uri: photoUrl }} style={styles.bubbleAvatar} />
-                                ) : (
-                                  <View style={[styles.bubbleAvatar, { backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: goldPrimary }]}>
-                                    <Text style={{ color: goldPrimary, fontSize: 11, fontWeight: '800' }}>
-                                      {(item.sender?.fullName || 'B')[0]?.toUpperCase()}
-                                    </Text>
-                                  </View>
-                                )
+                                <Avatar user={item.sender} size={28} style={{ marginRight: 8, alignSelf: 'flex-end', marginBottom: 2 }} />
                               )}
 
-                              {(() => {
-                                const reelData = parseReelMessage(item.text);
-                                if (reelData) {
-                                  return (
-                                    <ReelMessageCard
-                                      reel={reelData}
-                                      isMe={isMe}
-                                      timeStr={smartTimeStr || timeStr}
-                                      isSending={item.sending}
-                                      isRead={item.read}
-                                      onPress={() => router.push(`/(app)/insights?reelId=${reelData.reelId}` as any)}
+                              <View
+                                style={[
+                                  styles.messageBubble,
+                                  isMe ? [styles.bubbleMe, { backgroundColor: isDark ? '#daa520' : '#d97706' }] : [styles.bubbleOther, { backgroundColor: cardBg, borderColor }],
+                                ]}
+                              >
+                                {/* Attached Media */}
+                                {Boolean(item.mediaUrl) && (
+                                  <Image
+                                    source={{ uri: resolveImageUrl(item.mediaUrl)! }}
+                                    style={{ width: 220, height: 140, borderRadius: 8, marginBottom: 6 }}
+                                    resizeMode="cover"
+                                  />
+                                )}
+
+                                {Boolean(item.text) && (
+                                  <Text style={[styles.messageText, { color: isMe ? '#000000' : textPrimary }]}>
+                                    {item.text}
+                                  </Text>
+                                )}
+
+                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
+                                  <Text style={[styles.messageTime, { color: isMe ? 'rgba(0,0,0,0.6)' : textMuted }]}>
+                                    {smartTimeStr || timeStr}
+                                  </Text>
+                                  {isMe && (
+                                    <MaterialIcons
+                                      name={item.sending ? 'access-time' : item.read ? 'done-all' : 'done'}
+                                      size={14}
+                                      color={isMe ? 'rgba(0,0,0,0.6)' : goldPrimary}
                                     />
-                                  );
-                                }
-
-                                return (
-                                  <View
-                                    style={[
-                                      styles.messageBubble,
-                                      isMe ? [styles.bubbleMe, { backgroundColor: isDark ? '#daa520' : '#d97706' }] : [styles.bubbleOther, { backgroundColor: cardBg, borderColor }],
-                                    ]}
-                                  >
-                                    {/* Attached Media */}
-                                    {Boolean(item.mediaUrl) && (
-                                      <Image
-                                        source={{ uri: resolveImageUrl(item.mediaUrl)! }}
-                                        style={{ width: 220, height: 140, borderRadius: 8, marginBottom: 6 }}
-                                        resizeMode="cover"
-                                      />
-                                    )}
-
-                                    {Boolean(item.text) && (
-                                      <Text style={[styles.messageText, { color: isMe ? '#000000' : textPrimary }]}>
-                                        {item.text}
-                                      </Text>
-                                    )}
-
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4, marginTop: 4 }}>
-                                      <Text style={[styles.messageTime, { color: isMe ? 'rgba(0,0,0,0.6)' : textMuted }]}>
-                                        {smartTimeStr || timeStr}
-                                      </Text>
-                                      {isMe && (
-                                        <MaterialIcons
-                                          name={item.sending ? 'access-time' : item.read ? 'done-all' : 'done'}
-                                          size={14}
-                                          color={isMe ? 'rgba(0,0,0,0.6)' : goldPrimary}
-                                        />
-                                      )}
-                                    </View>
-                                  </View>
-                                );
-                              })()}
+                                  )}
+                                </View>
+                              </View>
                             </View>
                           </View>
                         );
@@ -1410,20 +1055,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#22c55e',
-    borderWidth: 2,
-    borderColor: '#0c1626',
-  },
-  headerOnlineBadge: {
-    position: 'absolute',
-    bottom: -1,
-    right: -1,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
     backgroundColor: '#22c55e',
     borderWidth: 2,
     borderColor: '#0c1626',
@@ -1598,168 +1232,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     letterSpacing: 0.2,
-  },
-  reelCardContainer: {
-    width: 240,
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: '#090D16',
-    borderWidth: 1.5,
-    marginVertical: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  reelCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#0F172A',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  reelCardAuthorAvatar: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1,
-    borderColor: '#daa520',
-  },
-  reelCardAuthorAvatarFallback: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#1E293B',
-    borderWidth: 1,
-    borderColor: '#daa520',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  reelCardAuthorName: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#F8FAFC',
-    maxWidth: 120,
-  },
-  reelCardTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  reelCardTagText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.5,
-  },
-  reelCardMediaWrap: {
-    width: '100%',
-    height: 240,
-    position: 'relative',
-    backgroundColor: '#020617',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reelCardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  reelCardPlayCenter: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  reelCardPlayCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(0, 0, 0, 0.55)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  reelCardMediaOverlay: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 10,
-  },
-  reelCardTitle: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 17,
-    textShadowColor: 'rgba(0, 0, 0, 0.85)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  reelCardMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  reelCardLocation: {
-    color: '#CBD5E1',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  reelCardPricePill: {
-    backgroundColor: '#daa520',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  reelCardPriceText: {
-    color: '#000000',
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  reelCardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#0B1120',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  reelCardFooterText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#daa520',
-    letterSpacing: 0.2,
-  },
-  reelCardTimeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingBottom: 6,
-    backgroundColor: '#0B1120',
-  },
-  reelCardTimeText: {
-    fontSize: 10,
-    color: '#94A3B8',
   },
 });

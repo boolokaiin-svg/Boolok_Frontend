@@ -10,6 +10,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing } from '../../constants/theme';
 import HousePlanLoadingAnimation from '../../components/HousePlanLoadingAnimation';
+import { SvgXml } from 'react-native-svg';
+import { synthesizeCanonicalBlueprint } from '../../lib/canonicalBlueprintEngine';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import * as SecureStore from 'expo-secure-store';
 
@@ -709,12 +711,20 @@ export default function BlueprintScreen() {
   const [openAiKey, setOpenAiKey] = useState<string>('');
   const [plan2dUrl, setPlan2dUrl] = useState<string | null>(null);
   const [plan3dUrl, setPlan3dUrl] = useState<string | null>(null);
+  const [plan2dSvg, setPlan2dSvg] = useState<string | null>(null);
+  const [plan3dSvg, setPlan3dSvg] = useState<string | null>(null);
+  const [technicalCadSvg, setTechnicalCadSvg] = useState<string | null>(null);
+  const [canonicalLayout, setCanonicalLayout] = useState<any | null>(null);
   const [designSummary, setDesignSummary] = useState<string | null>(null);
   const [isAiGenerating, setIsAiGenerating] = useState<boolean>(false);
+  const [animationSkipped, setAnimationSkipped] = useState<boolean>(false);
   const [lastGeneratedMode, setLastGeneratedMode] = useState<'both' | '2d' | '3d'>('both');
   const [aiGenError, setAiGenError] = useState<string | null>(null);
   const [activePlanTab, setActivePlanTab] = useState<'both' | '2d' | '3d'>('both');
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [fullscreenSvg, setFullscreenSvg] = useState<string | null>(null);
+  const animationSkippedRef = useRef<boolean>(false);
+  const generationDoneRef = useRef<boolean>(false);
 
   // Load saved OpenAI Key if available
   useEffect(() => {
@@ -733,29 +743,87 @@ export default function BlueprintScreen() {
     })();
   }, []);
 
-  const downloadPlanImage = useCallback((url: string | null, filename: string) => {
-    if (!url) return;
-    const fullUrl = resolveImageUrl(url) || url;
+  const downloadPlanImage = useCallback((url: string | null, filename: string, rawSvg?: string | null) => {
+    if (!url && !rawSvg) return;
     if (Platform.OS === 'web') {
       try {
+        let href = resolveImageUrl(url) || url || '';
+        let objectUrl: string | null = null;
+        if (rawSvg) {
+          const blob = new Blob([rawSvg], { type: 'image/svg+xml;charset=utf-8' });
+          objectUrl = URL.createObjectURL(blob);
+          href = objectUrl;
+        }
         const a = document.createElement('a');
-        a.href = fullUrl;
+        a.href = href;
         a.download = filename;
-        a.target = '_blank';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+        if (objectUrl) {
+          setTimeout(() => URL.revokeObjectURL(objectUrl!), 3000);
+        }
       } catch (err: any) {
-        console.error('Error downloading image:', err);
+        console.error('Error downloading plan:', err);
       }
     } else {
+      const fullUrl = resolveImageUrl(url) || url || '';
       Share.share({
         url: fullUrl,
-        message: `Architectural Plan: ${fullUrl}`,
+        message: `BOOLOK Architectural Plan (${filename}): ${fullUrl.startsWith('data:') ? 'Generated SVG Layout' : fullUrl}`,
         title: filename,
       });
     }
   }, []);
+
+  const renderFormattedSummary = useCallback((rawSummary: string) => {
+    const lines = String(rawSummary || '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/^#{1,6}\s+/gm, '')
+      .split(/\r?\n/);
+
+    return lines.map((line, idx) => {
+      const trimmed = line.trim();
+      if (!trimmed) {
+        return <View key={`sp-${idx}`} style={{ height: 6 }} />;
+      }
+      const isHeading =
+        trimmed === trimmed.toUpperCase() &&
+        trimmed.length > 5 &&
+        !trimmed.startsWith('•') &&
+        !trimmed.startsWith('-');
+      const isBullet = trimmed.startsWith('•') || trimmed.startsWith('-');
+
+      if (isHeading) {
+        return (
+          <Text
+            key={`hd-${idx}`}
+            style={[
+              styles.summarySectionHeading,
+              { color: theme.primary, marginTop: idx === 0 ? 2 : 10 },
+            ]}
+          >
+            {trimmed}
+          </Text>
+        );
+      }
+      return (
+        <Text
+          key={`ln-${idx}`}
+          style={[
+            styles.summaryBody,
+            {
+              color: isBullet ? theme.onSurface : theme.onSurfaceVariant,
+              paddingLeft: isBullet ? 6 : 0,
+              marginBottom: 3,
+            },
+          ]}
+        >
+          {trimmed}
+        </Text>
+      );
+    });
+  }, [theme]);
 
   const executeGeneration = useCallback(async (modeToGenerate?: '2d' | '3d' | 'both') => {
     const targetMode = modeToGenerate || outputMode;
@@ -765,7 +833,17 @@ export default function BlueprintScreen() {
     setActivePlanTab(targetMode);
     setIsAiGenerating(true);
     setIsGenerating(true);
+    setAnimationSkipped(false);
+    animationSkippedRef.current = false;
+    generationDoneRef.current = false;
     setAiGenError(null);
+    setPlan2dUrl(null);
+    setPlan3dUrl(null);
+    setPlan2dSvg(null);
+    setPlan3dSvg(null);
+    setTechnicalCadSvg(null);
+    setCanonicalLayout(null);
+    setDesignSummary(null);
 
     try {
       const json = buildJson();
@@ -775,38 +853,66 @@ export default function BlueprintScreen() {
       if (keyToUse) {
         headers['x-openai-key'] = keyToUse;
       }
-      const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          jsonData: json,
-          mode: targetMode,
-          apiKey: keyToUse || undefined,
-        }),
-      });
+      // Validate feasibility up-front with the canonical geometry engine so invalid/infeasible
+      // requests immediately surface a clear validation message.
+      const localCanonical = synthesizeCanonicalBlueprint(json, targetMode);
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to generate architectural plan with OpenAI.');
+      let data: any = null;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            jsonData: json,
+            mode: targetMode,
+            apiKey: keyToUse || undefined,
+          }),
+        });
+        const remoteJson = await res.json().catch(() => ({}));
+        if (res.ok && remoteJson.success) {
+          data = remoteJson;
+        } else if (res.status === 400 && remoteJson.message) {
+          throw new Error(remoteJson.message);
+        } else {
+          // Render instance still on older commit (404 Route not found) — use the identical canonical engine result
+          data = localCanonical;
+        }
+      } catch (netErr: any) {
+        if (netErr?.message && netErr.message.includes('Infeasible')) {
+          throw netErr;
+        }
+        data = localCanonical;
       }
 
-      if (data.plan2dUrl) setPlan2dUrl(data.plan2dUrl);
-      if (data.plan3dUrl) setPlan3dUrl(data.plan3dUrl);
+      setPlan2dUrl(data.plan2dFileUrl ? resolveImageUrl(data.plan2dFileUrl) || data.plan2dUrl : data.plan2dUrl || null);
+      setPlan3dUrl(data.plan3dFileUrl ? resolveImageUrl(data.plan3dFileUrl) || data.plan3dUrl : data.plan3dUrl || null);
+      setPlan2dSvg(data.plan2dSvg || null);
+      setPlan3dSvg(data.plan3dSvg || null);
+      setTechnicalCadSvg(data.technicalCadSvg || null);
+      setCanonicalLayout(data.canonicalLayout || null);
       if (data.summary) {
         setDesignSummary(data.summary);
       }
       setIsAiGenerating(false);
-      setIsGenerating(false);
-      setSubmitted(true);
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      generationDoneRef.current = true;
+      if (animationSkippedRef.current) {
+        setIsGenerating(false);
+        setAnimationSkipped(false);
+        setSubmitted(true);
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }
     } catch (err: any) {
       console.error('Generation error:', err);
       setIsAiGenerating(false);
       setIsGenerating(false);
+      setAnimationSkipped(false);
+      animationSkippedRef.current = false;
+      generationDoneRef.current = false;
+      setSubmitted(false);
       setAiGenError(err.message || 'Generation failed.');
       Alert.alert(
-        'Generation Failed',
-        err.message || 'Could not complete floor plan generation with OpenAI.',
+        'Layout Validation / Generation Error',
+        err.message || 'Could not complete floor plan generation.',
         [{ text: 'OK' }]
       );
     }
@@ -1949,21 +2055,43 @@ export default function BlueprintScreen() {
   };
 
   // ─── Loading / Generation Animation View ──
-  if (isGenerating) {
+  if (isGenerating && !animationSkipped) {
     return (
       <HousePlanLoadingAnimation
         theme={theme}
         isDark={isDark}
         formData={form}
+        onSkip={() => {
+          animationSkippedRef.current = true;
+          setAnimationSkipped(true);
+          if (generationDoneRef.current && !isAiGenerating) {
+            setIsGenerating(false);
+            setAnimationSkipped(false);
+            setSubmitted(true);
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+          }
+        }}
         onComplete={() => {
-          setIsGenerating(false);
-          setSubmitted(true);
-          scrollRef.current?.scrollTo({ y: 0, animated: true });
+          animationSkippedRef.current = true;
+          if ((generationDoneRef.current || !isAiGenerating) && (plan2dUrl || plan3dUrl || plan2dSvg || plan3dSvg)) {
+            setIsGenerating(false);
+            setAnimationSkipped(false);
+            setSubmitted(true);
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+          } else {
+            setAnimationSkipped(true);
+          }
         }}
         onViewPlan={() => {
-          setIsGenerating(false);
-          setSubmitted(true);
-          scrollRef.current?.scrollTo({ y: 0, animated: true });
+          animationSkippedRef.current = true;
+          if ((generationDoneRef.current || !isAiGenerating) && (plan2dUrl || plan3dUrl || plan2dSvg || plan3dSvg)) {
+            setIsGenerating(false);
+            setAnimationSkipped(false);
+            setSubmitted(true);
+            scrollRef.current?.scrollTo({ y: 0, animated: true });
+          } else {
+            setAnimationSkipped(true);
+          }
         }}
       />
     );
@@ -1973,7 +2101,10 @@ export default function BlueprintScreen() {
   if (submitted) {
     const json = buildJson();
     const jsonStr = JSON.stringify(json, null, 2);
-    const grossArea = form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639);
+    const grossArea = canonicalLayout?.areas?.plotAreaSqFt || (form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639));
+    const envelopeArea = canonicalLayout?.areas?.buildingEnvelopeSqFt || Math.round(grossArea * 0.76);
+    const totalBuiltUpArea = canonicalLayout?.areas?.totalBuiltUpAreaSqFt || envelopeArea * form.stories;
+    const setbackInfo = canonicalLayout?.setbacks;
 
     return (
       <View style={[styles.root, { backgroundColor: theme.surface }]}>
@@ -1981,7 +2112,7 @@ export default function BlueprintScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingHorizontal: isSmallMobile ? 10 : isWide ? 24 : 14, paddingBottom: 60 },
+            { paddingHorizontal: isSmallMobile ? 10 : isWide ? 24 : 14, paddingBottom: 120 },
             isWide && { maxWidth: 960, alignSelf: 'center', width: '100%' },
           ]}
           showsVerticalScrollIndicator={false}
@@ -2039,13 +2170,27 @@ export default function BlueprintScreen() {
                       </View>
                     </View>
 
-                    {plan2dUrl ? (
-                      <Pressable onPress={() => setFullscreenImage(plan2dUrl)}>
-                        <Image
-                          source={{ uri: resolveImageUrl(plan2dUrl) || plan2dUrl }}
-                          style={styles.planImage}
-                          resizeMode="contain"
-                        />
+                    {plan2dSvg || plan2dUrl ? (
+                      <Pressable
+                        onPress={() => {
+                          if (plan2dSvg) setFullscreenSvg(plan2dSvg);
+                          else setFullscreenImage(plan2dUrl);
+                        }}
+                        style={[styles.planCanvasTouchWrap, { backgroundColor: '#FAF8F5' }]}
+                      >
+                        {plan2dSvg ? (
+                          <SvgXml xml={plan2dSvg} width="100%" height={isWide ? 380 : 320} />
+                        ) : (
+                          <Image
+                            source={{ uri: resolveImageUrl(plan2dUrl) || plan2dUrl! }}
+                            style={styles.planImage}
+                            resizeMode="contain"
+                          />
+                        )}
+                        <View style={styles.zoomHintPill}>
+                          <MaterialCommunityIcons name="magnify-plus-outline" size={13} color="#DAA520" />
+                          <Text style={styles.zoomHintText}>Tap to Inspect Full Plan</Text>
+                        </View>
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
@@ -2056,16 +2201,27 @@ export default function BlueprintScreen() {
 
                     <View style={styles.cardFooter}>
                       <Text style={[styles.cardFootnote, { color: theme.onSurfaceVariant }]}>
-                        Rooms, wall linework, door arcs, dimensions & schedule
+                        Rooms, wall linework, door arcs, dimensions &amp; schedule
                       </Text>
-                      {plan2dUrl && (
-                        <Pressable
-                          onPress={() => downloadPlanImage(plan2dUrl, `house_plan_2d_${form.plotWidth}x${form.plotDepth}.png`)}
-                          style={[styles.planDownloadBtn, { borderColor: theme.primary }]}
-                        >
-                          <MaterialCommunityIcons name="download" size={13} color={theme.primary} />
-                          <Text style={[styles.planDownloadText, { color: theme.primary }]}>Download 2D</Text>
-                        </Pressable>
+                      {(plan2dUrl || plan2dSvg) && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
+                          <Pressable
+                            onPress={() => downloadPlanImage(plan2dUrl, `house_plan_2d_furnished_${form.plotWidth}x${form.plotDepth}.svg`, plan2dSvg)}
+                            style={[styles.planDownloadBtn, { borderColor: theme.primary }]}
+                          >
+                            <MaterialCommunityIcons name="download" size={13} color={theme.primary} />
+                            <Text style={[styles.planDownloadText, { color: theme.primary }]}>Download 2D Plan</Text>
+                          </Pressable>
+                          {technicalCadSvg && (
+                            <Pressable
+                              onPress={() => downloadPlanImage(null, `house_plan_2d_technical_cad_${form.plotWidth}x${form.plotDepth}.svg`, technicalCadSvg)}
+                              style={[styles.planDownloadBtn, { borderColor: theme.outlineVariant }]}
+                            >
+                              <MaterialCommunityIcons name="file-document-outline" size={13} color={theme.onSurfaceVariant} />
+                              <Text style={[styles.planDownloadText, { color: theme.onSurfaceVariant }]}>Download Technical CAD</Text>
+                            </Pressable>
+                          )}
+                        </View>
                       )}
                     </View>
                   </View>
@@ -2075,22 +2231,36 @@ export default function BlueprintScreen() {
                 {(outputMode === 'both' || outputMode === '3d' || (plan3dUrl && !plan2dUrl)) && (
                   <View style={[styles.planCard, isWide && (outputMode === 'both' || (plan2dUrl && plan3dUrl)) && { flex: 1 }, { borderColor: theme.outlineVariant, backgroundColor: isDark ? '#070D18' : '#F8FAFC' }]}>
                     <View style={styles.cardHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
                         <MaterialCommunityIcons name="cube-outline" size={16} color={theme.primary} />
-                        <Text style={[styles.cardTitle, { color: theme.onSurface }]}>PHASE 4: 3D CUTAWAY VISUALIZATION</Text>
+                        <Text style={[styles.cardTitle, { color: theme.onSurface, flex: 1 }]}>PHASE 4: 3D CUTAWAY PREVIEW</Text>
                       </View>
                       <View style={[styles.cadTag, { borderColor: 'rgba(218,165,32,0.4)', backgroundColor: 'rgba(218,165,32,0.1)' }]}>
                         <Text style={{ fontSize: 9.5, fontWeight: '700', color: theme.primary }}>ISOMETRIC CUTAWAY</Text>
                       </View>
                     </View>
 
-                    {plan3dUrl ? (
-                      <Pressable onPress={() => setFullscreenImage(plan3dUrl)}>
-                        <Image
-                          source={{ uri: resolveImageUrl(plan3dUrl) || plan3dUrl }}
-                          style={styles.planImage}
-                          resizeMode="contain"
-                        />
+                    {plan3dSvg || plan3dUrl ? (
+                      <Pressable
+                        onPress={() => {
+                          if (plan3dSvg) setFullscreenSvg(plan3dSvg);
+                          else setFullscreenImage(plan3dUrl);
+                        }}
+                        style={styles.planCanvasTouchWrap}
+                      >
+                        {plan3dSvg ? (
+                          <SvgXml xml={plan3dSvg} width="100%" height={isWide ? 380 : 320} />
+                        ) : (
+                          <Image
+                            source={{ uri: resolveImageUrl(plan3dUrl) || plan3dUrl! }}
+                            style={styles.planImage}
+                            resizeMode="contain"
+                          />
+                        )}
+                        <View style={styles.zoomHintPill}>
+                          <MaterialCommunityIcons name="magnify-plus-outline" size={13} color="#DAA520" />
+                          <Text style={styles.zoomHintText}>Tap to Inspect 3D Preview</Text>
+                        </View>
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
@@ -2101,15 +2271,15 @@ export default function BlueprintScreen() {
 
                     <View style={styles.cardFooter}>
                       <Text style={[styles.cardFootnote, { color: theme.onSurfaceVariant }]}>
-                        Derived geometry, materials, furniture & lighting (No exterior)
+                        1:1 derived geometry, walls, furniture &amp; room dimensions
                       </Text>
-                      {plan3dUrl && (
+                      {(plan3dUrl || plan3dSvg) && (
                         <Pressable
-                          onPress={() => downloadPlanImage(plan3dUrl, `house_plan_3d_${form.plotWidth}x${form.plotDepth}.png`)}
+                          onPress={() => downloadPlanImage(plan3dUrl, `house_plan_3d_preview_${form.plotWidth}x${form.plotDepth}.svg`, plan3dSvg)}
                           style={[styles.planDownloadBtn, { borderColor: theme.primary }]}
                         >
                           <MaterialCommunityIcons name="download" size={13} color={theme.primary} />
-                          <Text style={[styles.planDownloadText, { color: theme.primary }]}>Download 3D</Text>
+                          <Text style={[styles.planDownloadText, { color: theme.primary }]}>Download 3D Preview</Text>
                         </Pressable>
                       )}
                     </View>
@@ -2117,14 +2287,14 @@ export default function BlueprintScreen() {
                 )}
               </View>
 
-              {/* Executive Design Summary from AI */}
+              {/* Executive Design Summary from Canonical Engine */}
               {designSummary && (
                 <View style={[styles.designSummaryBox, { borderColor: theme.outlineVariant, backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : '#F1F5F9' }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                     <MaterialCommunityIcons name="text-box-check-outline" size={16} color={theme.primary} />
                     <Text style={[styles.summaryTitle, { color: theme.onSurface }]}>Phase 6: Architectural Executive Summary</Text>
                   </View>
-                  <Text style={[styles.summaryBody, { color: theme.onSurfaceVariant }]}>{designSummary}</Text>
+                  <View>{renderFormattedSummary(designSummary)}</View>
                 </View>
               )}
             </View>
@@ -2154,9 +2324,25 @@ export default function BlueprintScreen() {
                   <Text style={[styles.scheduleVal, { color: theme.onSurface }]}>{form.plotWidth} × {form.plotDepth} {form.plotUnit}</Text>
                 </View>
                 <View style={styles.scheduleRow}>
-                  <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Gross Footprint:</Text>
+                  <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Gross Plot Area:</Text>
                   <Text style={[styles.scheduleVal, { color: theme.onSurface }]}>{grossArea.toLocaleString()} sq.ft</Text>
                 </View>
+                <View style={styles.scheduleRow}>
+                  <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Buildable Envelope:</Text>
+                  <Text style={[styles.scheduleVal, { color: '#38BDF8' }]}>{envelopeArea.toLocaleString()} sq.ft</Text>
+                </View>
+                <View style={styles.scheduleRow}>
+                  <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Total Built-Up Area:</Text>
+                  <Text style={[styles.scheduleVal, { color: '#22c55e' }]}>{totalBuiltUpArea.toLocaleString()} sq.ft</Text>
+                </View>
+                {setbackInfo && (
+                  <View style={styles.scheduleRow}>
+                    <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Setbacks (F/R/L/R):</Text>
+                    <Text style={[styles.scheduleVal, { color: theme.onSurface }]}>
+                      {setbackInfo.frontFt}&apos; / {setbackInfo.rearFt}&apos; / {setbackInfo.leftFt}&apos; / {setbackInfo.rightFt}&apos;
+                    </Text>
+                  </View>
+                )}
                 <View style={styles.scheduleRow}>
                   <Text style={[styles.scheduleKey, { color: theme.onSurfaceVariant }]}>Orientation:</Text>
                   <Text style={[styles.scheduleVal, { color: theme.onSurface }]}>{form.facing.toUpperCase()}</Text>
@@ -2214,7 +2400,65 @@ export default function BlueprintScreen() {
                 </View>
               </View>
             </View>
+
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+              <Pressable
+                onPress={() => setSubmitted(false)}
+                style={[styles.actionBtnSecondary, { flex: 1, minWidth: 160, borderColor: theme.outlineVariant, paddingHorizontal: 14 }]}
+              >
+                <MaterialIcons name="edit" size={16} color={theme.onSurface} />
+                <Text style={[styles.actionBtnSecondaryText, { color: theme.onSurface }]}>Modify Specifications</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => executeGeneration(outputMode)}
+                style={[styles.actionBtnPrimary, { flex: 1, minWidth: 160 }]}
+              >
+                <LinearGradient colors={['#DAA520', '#B8860B']} style={[styles.actionBtnPrimaryGrad, { paddingHorizontal: 14 }]}>
+                  <MaterialCommunityIcons name="refresh" size={16} color="#0A0F23" />
+                  <Text style={styles.actionBtnPrimaryText}>Regenerate Layout</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
           </View>
+
+          {/* Fullscreen Plan / Preview Modal inside Submitted View */}
+          <Modal
+            visible={!!fullscreenImage || !!fullscreenSvg}
+            animationType="fade"
+            transparent
+            onRequestClose={() => {
+              setFullscreenImage(null);
+              setFullscreenSvg(null);
+            }}
+          >
+            <View style={styles.fullscreenOverlay}>
+              <Pressable
+                onPress={() => {
+                  setFullscreenImage(null);
+                  setFullscreenSvg(null);
+                }}
+                style={styles.fullscreenCloseBtn}
+              >
+                <MaterialIcons name="close" size={24} color="#FFFFFF" />
+              </Pressable>
+              {fullscreenSvg ? (
+                <ScrollView
+                  style={{ width: '100%', flex: 1 }}
+                  contentContainerStyle={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 48, paddingHorizontal: 12 }}
+                  maximumZoomScale={3}
+                  minimumZoomScale={1}
+                >
+                  <SvgXml xml={fullscreenSvg} width={Math.min(width - 24, 920)} height={Math.min(width - 24, 920) * 1.15} />
+                </ScrollView>
+              ) : fullscreenImage ? (
+                <Image
+                  source={{ uri: resolveImageUrl(fullscreenImage) || fullscreenImage }}
+                  style={styles.fullscreenImg}
+                  resizeMode="contain"
+                />
+              ) : null}
+            </View>
+          </Modal>
 
         </ScrollView>
       </View>
@@ -2264,6 +2508,21 @@ export default function BlueprintScreen() {
             )}
           </View>
         </View>
+
+        {/* Inline Real Request Status Banner when full-screen animation is skipped */}
+        {isGenerating && animationSkipped && (
+          <View style={[styles.inlineGeneratingBanner, { borderColor: theme.primary, backgroundColor: isDark ? 'rgba(218,165,32,0.12)' : 'rgba(218,165,32,0.1)' }]}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: theme.onSurface, fontSize: 12.5, fontWeight: '800' }}>
+                Synthesizing Canonical 2D &amp; 3D Architectural Layout...
+              </Text>
+              <Text style={{ color: theme.onSurfaceVariant, fontSize: 11 }}>
+                Validating setbacks, room coordinates, and isometric projection on server.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Studio Drafting Header */}
         <Animated.View entering={FadeInDown.duration(300)} style={styles.studioHero}>
@@ -2504,7 +2763,7 @@ export default function BlueprintScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   scrollContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
   },
   topNavRow: {
     flexDirection: 'row',
@@ -3426,10 +3685,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  planCanvasTouchWrap: {
+    width: '100%',
+    backgroundColor: '#070E1A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    paddingVertical: 6,
+  },
+  zoomHintPill: {
+    position: 'absolute',
+    bottom: 10,
+    right: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(7, 14, 26, 0.85)',
+    borderWidth: 1,
+    borderColor: 'rgba(218, 165, 32, 0.45)',
+  },
+  zoomHintText: {
+    color: '#F8FAFC',
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  summarySectionHeading: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  inlineGeneratingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 14,
   },
   cardTitle: {
     fontSize: 11,

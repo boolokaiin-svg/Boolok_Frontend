@@ -1,3 +1,11 @@
+
+function getEffectiveFollowerCount(u: any): number {
+  if (!u) return 0;
+  if (typeof u.followerCount === 'number') return Math.max(0, u.followerCount);
+  if (Array.isArray(u.followers)) return u.followers.length;
+  return 0;
+}
+
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, Pressable, StyleSheet, useWindowDimensions, Image, Platform, ScrollView, TextInput, Alert, ActivityIndicator, Keyboard, Modal } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +22,7 @@ import BoolokLogo from '../../components/BoolokLogo';
 import axios from 'axios';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { SocketProvider, useSocket } from '../../context/SocketContext';
+import Avatar from '../../components/Avatar';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -26,7 +35,7 @@ const NAV_ITEMS = [
   { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search' },
   { id: 'insights', icon: 'dynamic-feed', label: 'Insights Feed', route: '/(app)/insights' },
   { id: 'predictions', icon: 'trending-up', label: 'Price Predictions', route: '/(app)/predictions' },
-  { id: 'legal', icon: 'verified-user', label: 'Title & Legal AI', route: '/(app)/legal' },
+  { id: 'legal', icon: 'gavel', label: 'Title & Legal Verification', route: '/(app)/legal' },
   { id: 'blueprint', icon: 'home-work', label: 'House Plan', route: '/(app)/blueprint' },
 ];
 
@@ -110,6 +119,22 @@ function AppLayoutContent() {
       transform: [{ rotate: `${rotation.value}deg` }],
     };
   });
+
+  const resolveCanonicalDisplayName = (u: any): string => {
+    const rawName = (u?.fullName || '').trim();
+    const rawUser = (u?.username || '').toLowerCase();
+    const rawEmail = (u?.email || '').toLowerCase();
+    if (
+      rawUser === 'saivimenthanvl' ||
+      rawUser === 'saivimenthan' ||
+      rawEmail === 'saivimenthanvl@gmail.com' ||
+      rawName.toLowerCase() === 'sai' ||
+      rawName.toLowerCase() === 'sai vimenthan'
+    ) {
+      return 'Sai Vimenthan V L';
+    }
+    return rawName || 'Sai Vimenthan V L';
+  };
 
   const handleLogout = async () => {
     await signOut();
@@ -232,7 +257,7 @@ function AppLayoutContent() {
                           </View>
                         )}
                       </View>
-                      <Animated.Text style={[typography.labelMd, { color: color, fontSize: 15, width: 140 }, animatedExpandStyle]} numberOfLines={1}>
+                      <Animated.Text style={[typography.labelMd, { color: color, fontSize: 15, width: 170 }, animatedExpandStyle]} numberOfLines={1}>
                         {item.label}
                       </Animated.Text>
                     </View>
@@ -335,23 +360,64 @@ function AppLayoutContent() {
       followerCount: number;
     }> = [
         {
-          id: 'shreekutti',
-          _id: 'shreekutti',
+          id: '6ace0e6486b4ca082d9f1431',
+          _id: '6ace0e6486b4ca082d9f1431',
           fullName: 'Shreekutti',
           username: 'shreekutti',
           headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok',
           location: 'Bangalore, Karnataka · Tech Parks',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 3,
         },
         {
-          id: '6a8af34812ef34aed25ae8d2',
-          _id: '6a8af34812ef34aed25ae8d2',
+          id: '6aed5f1234567890abcdef01',
+          _id: '6aed5f1234567890abcdef01',
+          fullName: 'G Dinesh',
+          username: 'pgma251',
+          headline: 'Real Estate Professional & Boolok Member',
+          location: 'Chennai, Tamil Nadu · Prime Assets',
+          profilePicture: null,
+          followerCount: 0,
+        },
+        {
+          id: '6addf49b5f3925f54f8491f6',
+          _id: '6addf49b5f3925f54f8491f6',
+          fullName: 'Mithulan R',
+          username: 'mithulanr2003',
+          headline: 'Architectural Director & Skyscraper Asset Syndicate',
+          location: 'Marina Coastal District, Singapore',
+          profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJNc1F5yHFweMK8qtYRFt_2AJJQqzi4y0P2t7z2a4IHwoWCQYKJ=s400-c',
+          followerCount: 3,
+        },
+        {
+          id: '6ae9bd78b549b88abf72eac1',
+          _id: '6ae9bd78b549b88abf72eac1',
+          fullName: 'sampath',
+          username: 'sam',
+          headline: 'Real Estate Professional & Boolok Member',
+          location: 'Chennai, Tamil Nadu · Prime Assets',
+          profilePicture: null,
+          followerCount: 0,
+        },
+        {
+          id: '6ae2f7c95f0594915c812aa3',
+          _id: '6ae2f7c95f0594915c812aa3',
+          fullName: 'Subasree',
+          username: 'subasree',
+          headline: 'Commercial Portfolio Lead & Real Estate Advisor',
+          location: 'Chennai, Tamil Nadu · Prime Assets',
+          profilePicture: null,
+          followerCount: 1,
+        },
+
+        {
+          id: '6ace0e6586b4ca082d9f1432',
+          _id: '6ace0e6586b4ca082d9f1432',
           fullName: 'Logeshwaran A',
           username: 'logeshwarana',
           headline: 'Architectural Consultant & Real Estate Lead',
           location: 'Western Australia',
-          profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
+          profilePicture: 'https://boolokgpt.vercel.app/avatars/logeshwaran_doomsday.png',
           followerCount: 2,
         },
         {
@@ -372,7 +438,7 @@ function AppLayoutContent() {
           headline: 'Interior Designer & Modern Living Specialist',
           location: 'Chennai, Tamil Nadu · Modern Living',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 2,
         },
         {
           id: 'the_akshtr_estate',
@@ -382,7 +448,7 @@ function AppLayoutContent() {
           headline: 'Commercial Property & Tech Park Portfolio Lead',
           location: 'Chennai, Tamil Nadu · Prime Assets',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 2,
         },
         {
           id: 'prasanth_properties',
@@ -392,7 +458,7 @@ function AppLayoutContent() {
           headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates',
           location: 'Miami, Florida · Coastal Estates',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 2,
         },
         {
           id: 'aswin',
@@ -402,7 +468,7 @@ function AppLayoutContent() {
           headline: 'Principal Real Estate Broker & Multi-Family Asset Advisor',
           location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets',
           profilePicture: null,
-          followerCount: 3,
+          followerCount: 2,
         },
         {
           id: 'vignesh',
@@ -412,7 +478,7 @@ function AppLayoutContent() {
           headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist',
           location: 'Beverly Hills, California · Ultra Luxury',
           profilePicture: null,
-          followerCount: 3,
+          followerCount: 2,
         },
         {
           id: 'yashwanth',
@@ -422,7 +488,7 @@ function AppLayoutContent() {
           headline: 'Prime Commercial Hubs & Institutional Realty Lead',
           location: 'Chennai & Bangalore · Commercial Hubs',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 2,
         },
         {
           id: 'sophia_luxury',
@@ -432,7 +498,7 @@ function AppLayoutContent() {
           headline: 'European Family Office Principal & Luxury Syndication Client',
           location: 'Geneva, Switzerland & London · Private Capital',
           profilePicture: null,
-          followerCount: 5,
+          followerCount: 2,
         },
         {
           id: 'david_sterling',
@@ -442,7 +508,7 @@ function AppLayoutContent() {
           headline: 'Managing Director · Sterling Global Capital & Asset Co-Owner',
           location: 'London, UK & Beverly Hills · Private Equity',
           profilePicture: null,
-          followerCount: 6,
+          followerCount: 2,
         },
         {
           id: 'marcus_vance',
@@ -452,38 +518,61 @@ function AppLayoutContent() {
           headline: 'Institutional Real Estate Syndicate Lead & Co-Ownership Client',
           location: 'New York, NY · Real Estate Private Equity',
           profilePicture: null,
-          followerCount: 4,
+          followerCount: 2,
         },
       ];
 
     const BANNED_HANDLES = new Set(['aswin.realty', 'aswin_realty', 'ig_vicky16', 'ig_vicky.16', 'vicky', 'vicky_luxury', 'yashwanth_realty', 'cinemahub.live', 'cinemahub']);
 
+    // Strict relevance: only match display name or username
     const localMatches = COMMUNITY_ADVISORS.filter((a) => {
       const u = (a.username || '').toLowerCase();
       const fn = (a.fullName || '').toLowerCase();
       if (BANNED_HANDLES.has(u) || fn.includes('vicky') || fn.includes('cinemahub')) return false;
       return (
-        a.fullName.toLowerCase().includes(q) ||
-        a.username.toLowerCase().includes(q) ||
-        a.headline.toLowerCase().includes(q) ||
-        (a.location && a.location.toLowerCase().includes(q))
+        fn.includes(q) ||
+        u.includes(q)
       );
     });
 
-    if (user && ((user.fullName && user.fullName.toLowerCase().includes(q)) || (user.username && user.username.toLowerCase().includes(q)))) {
-      localMatches.unshift({
-        id: user.id || user._id || 'self',
-        _id: user.id || user._id || 'self',
-        fullName: user.fullName || 'Sai Vimenthan',
-        username: user.username || 'saivimenthanvl',
-        headline: user.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead',
-        location: user.location || 'Chennai, Tamil Nadu · Prime Assets',
-        profilePicture: user.profilePicture || null,
-        followerCount: user.followerCount || 0,
-      });
+    if (user) {
+      const uUname = (user.username || '').toLowerCase();
+      const uFullName = (user.fullName || '').toLowerCase();
+      if (uFullName.includes(q) || uUname.includes(q)) {
+        localMatches.unshift({
+          id: user.id || user._id || 'self',
+          _id: user.id || user._id || 'self',
+          fullName: user.fullName || 'Sai Vimenthan V L',
+          username: user.username || 'saivimenthanvl',
+          headline: user.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead',
+          location: user.location || 'Chennai, Tamil Nadu · Prime Assets',
+          profilePicture: user.profilePicture || null,
+          followerCount: user.followerCount || 0,
+        });
+      }
     }
 
-    setSearchResults(localMatches);
+    // Rank local matches: exact match first, then prefix, then substring
+    localMatches.sort((a, b) => {
+      const aFn = (a.fullName || '').toLowerCase();
+      const aUn = (a.username || '').toLowerCase();
+      const bFn = (b.fullName || '').toLowerCase();
+      const bUn = (b.username || '').toLowerCase();
+
+      const aExact = aFn === q || aUn === q;
+      const bExact = bFn === q || bUn === q;
+      if (aExact && !bExact) return -1;
+      if (!aExact && bExact) return 1;
+
+      const aPrefix = aFn.startsWith(q) || aUn.startsWith(q);
+      const bPrefix = bFn.startsWith(q) || bUn.startsWith(q);
+      if (aPrefix && !bPrefix) return -1;
+      if (!aPrefix && bPrefix) return 1;
+
+      return aFn.localeCompare(bFn);
+    });
+
+    setSearchResults(localMatches.slice(0, 8));
 
     const timer = setTimeout(async () => {
       setIsSearching(true);
@@ -496,14 +585,14 @@ function AppLayoutContent() {
           const sanitizedApiResults = res.data.results.filter((r: any) => {
             const u = (r.username || '').toLowerCase();
             const fn = (r.fullName || '').toLowerCase();
-            return !BANNED_HANDLES.has(u) && !fn.includes('vicky') && !fn.includes('cinemahub');
+            return !BANNED_HANDLES.has(u) && !fn.includes('vicky') && !fn.includes('cinemahub') && (fn.includes(q) || u.includes(q));
           });
           const seen = new Set(sanitizedApiResults.map((r: any) => (r.username || r.id || r._id).toLowerCase()));
           const combined = [
             ...sanitizedApiResults,
             ...localMatches.filter((m) => !seen.has((m.username || m.id).toLowerCase())),
           ];
-          setSearchResults(combined);
+          setSearchResults(combined.slice(0, 8));
         }
       } catch (e) {
         // keep localMatches
@@ -513,6 +602,31 @@ function AppLayoutContent() {
     }, 150);
     return () => clearTimeout(timer);
   }, [headerSearchQuery, user]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleFollowChange = (e: any) => {
+        const detail = e.detail;
+        if (!detail) return;
+        setSearchResults((prev: any[]) =>
+          prev.map((item) => {
+            const idMatches = detail.userId && (String(item.id).toLowerCase() === String(detail.userId).toLowerCase() || String(item._id).toLowerCase() === String(detail.userId).toLowerCase());
+            const unameMatches = detail.username && String(item.username).toLowerCase() === String(detail.username).toLowerCase();
+            if (idMatches || unameMatches) {
+              return {
+                ...item,
+                isFollowing: detail.isFollowing,
+                followerCount: typeof detail.followerCount === 'number' ? detail.followerCount : item.followerCount,
+              };
+            }
+            return item;
+          })
+        );
+      };
+      window.addEventListener('boolok_follow_changed', handleFollowChange);
+      return () => window.removeEventListener('boolok_follow_changed', handleFollowChange);
+    }
+  }, []);
 
   const handleSelectUser = (targetUser: any) => {
     setHeaderSearchQuery('');
@@ -529,9 +643,8 @@ function AppLayoutContent() {
   const MOBILE_NAV_ITEMS = [
     { id: 'dashboard', icon: 'dashboard', label: 'Home', route: '/(app)/dashboard' },
     { id: 'feed', icon: 'forum', label: 'Social', route: '/(app)/feed' },
-    { id: 'messages', icon: 'chat', label: 'Chat', route: '/(app)/messages' },
+    { id: 'create', icon: 'add', label: 'Create', route: '/(app)/create-post', isRaised: true },
     { id: 'search', icon: 'search', label: 'Search', route: '/(app)/search' },
-    { id: 'insights', icon: 'dynamic-feed', label: 'Reels', route: '/(app)/insights' },
     { id: 'profile', icon: 'person', label: 'Profile', route: '/(app)/profile' },
   ];
 
@@ -540,53 +653,77 @@ function AppLayoutContent() {
     const activeNavItems = MOBILE_NAV_ITEMS;
 
     return (
-      <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 10), borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', ...(!isDark ? shadows.md : {}) }]}>
-        <BlurView
-          intensity={isDark ? 50 : 80}
-          tint={isDark ? 'dark' : 'light'}
-          style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(10, 15, 35, 0.85)' : 'rgba(255, 255, 255, 0.92)' }]}
-        />
-        <View style={styles.bottomNavInner}>
-          {activeNavItems.map(item => {
-            const isActive = pathname === item.route || pathname === item.route.replace('/(app)', '');
+      <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+        <View style={styles.bottomNavPillContainer}>
+          <BlurView
+            intensity={isDark ? 65 : 85}
+            tint={isDark ? 'dark' : 'light'}
+            style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? 'rgba(11, 15, 25, 0.94)' : 'rgba(255, 255, 255, 0.94)' }]}
+          />
+          <View style={styles.bottomNavInner}>
+            {activeNavItems.map(item => {
+              const isActive = pathname === item.route || pathname === item.route.replace('/(app)', '');
 
-            return (
-              <Pressable
-                key={item.id}
-                style={styles.bottomNavItem}
-                onPress={() => router.push(item.route as any)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <View style={{ position: 'relative' }}>
-                  <MaterialIcons name={item.icon as any} size={24} color={isActive ? theme.primary : theme.onSurfaceVariant} />
-                  {item.id === 'messages' && unreadTotal > 0 && (
-                    <View style={{ position: 'absolute', top: -3, right: -6, backgroundColor: '#daa520', borderRadius: 6, minWidth: 14, height: 14, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 2 }}>
-                      <Text style={{ color: '#000000', fontSize: 8, fontWeight: '900' }}>{unreadTotal > 9 ? '9+' : unreadTotal}</Text>
+              if (item.isRaised) {
+                return (
+                  <Pressable
+                    key={item.id}
+                    style={styles.bottomNavRaisedItem}
+                    onPress={() => router.push(item.route as any)}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <View style={styles.bottomNavRaisedBtn}>
+                      <MaterialIcons name="add" size={28} color="#0B0F19" />
                     </View>
-                  )}
-                </View>
-                <Text style={{ fontSize: 10, marginTop: 4, color: isActive ? theme.primary : theme.onSurfaceVariant, fontWeight: isActive ? '800' : '500' }}>
-                  {item.label}
-                </Text>
-              </Pressable>
-            );
-          })}
+                  </Pressable>
+                );
+              }
+
+              return (
+                <Pressable
+                  key={item.id}
+                  style={[
+                    styles.bottomNavItem,
+                    isActive && styles.bottomNavItemActive
+                  ]}
+                  onPress={() => router.push(item.route as any)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <View style={{ position: 'relative' }}>
+                    <MaterialIcons
+                      name={item.icon as any}
+                      size={22}
+                      color={isActive ? '#0B0F19' : (isDark ? '#94A3B8' : '#64748B')}
+                    />
+                  </View>
+                  <Text style={{
+                    fontSize: 10,
+                    marginTop: 2,
+                    color: isActive ? '#0B0F19' : (isDark ? '#94A3B8' : '#64748B'),
+                    fontWeight: isActive ? '800' : '600'
+                  }}>
+                    {item.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       </View>
     );
   };
 
   const ALL_FEATURES_NAV = [
-    { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', route: '/(app)/dashboard', category: 'Main' },
-    { id: 'feed', icon: 'forum', label: 'Social Feed', route: '/(app)/feed', category: 'Main' },
-    { id: 'messages', icon: 'chat', label: 'Direct Messages', route: '/(app)/messages', category: 'Main', badge: unreadTotal },
-    { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search', category: 'Main' },
-    { id: 'insights', icon: 'dynamic-feed', label: 'Video Reels & Insights', route: '/(app)/insights', category: 'Main' },
-    { id: 'predictions', icon: 'trending-up', label: 'Price Predictions', route: '/(app)/predictions', category: 'AI Intelligence', tag: 'AI' },
-    { id: 'legal', icon: 'verified-user', label: 'Title & Legal Verification', route: '/(app)/legal', category: 'AI Intelligence', tag: 'AI' },
-    { id: 'blueprint', icon: 'home-work', label: 'House Plan & Blueprint', route: '/(app)/blueprint', category: 'AI Intelligence', tag: 'PRO' },
-    { id: 'profile', icon: 'person', label: 'My Portfolio', route: '/(app)/profile', category: 'Account' },
-    { id: 'settings', icon: 'settings', label: 'Settings', route: '/(app)/settings', category: 'Account' },
+    { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', route: '/(app)/dashboard', category: 'Features' },
+    { id: 'feed', icon: 'forum', label: 'Social Feed', route: '/(app)/feed', category: 'Features' },
+    { id: 'messages', icon: 'chat', label: 'Direct Messages', route: '/(app)/messages', category: 'Features', badge: unreadTotal },
+    { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search', category: 'Features' },
+    { id: 'insights', icon: 'dynamic-feed', label: 'Video Reels & Insights', route: '/(app)/insights', category: 'Features' },
+    { id: 'predictions', icon: 'trending-up', label: 'Price Predictions', route: '/(app)/predictions', category: 'Features' },
+    { id: 'legal', icon: 'gavel', label: 'Title & Legal Verification', route: '/(app)/legal', category: 'Features' },
+    { id: 'blueprint', icon: 'home-work', label: 'House Plan & Blueprint', route: '/(app)/blueprint', category: 'Features' },
+    { id: 'profile', icon: 'person', label: 'My Portfolio', route: '/(app)/profile', category: 'Preferences' },
+    { id: 'settings', icon: 'settings', label: 'Settings', route: '/(app)/settings', category: 'Preferences' },
   ];
 
   const MobileSideDrawer = () => {
@@ -660,25 +797,39 @@ function AppLayoutContent() {
               onPress={() => handleNavigate('/(app)/profile')}
               style={[mobileDrawerStyles.userCard, { backgroundColor: cardBg, borderColor }]}
             >
-              {(() => {
-                const navAvatar = resolveImageUrl(user?.profilePicture);
-                if (navAvatar) {
-                  return <Image source={{ uri: navAvatar }} style={mobileDrawerStyles.userAvatar} />;
-                }
-                return (
-                  <View style={[mobileDrawerStyles.userAvatar, { backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center' }]}>
-                    <Text style={{ color: theme.onPrimary, fontSize: 16, fontWeight: 'bold' }}>
-                      {(user?.fullName || 'Agent').charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                );
-              })()}
+              <Avatar user={user} size={38} />
               <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: theme.onSurface }} numberOfLines={1}>
-                  {user?.fullName || 'Real Estate Advisor'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: theme.onSurface, flexShrink: 1 }} numberOfLines={1}>
+                    {resolveCanonicalDisplayName(user)}
+                  </Text>
+                  {Boolean(user?.isPro || (user?.subscription && user.subscription.plan === 'pro')) ? (
+                    <View style={{ backgroundColor: 'rgba(218, 165, 32, 0.15)', borderColor: 'rgba(218, 165, 32, 0.3)', borderWidth: 1, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: theme.primary }}>PRO</Text>
+                    </View>
+                  ) : (
+                    <Pressable
+                      onPress={(e) => {
+                        e.stopPropagation?.();
+                        closeMobileDrawer(() => {
+                          router.push('/(app)/settings' as any);
+                        });
+                      }}
+                      style={{
+                        backgroundColor: 'rgba(218, 165, 32, 0.15)',
+                        borderColor: theme.primary,
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: theme.primary }}>Upgrade Pro</Text>
+                    </Pressable>
+                  )}
+                </View>
                 <Text style={{ fontSize: 11, color: theme.primary, fontWeight: '600', marginTop: 1 }}>
-                  @{user?.username || 'member'} · Elite Advisor
+                  @{user?.username || 'saivimenthanvl'} · Elite Advisor
                 </Text>
               </View>
               <MaterialIcons name="chevron-right" size={20} color={theme.onSurfaceVariant} />
@@ -686,9 +837,9 @@ function AppLayoutContent() {
 
             {/* Feature Navigation List */}
             <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 10 }}>
-              {/* Category: Main Features */}
+              {/* Category: Unified Features Section */}
               <Text style={[mobileDrawerStyles.sectionHeader, { color: theme.onSurfaceVariant }]}>FEATURES</Text>
-              {ALL_FEATURES_NAV.filter(item => item.category === 'Main').map(item => {
+              {ALL_FEATURES_NAV.filter(item => item.category === 'Features').map(item => {
                 const isActive = pathname === item.route || pathname === item.route.replace('/(app)', '');
                 return (
                   <Pressable
@@ -718,43 +869,10 @@ function AppLayoutContent() {
                 );
               })}
 
-              {/* Category: AI Intelligence Tools */}
-              <View style={{ height: 1, backgroundColor: borderColor, marginVertical: 10, marginHorizontal: 16 }} />
-              <Text style={[mobileDrawerStyles.sectionHeader, { color: theme.primary }]}>AI INTELLIGENCE & SUITE</Text>
-              {ALL_FEATURES_NAV.filter(item => item.category === 'AI Intelligence').map(item => {
-                const isActive = pathname === item.route || pathname === item.route.replace('/(app)', '');
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => handleNavigate(item.route)}
-                    style={({ pressed }: any) => [
-                      mobileDrawerStyles.drawerNavItem,
-                      isActive && { backgroundColor: isDark ? 'rgba(218, 165, 32, 0.12)' : 'rgba(218, 165, 32, 0.1)', borderLeftColor: theme.primary, borderLeftWidth: 4 },
-                      pressed && { opacity: 0.75 },
-                    ]}
-                  >
-                    <View style={{ width: 28, alignItems: 'center' }}>
-                      <MaterialIcons name={item.icon as any} size={22} color={theme.primary} />
-                    </View>
-                    <Text style={[
-                      mobileDrawerStyles.navItemText,
-                      { color: isActive ? theme.primary : theme.onSurface, fontWeight: isActive ? '800' : '600' }
-                    ]}>
-                      {item.label}
-                    </Text>
-                    {item.tag && (
-                      <View style={[mobileDrawerStyles.tagBadge, { backgroundColor: item.tag === 'PRO' ? '#8b5cf6' : theme.primary }]}>
-                        <Text style={{ color: item.tag === 'PRO' ? '#ffffff' : '#000000', fontSize: 9, fontWeight: '900' }}>{item.tag}</Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-
-              {/* Category: Account */}
+              {/* Category: Preferences / Account */}
               <View style={{ height: 1, backgroundColor: borderColor, marginVertical: 10, marginHorizontal: 16 }} />
               <Text style={[mobileDrawerStyles.sectionHeader, { color: theme.onSurfaceVariant }]}>PREFERENCES</Text>
-              {ALL_FEATURES_NAV.filter(item => item.category === 'Account').map(item => {
+              {ALL_FEATURES_NAV.filter(item => item.category === 'Preferences').map(item => {
                 const isActive = pathname === item.route || pathname === item.route.replace('/(app)', '');
                 return (
                   <Pressable
@@ -845,9 +963,9 @@ function AppLayoutContent() {
         }]}>
           {/* Header Left: Brand logo & Greeting OR Mobile Search Bar */}
           {isWide ? (
-            <View style={{ flexShrink: 0, minWidth: 160, marginRight: spacing.md }}>
+            <View style={{ flexShrink: 1, minWidth: 200, maxWidth: 360, marginRight: spacing.md, paddingLeft: 4 }}>
               <Text style={{ fontSize: 18, fontWeight: '800', color: theme.onSurface }} numberOfLines={1}>
-                Welcome back, {user?.fullName?.split(' ')[0] || 'Sai'}
+                Welcome back, {user?.fullName || 'Sai Vimenthan V L'}
               </Text>
               <Text style={{ fontSize: 12, color: theme.onSurfaceVariant, fontWeight: '500' }}>Real Estate Intelligence</Text>
             </View>
@@ -871,7 +989,7 @@ function AppLayoutContent() {
               </Pressable>
               <View style={{ flexShrink: 1 }}>
                 <Text style={{ fontSize: 13, fontWeight: '800', color: theme.onSurface }} numberOfLines={1}>
-                  Hi, {user?.fullName?.split(' ')[0] || 'Sai'}
+                  Hi, {user?.fullName || 'Sai Vimenthan V L'}
                 </Text>
                 <Text style={{ fontSize: 9.5, color: theme.onSurfaceVariant, fontWeight: '500' }} numberOfLines={1}>
                   Elite Advisor
@@ -957,19 +1075,13 @@ function AppLayoutContent() {
                               handleSelectUser(u);
                             }}
                           >
-                            {resolveImageUrl(u.profilePicture) ? (
-                              <Image source={{ uri: resolveImageUrl(u.profilePicture)! }} style={{ width: 34, height: 34, borderRadius: 17, marginRight: 10 }} />
-                            ) : (
-                              <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1e293b' : '#e2e8f0', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#daa520' }}>
-                                <Text style={{ color: '#daa520', fontWeight: '700', fontSize: 14 }}>{initial}</Text>
-                              </View>
-                            )}
+                            <Avatar user={u} size={34} style={{ marginRight: 10 }} />
                             <View style={{ flex: 1 }}>
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '700' }}>{u.fullName}</Text>
                                 <MaterialIcons name="verified" size={14} color="#daa520" style={{ marginLeft: 4 }} />
                               </View>
-                              <Text style={{ color: theme.onSurfaceVariant, fontSize: 11 }}>@{u.username} · {u.followerCount || 0} followers</Text>
+                              <Text style={{ color: theme.onSurfaceVariant, fontSize: 11 }}>@{u.username} · {getEffectiveFollowerCount(u)} followers</Text>
                             </View>
                             <MaterialIcons name="chevron-right" size={18} color={theme.outline} />
                           </Pressable>
@@ -1017,43 +1129,74 @@ function AppLayoutContent() {
 
               {/* Real-time Autocomplete Dropdown */}
               {headerSearchQuery.trim().length > 0 && (
-                <View style={[styles.autocompleteDropdown, { backgroundColor: isDark ? '#0c1626' : '#ffffff', borderColor: theme.outlineVariant, maxHeight: 360, zIndex: 999 }]}>
+                <View style={[
+                  styles.autocompleteDropdown,
+                  {
+                    backgroundColor: isDark ? '#0c1626' : '#ffffff',
+                    borderColor: theme.outlineVariant,
+                    maxHeight: 340,
+                    overflow: 'hidden',
+                    zIndex: 9999,
+                    elevation: 12,
+                    shadowColor: '#000',
+                    shadowOffset: { width: 0, height: 6 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 16,
+                  }
+                ]}>
                   {searchResults.length > 0 ? (
-                    searchResults.map((u: any, idx: number) => {
-                      const initial = (u.fullName || u.username || 'U')[0]?.toUpperCase();
-                      return (
-                        <Pressable
-                          key={u.id || u._id || idx}
-                          style={({ pressed, hovered }: any) => [
-                            styles.dropdownItem,
-                            { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: idx < searchResults.length - 1 ? 1 : 0, borderBottomColor: isDark ? '#1a273c' : '#f0f0f0' },
-                            (pressed || hovered) && { backgroundColor: isDark ? '#162338' : '#f8f9fa' }
-                          ]}
-                          onPress={() => handleSelectUser(u)}
-                        >
-                          {resolveImageUrl(u.profilePicture) ? (
-                            <Image source={{ uri: resolveImageUrl(u.profilePicture)! }} style={{ width: 34, height: 34, borderRadius: 17, marginRight: 10 }} />
-                          ) : (
-                            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1e293b' : '#e2e8f0', justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: '#daa520' }}>
-                              <Text style={{ color: '#daa520', fontWeight: '700', fontSize: 14 }}>{initial}</Text>
+                    <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 270 }}>
+                      {searchResults.map((u: any, idx: number) => {
+                        const initial = (u.fullName || u.username || 'U')[0]?.toUpperCase();
+                        return (
+                          <Pressable
+                            key={u.id || u._id || idx}
+                            style={({ pressed, hovered }: any) => [
+                              styles.dropdownItem,
+                              { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: idx < searchResults.length - 1 ? 1 : 0, borderBottomColor: isDark ? '#1a273c' : '#f0f0f0' },
+                              (pressed || hovered) && { backgroundColor: isDark ? '#162338' : '#f8f9fa' }
+                            ]}
+                            onPress={() => handleSelectUser(u)}
+                          >
+                            <Avatar user={u} size={34} style={{ marginRight: 10 }} />
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '700' }}>{u.fullName}</Text>
+                                <MaterialIcons name="verified" size={14} color="#daa520" style={{ marginLeft: 4 }} />
+                              </View>
+                              <Text style={{ color: theme.onSurfaceVariant, fontSize: 11 }}>@{u.username} · {getEffectiveFollowerCount(u)} followers</Text>
                             </View>
-                          )}
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                              <Text style={{ color: theme.onSurface, fontSize: 14, fontWeight: '700' }}>{u.fullName}</Text>
-                              <MaterialIcons name="verified" size={14} color="#daa520" style={{ marginLeft: 4 }} />
-                            </View>
-                            <Text style={{ color: theme.onSurfaceVariant, fontSize: 11 }}>@{u.username} · {u.followerCount || 0} followers</Text>
-                          </View>
-                          <MaterialIcons name="chevron-right" size={18} color={theme.outline} />
-                        </Pressable>
-                      );
-                    })
+                            <MaterialIcons name="chevron-right" size={18} color={theme.outline} />
+                          </Pressable>
+                        );
+                      })}
+                    </ScrollView>
                   ) : !isSearching ? (
                     <View style={[styles.dropdownItem, { padding: 14 }]}>
                       <Text style={{ color: theme.onSurfaceVariant, fontSize: 13 }}>No users found matching "{headerSearchQuery}"</Text>
                     </View>
                   ) : null}
+
+                  <Pressable
+                    onPress={() => {
+                      const q = headerSearchQuery.trim();
+                      setHeaderSearchQuery('');
+                      router.push({ pathname: '/(app)/search', params: { q, filter: 'Profiles' } } as any);
+                    }}
+                    style={{
+                      padding: 10,
+                      borderTopWidth: 1,
+                      borderTopColor: isDark ? '#1a273c' : '#f0f0f0',
+                      alignItems: 'center',
+                      backgroundColor: isDark ? '#0f1a2e' : '#f8fafc',
+                      borderBottomLeftRadius: radius.lg,
+                      borderBottomRightRadius: radius.lg,
+                    }}
+                  >
+                    <Text style={{ color: '#daa520', fontSize: 12, fontWeight: '700' }}>
+                      Search all in AI Search Hub →
+                    </Text>
+                  </Pressable>
                 </View>
               )}
             </View>
@@ -1134,13 +1277,7 @@ function AppLayoutContent() {
                               }
                             }}
                           >
-                            {resolveImageUrl(sender.profilePicture) ? (
-                              <Image source={{ uri: resolveImageUrl(sender.profilePicture)! }} style={{ width: 32, height: 32, borderRadius: 16, marginRight: 10 }} />
-                            ) : (
-                              <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#daa520', justifyContent: 'center', alignItems: 'center', marginRight: 10 }}>
-                                <Text style={{ color: '#000000', fontWeight: '800', fontSize: 13 }}>{initial}</Text>
-                              </View>
-                            )}
+                            <Avatar user={sender} size={32} style={{ marginRight: 10 }} />
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: theme.onSurface, fontSize: 12, lineHeight: 16 }}>{n.message}</Text>
                               <Text style={{ color: theme.outline, fontSize: 10, marginTop: 2 }}>{new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
@@ -1185,30 +1322,13 @@ function AppLayoutContent() {
               ]}
             >
               {isWide && (
-                <View style={{ alignItems: 'flex-end', marginRight: spacing.sm }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.onSurface }}>{user?.fullName?.split(' ')[0] || 'Agent'}</Text>
+                <View style={{ alignItems: 'flex-end', marginRight: spacing.sm, maxWidth: 180 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: theme.onSurface }} numberOfLines={1}>{resolveCanonicalDisplayName(user)}</Text>
                   <Text style={{ fontSize: 10, fontWeight: '700', color: theme.primary, textTransform: 'uppercase' }}>Elite Agent</Text>
                 </View>
               )}
 
-              {(() => {
-                const navAvatar = resolveImageUrl(user?.profilePicture);
-                if (navAvatar) {
-                  return (
-                    <Image
-                      source={{ uri: navAvatar }}
-                      style={[styles.profileImage, !isWide && { width: 34, height: 34, borderRadius: 17 }]}
-                    />
-                  );
-                }
-                return (
-                  <View style={[styles.profileImage, !isWide && { width: 34, height: 34, borderRadius: 17 }, { backgroundColor: theme.primary, justifyContent: 'center', alignItems: 'center', flexShrink: 0 }]}>
-                    <Text style={{ color: theme.onPrimary, fontSize: isWide ? 18 : 14, fontWeight: 'bold' }}>
-                      {(user?.fullName || 'Agent').charAt(0).toUpperCase()}
-                    </Text>
-                  </View>
-                );
-              })()}
+              <Avatar user={user} size={isWide ? 42 : 34} />
 
               {isWide && (
                 <Pressable
@@ -1380,22 +1500,61 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    overflow: 'hidden',
+    alignItems: 'center',
     zIndex: 100,
+    paddingHorizontal: 16,
+  },
+  bottomNavPillContainer: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 166, 35, 0.25)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 10,
   },
   bottomNavInner: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
   },
   bottomNavItem: {
     alignItems: 'center',
     justifyContent: 'center',
     flex: 1,
-    paddingVertical: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+  },
+  bottomNavItemActive: {
+    backgroundColor: '#F5A623',
+  },
+  bottomNavRaisedItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    marginTop: 0,
+  },
+  bottomNavRaisedBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F5A623',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F5A623',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   autocompleteDropdown: {
     position: 'absolute',

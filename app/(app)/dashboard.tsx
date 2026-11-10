@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,80 +7,146 @@ import {
   TextInput,
   Pressable,
   Platform,
-  Alert,
+  Image,
   useWindowDimensions,
+  ActivityIndicator,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { apiFetch } from '../../lib/api';
+import axios from 'axios';
+import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { spacing, typography, radius, shadows } from '../../constants/theme';
-import Animated, { FadeIn } from 'react-native-reanimated';
-import Svg, { Path } from 'react-native-svg';
+import { spacing, typography, radius } from '../../constants/theme';
+import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated';
 import LoadingScreen from '../../components/LoadingScreen';
+import Avatar from '../../components/Avatar';
+import FollowButton from '../../components/FollowButton';
 
-export default function FeedScreen() {
+interface PropertyListing {
+  _id: string;
+  title: string;
+  price?: string;
+  location?: string;
+  specs?: string;
+  content?: string;
+  mediaUrl?: string;
+  image?: string;
+  author?: {
+    _id: string;
+    fullName: string;
+    username: string;
+    profilePicture?: string | null;
+    headline?: string;
+    location?: string;
+  };
+  likesCount?: number;
+  commentsCount?: number;
+  isLiked?: boolean;
+}
+
+const FEATURED_STORIES = [
+  { id: 'create', type: 'create', label: 'Create Story' },
+  { id: 'shreekutti', username: 'shreekutti', name: 'Shreekutti', role: 'Commercial Lead', unread: true },
+  { id: 'logeshwarana', username: 'logeshwarana', name: 'Logeshwaran', role: 'Architectural Consultant', unread: true },
+  { id: 'subasree', username: 'subasree', name: 'Subasree', role: 'Luxury Estates', unread: true },
+  { id: 'ajmal', username: 'ajmal', name: 'Ajmal', role: 'Prime Waterfront', unread: false },
+  { id: 'the_akshtr_estate', username: 'the_akshtr_estate', name: 'Akshat', role: 'IT Corridors', unread: false },
+];
+
+export default function DashboardScreen() {
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const { width } = useWindowDimensions();
-  const isWide = width >= 768;
+  const isWide = width >= 1024;
+  const isTablet = width >= 768 && width < 1024;
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<'All' | 'Buy' | 'Rent' | 'Commercial' | 'Land'>('All');
+  const [properties, setProperties] = useState<PropertyListing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savedPosts, setSavedPosts] = useState<Record<string, boolean>>({});
+
+  const bgCanvas = isDark ? theme.background : '#F8FAFC';
+  const cardBg = isDark ? theme.surface : '#FFFFFF';
+  const borderCol = isDark ? theme.outlineVariant : '#E2E8F0';
+  const textPrimary = theme.onSurface;
+  const textSecondary = theme.onSurfaceVariant;
+  const textMuted = theme.outline;
+  const goldPrimary = theme.primary;
 
   useEffect(() => {
-    fetchDashboardStats();
+    fetchProperties();
   }, []);
 
-  const fetchDashboardStats = async () => {
+  const fetchProperties = async () => {
     try {
-      const data = await apiFetch('/api/dashboard/stats');
+      const res = await axios.get(`${API_BASE_URL}/api/feed`);
+      if (res.data && Array.isArray(res.data.posts)) {
+        // Filter out duplicate or static shadow posts if real DB posts exist
+        const seenAuthors = new Set<string>();
+        const seenTitles = new Set<string>();
+        const deduplicated: any[] = [];
 
-      setStats({
-        complianceAlert: '',
-        marketPredictions: {
-          location: '',
-          growthIndex: '',
-          value: '',
-          volatility: '',
-          growthPercent: '',
-          peakDate: '',
-        },
-        ...data,
-        recentInquiries: Array.isArray(data?.recentInquiries)
-          ? data.recentInquiries
-          : [],
-      });
-    } catch (error) {
-      console.error('Failed to fetch stats:', error);
-      setStats({
-        recentInquiries: [],
-        complianceAlert: 'Could not load data. Check your connection.',
-        marketPredictions: {
-          location: '—',
-          growthIndex: '—',
-          value: '—',
-          volatility: '—',
-          growthPercent: '—',
-          peakDate: '—',
-        },
-      });
+        // DB posts have 24-character hexadecimal IDs; prioritize them
+        const sortedPosts = [...res.data.posts].sort((a, b) => {
+          const aIsDb = /^[0-9a-fA-F]{24}$/.test(a._id);
+          const bIsDb = /^[0-9a-fA-F]{24}$/.test(b._id);
+          if (aIsDb && !bIsDb) return -1;
+          if (!aIsDb && bIsDb) return 1;
+          return 0;
+        });
+
+        for (const p of sortedPosts) {
+          const authorUser = (p.author?.username || p.author?._id || '').toLowerCase();
+          const cleanTitle = (p.title || p.content || '').toLowerCase().trim();
+          const isCoventry = cleanTitle.includes('coventry');
+
+          // If this is a static community post (like sai-p-1) and we already have a real Coventry or author post, skip it
+          if (isCoventry && seenTitles.has('coventry')) {
+            continue;
+          }
+          if (authorUser && seenAuthors.has(authorUser) && !/^[0-9a-fA-F]{24}$/.test(p._id)) {
+            continue;
+          }
+
+          if (isCoventry) {
+            seenTitles.add('coventry');
+          }
+          if (authorUser) {
+            seenAuthors.add(authorUser);
+          }
+
+          deduplicated.push(
+            isCoventry
+              ? {
+                  ...p,
+                  mediaUrl: '/coventry_corporate.jpg',
+                  image: '/coventry_corporate.jpg',
+                }
+              : p
+          );
+        }
+
+        setProperties(deduplicated);
+      }
+    } catch (err) {
+      console.error('Failed to load properties for dashboard:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = () => {
+  const handleSearchSubmit = () => {
     if (!searchQuery.trim()) return;
-    if (Platform.OS === 'web') {
-      window.alert(`Searching across global databases for: ${searchQuery}`);
-    } else {
-      Alert.alert(
-        'Smart Search',
-        `Searching across global databases for: ${searchQuery}`
-      );
-    }
+    router.push({
+      pathname: '/(app)/search',
+      params: { q: searchQuery.trim(), filter: selectedCategory },
+    } as any);
+  };
+
+  const toggleSave = (id: string) => {
+    setSavedPosts((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   if (loading) {
@@ -90,522 +156,322 @@ export default function FeedScreen() {
   return (
     <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
       <ScrollView
-        style={[
-          styles.container,
-          { backgroundColor: theme.background },
-        ]}
+        style={[styles.container, { backgroundColor: bgCanvas }]}
         contentContainerStyle={[
           styles.contentContainer,
-          { padding: isWide ? spacing.xl : spacing.md },
+          { paddingHorizontal: isWide ? spacing.xl : 14, paddingTop: 16, paddingBottom: 100 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.grid}>
-          {/* Row 1 */}
-          {/* AI Search Hub */}
-          <Pressable
-            style={({ pressed, hovered }: any) => [
-              styles.card,
-              { padding: isWide ? spacing.xl : spacing.md },
-              {
-                backgroundColor: theme.surface,
-                borderColor: isDark
-                  ? theme.outlineVariant
-                  : 'rgba(218, 165, 32, 0.35)',
-              },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(66.666% - 16px)' : '65%' } : { width: '100%' },
-              styles.searchCard,
-              (pressed || hovered) && {
-                transform: [{ scale: 1.01 }],
-                shadowColor: theme.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 15,
-                borderColor: 'rgba(218, 165, 32, 0.4)',
-              },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <View style={{ flexShrink: 1, marginRight: spacing.md }}>
-                <Text
-                  style={[typography.headlineMd, { color: theme.onSurface }]}
-                >
-                  AI Search Hub
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: theme.onSurfaceVariant,
-                    marginTop: 4,
-                  }}
-                >
-                  Deep-dive property intelligence across 40+ global databases.
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.iconBox,
-                  { backgroundColor: 'rgba(218, 165, 32, 0.1)' },
-                ]}
-              >
-                <MaterialIcons
-                  name="search"
-                  size={24}
-                  color={theme.primary}
-                />
-              </View>
-            </View>
-
-            <View style={styles.searchInputWrap}>
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                    color: theme.onSurface,
-                  },
-                  { paddingRight: isWide ? 150 : 60 },
-                ]}
-                placeholder="Describe the property you are looking for..."
-                placeholderTextColor={theme.outline}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-              />
-              <Pressable
-                onPress={handleSearch}
-                style={({ pressed, hovered }: any) => [
-                  styles.searchBtn,
-                  { backgroundColor: theme.primary },
-                  !isWide && { paddingHorizontal: 12 },
-                  (pressed || hovered) && {
-                    transform: [{ scale: 0.95 }],
-                    opacity: 0.9,
-                  },
-                ]}
-              >
-                {isWide ? (
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>
-                    Smart Search
-                  </Text>
-                ) : (
-                  <MaterialIcons name="search" size={20} color="#fff" />
-                )}
+        {/* ── TOP HERO SEARCH HUB (Reference Screenshot 3 Layout) ── */}
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.heroSection}>
+          <View style={[styles.searchBarContainer, { backgroundColor: cardBg, borderColor: borderCol }]}>
+            <MaterialIcons name="search" size={22} color={goldPrimary} style={{ marginRight: 10 }} />
+            <TextInput
+              style={[styles.searchInput, { color: textPrimary }]}
+              placeholder="Search apartments, villas, commercial campuses..."
+              placeholderTextColor={textMuted}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              onSubmitEditing={handleSearchSubmit}
+            />
+            {searchQuery.length > 0 && (
+              <Pressable onPress={() => setSearchQuery('')} style={{ padding: 4, marginRight: 6 }}>
+                <MaterialIcons name="close" size={18} color={textMuted} />
               </Pressable>
-            </View>
-
-            <View>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  color: theme.outline,
-                  marginBottom: spacing.sm,
-                  letterSpacing: 1,
-                }}
-              >
-                Recent Inquiries
-              </Text>
-              <View style={styles.chipRow}>
-                {(stats?.recentInquiries ?? []).map(
-                  (inquiry: string, index: number) => (
-                    <Pressable
-                      key={index}
-                      style={({ pressed, hovered }: any) => [
-                        styles.chip,
-                        {
-                          backgroundColor: theme.surfaceContainerHigh,
-                          borderColor: theme.outlineVariant,
-                        },
-                        (pressed || hovered) && {
-                          borderColor: theme.primary,
-                        },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="history"
-                        size={14}
-                        color={theme.onSurfaceVariant}
-                        style={{ marginRight: 4 }}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          color: theme.onSurfaceVariant,
-                        }}
-                      >
-                        {inquiry}
-                      </Text>
-                    </Pressable>
-                  )
-                )}
-              </View>
-            </View>
-          </Pressable>
-
-          {/* Legal AI */}
-          <Pressable
-            onPress={() => router.push('/(app)/legal')}
-            style={({ pressed, hovered }: any) => [
-              styles.card,
-              { padding: isWide ? spacing.xl : spacing.md },
-              {
-                backgroundColor: theme.surface,
-                borderColor: isDark
-                  ? theme.outlineVariant
-                  : 'rgba(218, 165, 32, 0.35)',
-                cursor: 'pointer',
-              },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(33.333% - 16px)' : '32%' } : { width: '100%' },
-              styles.legalCard,
-              (pressed || hovered) && {
-                transform: [{ scale: 1.02 }],
-                shadowColor: theme.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 15,
-                borderColor: 'rgba(218, 165, 32, 0.4)',
-              },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <Text
-                style={[typography.headlineSm, { color: theme.onSurface }]}
-              >
-                Title & Legal AI
-              </Text>
-              <MaterialIcons name="verified-user" size={24} color={theme.primary} />
-            </View>
-
-            <View
-              style={[
-                styles.alertBox,
-                {
-                  backgroundColor: 'rgba(218, 165, 32, 0.1)',
-                  borderColor: 'rgba(218, 165, 32, 0.25)',
-                },
-              ]}
+            )}
+            <Pressable
+              onPress={handleSearchSubmit}
+              style={({ pressed }: any) => [styles.searchActionBtn, { backgroundColor: goldPrimary }, pressed && { opacity: 0.85 }]}
             >
-              <MaterialIcons
-                name="shield"
-                size={24}
-                color={theme.primary}
-                style={{ marginRight: spacing.sm, marginTop: 2 }}
-              />
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: '700',
-                    color: theme.onSurface,
-                    marginBottom: 2,
-                  }}
-                >
-                  Deed & EC Verification
-                </Text>
-                <Text
-                  style={{ fontSize: 13, color: theme.onSurfaceVariant }}
-                >
-                  Autonomous TNREGINET audit, bilingual OCR & lien detection
-                </Text>
-              </View>
-            </View>
+              <Text style={[styles.searchActionBtnText, { color: '#0B0F19' }]}>Search</Text>
+            </Pressable>
+          </View>
 
-            <View
-              style={[
-                styles.activeReviewsRow,
-                { backgroundColor: theme.surfaceContainer },
-              ]}
-            >
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '600',
-                  color: theme.onSurface,
-                }}
-              >
-                Registry Status
-              </Text>
-              <View
-                style={[
-                  styles.pendingBadge,
-                  { backgroundColor: '#10B981' },
-                ]}
-              >
-                <Text
-                  style={{ fontSize: 10, fontWeight: '800', color: '#fff' }}
-                >
-                  ONLINE
-                </Text>
-              </View>
-            </View>
-
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: theme.primary,
-                marginTop: 'auto',
-              }}
-            >
-              Verify Title Deed →
-            </Text>
-          </Pressable>
-
-          {/* Row 2 */}
-          {/* Blueprint Architect */}
-          <Pressable
-            onPress={() => router.push('/(app)/blueprint')}
-            style={({ pressed, hovered }: any) => [
-              styles.card,
-              { padding: isWide ? spacing.xl : spacing.md },
-              {
-                backgroundColor: theme.surface,
-                borderColor: isDark
-                  ? theme.outlineVariant
-                  : 'rgba(218, 165, 32, 0.35)',
-                cursor: 'pointer',
-              },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(33.333% - 16px)' : '32%' } : { width: '100%' },
-              styles.blueprintCard,
-              (pressed || hovered) && {
-                transform: [{ scale: 1.02 }],
-                shadowColor: theme.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 15,
-                borderColor: 'rgba(218, 165, 32, 0.4)',
-              },
-            ]}
-          >
-            <View style={styles.blueprintBg}>
-              <Text
-                style={{ color: 'rgba(218, 165, 32, 0.1)', fontSize: 12 }}
-              >
-                LVG_RM: 24' x 18'
-              </Text>
-            </View>
-
-            <View style={{ marginTop: 'auto' }}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginBottom: spacing.xs,
-                }}
-              >
-                <MaterialIcons
-                  name="architecture"
-                  size={18}
-                  color={theme.primary}
-                />
-                <Text
+          {/* Category Filter Pills (All / Buy / Rent / Commercial / Land) */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryPillsScroll} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+            {(['All', 'Buy', 'Rent', 'Commercial', 'Land'] as const).map((cat) => {
+              const active = selectedCategory === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => setSelectedCategory(cat)}
                   style={[
-                    typography.headlineSm,
-                    { color: theme.onSurface, marginLeft: 6 },
+                    styles.categoryPill,
+                    { backgroundColor: active ? goldPrimary : cardBg, borderColor: active ? goldPrimary : borderCol }
                   ]}
                 >
-                  Blueprint Architect
-                </Text>
+                  <Text style={[styles.categoryPillText, { color: active ? '#0B0F19' : textSecondary }, active && { fontWeight: '800' }]}>{cat}</Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </Animated.View>
+
+        {/* ── STORIES / FEATURED ACCOUNTS ROW (Screenshot 3) ── */}
+        <View style={styles.storiesSection}>
+          <Text style={[styles.sectionHeaderTitle, { color: textMuted }]}>FEATURED REAL ESTATE NETWORK</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storiesContainer}>
+            {/* Create Story slot */}
+            <Pressable
+              onPress={() => router.push('/(app)/create-post')}
+              style={styles.storyCard}
+            >
+              <View style={[styles.createStoryRing, { borderColor: borderCol }]}>
+                <Avatar user={user} size={50} />
+                <View style={[styles.createPlusBadge, { backgroundColor: goldPrimary, borderColor: cardBg }]}>
+                  <MaterialIcons name="add" size={14} color="#0B0F19" />
+                </View>
               </View>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: theme.onSurfaceVariant,
-                  marginBottom: spacing.md,
-                }}
-              >
-                Generate 2D/3D floor plans from simple text descriptions or
-                rough sketches.
-              </Text>
+              <Text style={[styles.storyLabel, { color: textSecondary }]} numberOfLines={1}>Your Post</Text>
+            </Pressable>
+
+            {/* Other Advisors Stories (never displays current user as a suggested third-party) */}
+            {FEATURED_STORIES.filter((s) => s.type !== 'create' && s.username !== user?.username).map((st) => (
               <Pressable
-                onPress={() => router.push('/(app)/blueprint')}
-                style={({ pressed, hovered }: any) => [
-                  styles.generateBtn,
-                  { backgroundColor: theme.primary, cursor: 'pointer' },
-                  (pressed || hovered) && { transform: [{ scale: 0.98 }] },
-                ]}
+                key={st.id}
+                onPress={() => router.push({ pathname: '/(app)/profile', params: { id: st.username } } as any)}
+                style={styles.storyCard}
               >
-                <Text
-                  style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}
-                >
-                  Generate New Plan
-                </Text>
+                <View style={[styles.storyAvatarRing, st.unread && { borderColor: goldPrimary }]}>
+                  <Avatar user={{ fullName: st.name, username: st.username }} size={50} />
+                </View>
+                <Text style={[styles.storyLabel, { color: textSecondary }]} numberOfLines={1}>{st.name}</Text>
               </Pressable>
-            </View>
-          </Pressable>
+            ))}
+          </ScrollView>
+        </View>
 
-          {/* Market Predictions */}
+        {/* ── FEATURED REAL ESTATE PROPERTIES FEED (Screenshot 3) ── */}
+        <View style={styles.feedHeaderRow}>
+          <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+            <Text style={[styles.feedHeading, { color: textPrimary }]}>Top Verified Listings</Text>
+            <Text style={[styles.feedSubheading, { color: textMuted }]}>Direct from authenticated institutional brokers and architects</Text>
+          </View>
           <Pressable
-            onPress={() => router.push('/(app)/predictions')}
-            style={({ pressed, hovered }: any) => [
-              styles.card,
-              { padding: isWide ? spacing.xl : spacing.md },
-              {
-                backgroundColor: theme.surface,
-                borderColor: isDark
-                  ? theme.outlineVariant
-                  : 'rgba(218, 165, 32, 0.35)',
-                cursor: 'pointer',
-              },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(66.666% - 16px)' : '65%' } : { width: '100%' },
-              styles.predictionsCard,
-              (pressed || hovered) && {
-                transform: [{ scale: 1.01 }],
-                shadowColor: theme.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 15,
-                borderColor: 'rgba(218, 165, 32, 0.4)',
-              },
-            ]}
+            onPress={() => router.push('/(app)/search')}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, flexShrink: 0 }}
           >
-            <View style={styles.cardHeaderRow}>
-              <View style={{ flexShrink: 1, marginRight: spacing.md }}>
-                <Text
-                  style={[typography.headlineSm, { color: theme.onSurface }]}
-                >
-                  Market Predictions
-                </Text>
-                <Text
-                  style={{ fontSize: 12, color: theme.onSurfaceVariant }}
-                >
-                  Global growth index:{' '}
-                  {stats?.marketPredictions?.growthIndex}
-                </Text>
-              </View>
-              <View
+            <Text style={{ color: goldPrimary, fontSize: 13, fontWeight: '700' }}>Explore All</Text>
+            <MaterialIcons name="arrow-forward" size={16} color={goldPrimary} />
+          </Pressable>
+        </View>
+
+        {/* Property Grid */}
+        <View style={[styles.propertyGrid, isWide && styles.propertyGridWide]}>
+          {properties.map((prop, idx) => {
+            const author = prop.author || {
+              _id: 'member',
+              fullName: 'Institutional Partner',
+              username: 'member',
+              headline: 'Prime Assets',
+            };
+            const isSaved = Boolean(savedPosts[prop._id]);
+
+            return (
+              <Animated.View
+                key={prop._id}
+                entering={FadeInDown.delay(idx * 70).duration(350)}
                 style={[
-                  styles.locationBadge,
-                  { backgroundColor: theme.surfaceContainer },
+                  styles.propertyCard,
+                  { backgroundColor: cardBg, borderColor: borderCol },
+                  isWide ? { width: 'calc(50% - 10px)' as any } : { width: '100%' },
                 ]}
               >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: theme.onSurfaceVariant,
-                  }}
-                >
-                  {stats?.marketPredictions?.location}
-                </Text>
-                <MaterialIcons
-                  name="keyboard-arrow-down"
-                  size={16}
-                  color={theme.onSurfaceVariant}
-                  style={{ marginLeft: 4 }}
-                />
-              </View>
-            </View>
-
-            {/* Chart Area */}
-            <View style={styles.chartArea}>
-              <Text style={styles.bullishText}>BULLISH</Text>
-              <Text style={[styles.peakDate, { color: theme.primary }]}>
-                PREDICTED PEAK: {stats?.marketPredictions?.peakDate}
-              </Text>
-              {Platform.OS === 'web' ? (
-                <svg
-                  width="100%"
-                  height="150"
-                  viewBox="0 0 800 150"
-                  preserveAspectRatio="none"
-                  style={{ position: 'absolute', bottom: 0, left: 0 }}
-                >
-                  <path
-                    d="M0,100 C150,120 250,140 350,100 C450,60 550,20 650,50 C700,65 750,120 800,20"
-                    fill="none"
-                    stroke="#DAA520"
-                    strokeWidth="4"
-                    strokeLinecap="round"
+                {/* Property Image Header with Verified badge & Save Icon */}
+                <View style={styles.propertyImageWrap}>
+                  <Image
+                    source={{
+                      uri: resolveImageUrl(prop.mediaUrl || prop.image) || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
+                    }}
+                    style={styles.propertyImage}
+                    resizeMode="cover"
                   />
-                </svg>
-              ) : (
-                <Svg
-                  height="150"
-                  width="100%"
-                  viewBox="0 0 800 150"
-                  style={{ position: 'absolute', bottom: 0, left: 0 }}
-                >
-                  <Path
-                    d="M0,100 C150,120 250,140 350,100 C450,60 550,20 650,50 C700,65 750,120 800,20"
-                    fill="none"
-                    stroke="#DAA520"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                  />
-                </Svg>
-              )}
-            </View>
+                  <View style={styles.propertyImageOverlay}>
+                    <View style={[styles.verifiedBadge, { backgroundColor: goldPrimary }]}>
+                      <MaterialIcons name="verified" size={14} color="#0B0F19" style={{ marginRight: 3 }} />
+                      <Text style={styles.verifiedBadgeText}>VERIFIED</Text>
+                    </View>
+                    <Pressable
+                      onPress={() => toggleSave(prop._id)}
+                      style={[styles.bookmarkCircle, isSaved && { backgroundColor: goldPrimary }]}
+                    >
+                      <MaterialIcons
+                        name={isSaved ? 'bookmark' : 'bookmark-border'}
+                        size={18}
+                        color={isSaved ? '#0B0F19' : '#FFFFFF'}
+                      />
+                    </Pressable>
+                  </View>
 
-            <View style={styles.metricsRow}>
-              <View>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: '700',
-                    color: theme.outline,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Value
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '800',
-                    color: theme.onSurface,
-                  }}
-                >
-                  {stats?.marketPredictions?.value}
-                </Text>
+                  {/* Price Tag Overlay */}
+                  {Boolean(prop.price) && (
+                    <View style={styles.priceTag}>
+                      <Text style={styles.priceTagText}>{prop.price}</Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Property Details Body */}
+                <View style={styles.propertyCardBody}>
+                  <Text style={[styles.propertyTitle, { color: textPrimary }]} numberOfLines={1}>
+                    {prop.title}
+                  </Text>
+
+                  {Boolean(prop.location) && (
+                    <View style={styles.propertyMetaRow}>
+                      <MaterialIcons name="location-on" size={15} color={goldPrimary} style={{ marginRight: 4 }} />
+                      <Text style={[styles.propertyLocationText, { color: textSecondary }]} numberOfLines={1}>
+                        {prop.location}
+                      </Text>
+                    </View>
+                  )}
+
+                  {Boolean(prop.specs) && (
+                    <View style={styles.specsRow}>
+                      <Text style={[styles.specsText, { color: textSecondary }]} numberOfLines={1}>
+                        {prop.specs}
+                      </Text>
+                    </View>
+                  )}
+
+                  {Boolean(prop.content) && (
+                    <Text style={[styles.propertyDescription, { color: textMuted }]} numberOfLines={2}>
+                      {prop.content}
+                    </Text>
+                  )}
+
+                  {/* Broker Attribution Bar & Follow Button */}
+                  <View style={[styles.brokerAttributionBar, { borderTopColor: borderCol }]}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(app)/profile',
+                          params: { id: author._id || author.username },
+                        } as any)
+                      }
+                      style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}
+                    >
+                      <Avatar user={author} size={36} />
+                      <View style={{ marginLeft: 8, flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <Text style={[styles.brokerName, { color: textPrimary }]} numberOfLines={1}>
+                            {author.fullName}
+                          </Text>
+                          <MaterialIcons name="verified" size={13} color={goldPrimary} style={{ marginLeft: 3 }} />
+                        </View>
+                        <Text style={[styles.brokerRole, { color: textMuted }]} numberOfLines={1}>
+                          @{author.username}
+                        </Text>
+                      </View>
+                    </Pressable>
+
+                    <FollowButton
+                      targetUserId={author._id}
+                      targetUsername={author.username}
+                      targetUser={author}
+                      size="sm"
+                    />
+                  </View>
+
+                  {/* Action Row: Like, Comment, Share, Inquire */}
+                  <View style={styles.actionRow}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(app)/messages',
+                          params: {
+                            userId: author._id,
+                            username: author.username,
+                            fullName: author.fullName,
+                          },
+                        } as any)
+                      }
+                      style={[styles.inquireBtn, { backgroundColor: goldPrimary }]}
+                    >
+                      <MaterialCommunityIcons name="chat-processing-outline" size={16} color="#0B0F19" style={{ marginRight: 6 }} />
+                      <Text style={styles.inquireBtnText}>Message Broker</Text>
+                    </Pressable>
+
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/(app)/search',
+                          params: { q: prop.title },
+                        } as any)
+                      }
+                      style={[styles.detailsBtn, { backgroundColor: isDark ? '#1A2133' : '#F1F5F9', borderColor: borderCol }]}
+                    >
+                      <Text style={[styles.detailsBtnText, { color: textSecondary }]}>View Details</Text>
+                      <MaterialIcons name="chevron-right" size={16} color={textMuted} />
+                    </Pressable>
+                  </View>
+                </View>
+              </Animated.View>
+            );
+          })}
+        </View>
+
+        {/* ── AI TOOLS WIDGETS STRIP (Bottom of Dashboard) ── */}
+        <View style={styles.toolsStrip}>
+          <Text style={[styles.sectionHeaderTitle, { color: textMuted }]}>INTELLIGENT SUITE</Text>
+          <View style={styles.toolsGrid}>
+            <Pressable
+              onPress={() => router.push('/(app)/search')}
+              style={[styles.toolCard, { backgroundColor: cardBg, borderColor: borderCol }]}
+            >
+              <View style={[styles.toolIconBox, { backgroundColor: 'rgba(245, 166, 35, 0.12)' }]}>
+                <MaterialIcons name="search" size={22} color={goldPrimary} />
               </View>
-              <View>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: '700',
-                    color: theme.outline,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Volatility
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '800',
-                    color: theme.onSurface,
-                  }}
-                >
-                  {stats?.marketPredictions?.volatility}
-                </Text>
+              <Text style={[styles.toolTitle, { color: textPrimary }]}>AI Search Hub</Text>
+              <Text style={[styles.toolSubtitle, { color: textMuted }]}>Deep queries over 40+ databases</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/insights')}
+              style={[styles.toolCard, { backgroundColor: cardBg, borderColor: borderCol }]}
+            >
+              <View style={[styles.toolIconBox, { backgroundColor: 'rgba(56, 189, 248, 0.12)' }]}>
+                <MaterialIcons name="dynamic-feed" size={22} color="#38bdf8" />
               </View>
-              <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
-                <Text
-                  style={{
-                    fontSize: 10,
-                    fontWeight: '700',
-                    color: theme.primary,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  Growth
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: '800',
-                    color: theme.onSurface,
-                  }}
-                >
-                  {stats?.marketPredictions?.growthPercent}
-                </Text>
+              <Text style={[styles.toolTitle, { color: textPrimary }]}>Video Reels & Insights</Text>
+              <Text style={[styles.toolSubtitle, { color: textMuted }]}>Verified property walk-throughs</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/predictions')}
+              style={[styles.toolCard, { backgroundColor: cardBg, borderColor: borderCol }]}
+            >
+              <View style={[styles.toolIconBox, { backgroundColor: 'rgba(34, 197, 94, 0.12)' }]}>
+                <MaterialIcons name="trending-up" size={22} color="#22c55e" />
               </View>
-            </View>
-          </Pressable>
+              <Text style={[styles.toolTitle, { color: textPrimary }]}>Price Predictions</Text>
+              <Text style={[styles.toolSubtitle, { color: textMuted }]}>Predictive yield models</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/legal')}
+              style={[styles.toolCard, { backgroundColor: cardBg, borderColor: borderCol }]}
+              accessibilityLabel="Title & Legal Verification"
+            >
+              <View style={[styles.toolIconBox, { backgroundColor: 'rgba(234, 179, 8, 0.12)' }]}>
+                <MaterialIcons name="gavel" size={22} color={goldPrimary} />
+              </View>
+              <Text style={[styles.toolTitle, { color: textPrimary }]}>Title & Legal Verification</Text>
+              <Text style={[styles.toolSubtitle, { color: textMuted }]}>Deed & encumbrance checks</Text>
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/blueprint')}
+              style={[styles.toolCard, { backgroundColor: cardBg, borderColor: borderCol }]}
+            >
+              <View style={[styles.toolIconBox, { backgroundColor: 'rgba(168, 85, 247, 0.12)' }]}>
+                <MaterialIcons name="architecture" size={22} color="#a855f7" />
+              </View>
+              <Text style={[styles.toolTitle, { color: textPrimary }]}>Blueprint Architect</Text>
+              <Text style={[styles.toolSubtitle, { color: textMuted }]}>Instant 2D/3D layout plans</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </Animated.View>
@@ -613,158 +479,353 @@ export default function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  contentContainer: { padding: spacing.xl },
-  grid: {
-    display: 'flex',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.gutter,
+  container: {
+    flex: 1,
   },
-  card: {
-    borderRadius: radius.xl,
+  contentContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  heroSection: {
+    marginBottom: 20,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#131824',
     borderWidth: 1,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
+    borderColor: '#232D42',
+    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
     shadowRadius: 10,
-    elevation: 3,
-    ...Platform.select({
-      web: {
-        transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.04)',
-      } as any,
-    }),
-  },
-
-  cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: spacing.lg,
-  },
-  iconBox: {
-    padding: 8,
-    borderRadius: radius.lg,
-  },
-
-  // Search Card
-  searchCard: { flexShrink: 0 },
-  searchInputWrap: {
-    flexDirection: 'row',
-    position: 'relative',
-    marginBottom: spacing.xl,
+    elevation: 4,
   },
   searchInput: {
     flex: 1,
-    borderWidth: 2,
-    borderRadius: radius.xl,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    fontSize: 16,
-  },
-  searchBtn: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    bottom: 8,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({ web: { transition: 'transform 0.2s ease' } as any }),
-  },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '500',
+    outlineStyle: 'none',
+  } as any,
+  searchActionBtn: {
+    backgroundColor: '#F5A623',
     paddingHorizontal: 16,
     paddingVertical: 8,
+    borderRadius: 18,
+  },
+  searchActionBtnText: {
+    color: '#0B0F19',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  categoryPillsScroll: {
+    marginTop: 12,
+  },
+  categoryPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
     borderRadius: 20,
-    ...Platform.select({ web: { transition: 'all 0.2s ease' } as any }),
+    backgroundColor: '#131824',
+    borderWidth: 1,
+    borderColor: '#232D42',
+  },
+  categoryPillActive: {
+    backgroundColor: '#F5A623',
+    borderColor: '#F5A623',
+  },
+  categoryPillText: {
+    color: '#94A3B8',
+    fontSize: 12.5,
+    fontWeight: '600',
+  },
+  categoryPillTextActive: {
+    color: '#0B0F19',
+    fontWeight: '800',
   },
 
-  // Legal Card
-  legalCard: { flexDirection: 'column' },
-  alertBox: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    flexDirection: 'row',
-    marginBottom: spacing.lg,
+  // Stories
+  storiesSection: {
+    marginBottom: 24,
   },
-  activeReviewsRow: {
-    borderRadius: radius.lg,
-    padding: spacing.md,
+  sectionHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1.2,
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  storiesContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingVertical: 4,
+  },
+  storyCard: {
+    alignItems: 'center',
+    width: 68,
+  },
+  createStoryRing: {
+    position: 'relative',
+    padding: 2,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: '#232D42',
+  },
+  createPlusBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    backgroundColor: '#F5A623',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#0B0F19',
+  },
+  storyAvatarRing: {
+    padding: 2,
+    borderRadius: 32,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  storyAvatarRingUnread: {
+    borderColor: '#F5A623',
+  },
+  storyLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
+  // Feed
+  feedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  feedHeading: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  feedSubheading: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  propertyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  propertyGridWide: {
+    justifyContent: 'space-between',
+  },
+  propertyCard: {
+    backgroundColor: '#131824',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#232D42',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  propertyImageWrap: {
+    height: 220,
+    width: '100%',
+    position: 'relative',
+    backgroundColor: '#070D18',
+  },
+  propertyImage: {
+    width: '100%',
+    height: '100%',
+  },
+  propertyImageOverlay: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
   },
-  pendingBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-
-  // Blueprint Card
-  blueprintCard: {
-    position: 'relative',
-    minHeight: 300,
-  },
-  blueprintBg: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    height: 120,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(218, 165, 32, 0.2)',
-    padding: spacing.sm,
-    justifyContent: 'flex-end',
-  },
-  generateBtn: {
-    paddingVertical: 14,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    ...Platform.select({ web: { transition: 'transform 0.2s ease' } as any }),
-  },
-
-  // Predictions Card
-  predictionsCard: { minHeight: 300 },
-  locationBadge: {
+  verifiedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F5A623',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  verifiedBadgeText: {
+    color: '#0B0F19',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  bookmarkCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(11, 15, 25, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  priceTag: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(11, 15, 25, 0.88)',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: radius.full,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(245, 166, 35, 0.3)',
   },
-  chartArea: {
-    flex: 1,
-    position: 'relative',
-    minHeight: 150,
-    marginVertical: spacing.lg,
+  priceTagText: {
+    color: '#F5A623',
+    fontSize: 16,
+    fontWeight: '900',
   },
-  bullishText: {
-    position: 'absolute',
-    top: 40,
-    left: '20%',
-    fontSize: 80,
+  propertyCardBody: {
+    padding: 16,
+  },
+  propertyTitle: {
+    fontSize: 16,
     fontWeight: '800',
-    color: 'rgba(218, 165, 32, 0.05)',
+    color: '#FFFFFF',
+    marginBottom: 6,
   },
-  peakDate: {
-    position: 'absolute',
-    top: 0,
-    right: 20,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  metricsRow: {
+  propertyMetaRow: {
     flexDirection: 'row',
-    gap: spacing.xl,
-    marginTop: 'auto',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  propertyLocationText: {
+    color: '#94A3B8',
+    fontSize: 12.5,
+    fontWeight: '500',
+  },
+  specsRow: {
+    marginBottom: 10,
+  },
+  specsText: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  propertyDescription: {
+    color: '#64748B',
+    fontSize: 12.5,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  brokerAttributionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+    marginBottom: 14,
+  },
+  brokerName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  brokerRole: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  inquireBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F5A623',
+    paddingVertical: 9,
+    borderRadius: 12,
+  },
+  inquireBtnText: {
+    color: '#0B0F19',
+    fontWeight: '800',
+    fontSize: 12.5,
+  },
+  detailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 12,
+    backgroundColor: '#1A2133',
+    borderWidth: 1,
+    borderColor: '#232D42',
+  },
+  detailsBtnText: {
+    color: '#94A3B8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // Tools strip
+  toolsStrip: {
+    marginTop: 36,
+  },
+  toolsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  toolCard: {
+    flex: 1,
+    minWidth: 220,
+    backgroundColor: '#131824',
+    borderWidth: 1,
+    borderColor: '#232D42',
+    borderRadius: 16,
+    padding: 14,
+  },
+  toolIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  toolTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  toolSubtitle: {
+    fontSize: 11.5,
+    color: '#64748B',
   },
 });
+
+

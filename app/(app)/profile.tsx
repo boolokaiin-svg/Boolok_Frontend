@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,60 +26,18 @@ import LoadingScreen from '../../components/LoadingScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import BoolokLogo from '../../components/BoolokLogo';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
+import { API_BASE_URL, resolveImageUrl, resolveReelVideoUrl, isEligibleReelRecord } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 
 // ── Shared follow tracker ───────────────────────────────────────────────────
 const GLOBAL_FOLLOWED_USERS = new Set<string>();
 
+import Avatar from '../../components/Avatar';
+import Skeleton from '../../components/Skeleton';
+import FollowButton, { broadcastFollowChange } from '../../components/FollowButton';
+
 const UserAvatar = ({ user, size = 40, style }: { user?: any; size?: number; style?: any }) => {
-  const { isDark } = useTheme();
-  const [hasError, setHasError] = useState(false);
-
-  let rawPhoto = user?.profilePicture || user?.avatar;
-  if (rawPhoto && typeof rawPhoto === 'string' && rawPhoto.includes('images.unsplash.com')) {
-    rawPhoto = null;
-  }
-  const photo = resolveImageUrl(rawPhoto);
-
-  useEffect(() => {
-    setHasError(false);
-  }, [photo]);
-  const name = user?.fullName || user?.username || (typeof user === 'string' ? user : 'User');
-  const initial = (name[0] || 'U').toUpperCase();
-
-  if (photo && !hasError) {
-    return (
-      <Image
-        source={{ uri: photo }}
-        style={[{ width: size, height: size, borderRadius: size / 2 }, style]}
-        resizeMode="cover"
-        onError={() => setHasError(true)}
-      />
-    );
-  }
-
-  return (
-    <View
-      style={[
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          backgroundColor: isDark ? '#162338' : '#FEF3C7',
-          justifyContent: 'center',
-          alignItems: 'center',
-          borderWidth: 1.5,
-          borderColor: isDark ? '#daa520' : '#D97706',
-        },
-        style,
-      ]}
-    >
-      <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: size * 0.42 }}>
-        {initial}
-      </Text>
-    </View>
-  );
+  return <Avatar user={user} size={size} style={style} />;
 };
 
 const COMMUNITY_MEMBERS = [
@@ -98,8 +56,8 @@ const COMMUNITY_MEMBERS = [
     posts: [],
   },
   {
-    id: '6a8af34812ef34aed25ae8d2',
-    _id: '6a8af34812ef34aed25ae8d2',
+    id: '6ace0e6586b4ca082d9f1432',
+    _id: '6ace0e6586b4ca082d9f1432',
     fullName: 'Logeshwaran A',
     username: 'logeshwarana',
     headline: 'Architectural Consultant & Real Estate Lead',
@@ -109,7 +67,41 @@ const COMMUNITY_MEMBERS = [
     followerCount: 0,
     followingCount: 0,
     mutuals: '',
-    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
+    profilePicture: 'https://boolokgpt.vercel.app/avatars/logeshwaran_doomsday.png',
+    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
+    reels: [],
+    posts: [],
+  },
+  {
+    id: '6addf49b5f3925f54f8491f6',
+    _id: '6addf49b5f3925f54f8491f6',
+    fullName: 'Mithulan R',
+    username: 'mithulanr2003',
+    headline: 'Architectural Director & Skyscraper Asset Syndicate',
+    location: 'Marina Coastal District, Singapore',
+    bio: 'Real estate professional and advisor on the Boolok AI network.',
+    closedDeals: '2',
+    followerCount: 0,
+    followingCount: 0,
+    mutuals: '',
+    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJNc1F5yHFweMK8qtYRFt_2AJJQqzi4y0P2t7z2a4IHwoWCQYKJ=s400-c',
+    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
+    reels: [],
+    posts: [],
+  },
+  {
+    id: '6aed5f1234567890abcdef01',
+    _id: '6aed5f1234567890abcdef01',
+    fullName: 'G Dinesh',
+    username: 'pgma251',
+    headline: 'Real Estate Professional & Boolok Member',
+    location: 'Chennai, Tamil Nadu · Prime Assets',
+    bio: 'Real estate professional and advisor on the Boolok AI network.',
+    closedDeals: '0',
+    followerCount: 0,
+    followingCount: 0,
+    mutuals: '',
+    profilePicture: 'data:image/png;base64,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',
     coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
     reels: [],
     posts: [],
@@ -119,7 +111,6 @@ const COMMUNITY_MEMBERS = [
     _id: 'ajmal',
     fullName: 'Mohammed Ajmal',
     username: 'ajmal',
-    email: 'ajmal@boolok.ai',
     headline: 'Luxury Living & High-End Residential Broker',
     location: 'Dubai & Kochi · Luxury Villas',
     bio: 'Connecting international investors to premier waterfront villas and bespoke residential developments.',
@@ -153,7 +144,7 @@ const COMMUNITY_MEMBERS = [
     bio: 'Specializing in Grade-A IT SEZ parks, commercial lease syndications, and institutional asset acquisitions on OMR Chennai.',
     closedDeals: '2',
     profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200',
+    coverImage: '/coventry_corporate.jpg',
     reels: [],
     posts: [],
   },
@@ -260,8 +251,7 @@ const COMMUNITY_MEMBERS = [
 const resolvePropertyImage = (post: any) => {
   const url = post?.mediaUrl || post?.image || post?.mediaUrls?.[0];
   if (url && typeof url === 'string' && url.trim()) {
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
-    return `${process.env.EXPO_PUBLIC_API_URL}${url}`;
+    return resolveImageUrl(url) || url;
   }
   const loc = (post?.location || '').toLowerCase();
   const title = (post?.title || '').toLowerCase();
@@ -281,7 +271,7 @@ const resolvePropertyImage = (post: any) => {
     return 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200';
   }
   if (loc.includes('coventry') || loc.includes('united kingdom') || loc.includes('london')) {
-    return 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200';
+    return '/coventry_corporate.jpg';
   }
   return 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200';
 };
@@ -303,7 +293,7 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     return {
       id: viewer?.id || viewer?._id || 'self',
       _id: viewer?.id || viewer?._id || 'self',
-      fullName: viewer?.fullName || 'Sai Vimenthan',
+      fullName: viewer?.fullName || 'Boolok Member',
       username: viewer?.username || 'saivimenthanvl',
       headline: viewer?.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead',
       location: viewer?.location || 'Chennai, Tamil Nadu · Prime Assets',
@@ -336,7 +326,6 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     _id: targetId,
     fullName: cleanName,
     username: targetId.toLowerCase(),
-    email: `${targetId.toLowerCase()}@boolok.ai`,
     headline: 'Certified Real Estate Advisor @ Boolok Network',
     location: 'Chennai, Tamil Nadu · Prime Assets',
     bio: 'Real estate professional and certified portfolio advisor on the Boolok AI network.',
@@ -349,13 +338,23 @@ function resolveMemberProfile(targetId: string, viewer: any) {
   };
 }
 
-const ProfileReelItem = ({ reel }: { reel: any }) => {
+const ProfileReelItem = ({ reel, onDelete }: { reel: any; onDelete?: (id: string) => Promise<void> | void }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const { user } = useAuth();
   const [isPlaying, setIsPlaying] = useState(false);
+  const [expandedInsight, setExpandedInsight] = useState(false);
 
   const initialLikes = (() => {
+    if (typeof reel.likesCount === 'number') {
+      return reel.likesCount;
+    }
+    if (Array.isArray(reel.likes)) {
+      return reel.likes.length;
+    }
+    if (typeof reel.likes === 'number') {
+      return reel.likes;
+    }
     if (Platform.OS === 'web') {
       try {
         const raw = localStorage.getItem('boolok_post_likes');
@@ -367,12 +366,39 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
         }
       } catch (_) {}
     }
-    return reel.likesCount ?? (Array.isArray(reel.likes) ? reel.likes.length : (typeof reel.likes === 'number' ? reel.likes : 0));
+    return 0;
   })();
 
   const [likesCount, setLikesCount] = useState<number>(initialLikes);
+
+  // Sync likes on native mobile via SecureStore and update when reel changes
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        if (Platform.OS === 'web') {
+          const raw = localStorage.getItem('boolok_post_likes');
+          if (raw) {
+            const cache = JSON.parse(raw);
+            if (cache[reel._id] && typeof cache[reel._id].count === 'number') {
+              if (isMounted) setLikesCount(cache[reel._id].count);
+            }
+          }
+        } else {
+          const raw = await SecureStore.getItemAsync('boolok_post_likes');
+          if (raw) {
+            const cache = JSON.parse(raw);
+            if (cache[reel._id] && typeof cache[reel._id].count === 'number') {
+              if (isMounted) setLikesCount(cache[reel._id].count);
+            }
+          }
+        }
+      } catch (_) {}
+    })();
+    return () => { isMounted = false; };
+  }, [reel._id]);
   const [hasLiked, setHasLiked] = useState<boolean>(() => {
-    if (Boolean(reel.isLiked)) return true;
+    if (typeof reel.isLiked === 'boolean') return reel.isLiked;
     if (Platform.OS === 'web') {
       try {
         const raw = localStorage.getItem('boolok_post_likes');
@@ -406,47 +432,27 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
   });
   const [showComments, setShowComments] = useState(false);
   const [commentInput, setCommentInput] = useState('');
-  const [isSaved, setIsSaved] = useState<boolean>(() => {
-    if (Platform.OS === 'web') {
-      try {
-        const raw = localStorage.getItem('boolok_saved_reels');
-        if (raw) {
-          const list = JSON.parse(raw);
-          const rId = reel._id || reel.id;
-          return Array.isArray(list) && list.some((r: any) => (r._id || r.id) === rId);
-        }
-      } catch (_) {}
-    }
-    return false;
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  const handleSaveReel = async () => {
-    const nextSaved = !isSaved;
-    setIsSaved(nextSaved);
-    try {
-      let list: any[] = [];
-      const rId = reel._id || reel.id;
-      if (Platform.OS === 'web') {
-        const raw = localStorage.getItem('boolok_saved_reels');
-        if (raw) list = JSON.parse(raw) || [];
-        if (nextSaved) {
-          list = [reel, ...list.filter((r: any) => (r._id || r.id) !== rId)];
-        } else {
-          list = list.filter((r: any) => (r._id || r.id) !== rId);
-        }
-        localStorage.setItem('boolok_saved_reels', JSON.stringify(list));
-      } else {
-        const raw = await SecureStore.getItemAsync('boolok_saved_reels');
-        if (raw) list = JSON.parse(raw) || [];
-        if (nextSaved) {
-          list = [reel, ...list.filter((r: any) => (r._id || r.id) !== rId)];
-        } else {
-          list = list.filter((r: any) => (r._id || r.id) !== rId);
-        }
-        await SecureStore.setItemAsync('boolok_saved_reels', JSON.stringify(list));
-      }
-    } catch (_) {}
-  };
+  const currentUserId = String(user?.id || user?._id || '');
+  const currentUsername = String(user?.username || '').toLowerCase();
+  const currentFullName = String(user?.fullName || '').toLowerCase();
+  const authorUserId = String(reel.author?._id || reel.author?.id || (typeof reel.author === 'string' ? reel.author : ''));
+  const authorUsername = String(reel.author?.username || reel.authorName || '').toLowerCase();
+  const authorFullName = String(reel.author?.fullName || reel.authorName || '').toLowerCase();
+  const isCoventry = (reel.title || '').toLowerCase().includes('coventry') || (reel.location || '').toLowerCase().includes('coventry');
+  const isKyoto =
+    String(reel._id || reel.id || '').includes('kyoto') ||
+    String(reel._id || reel.id || '') === 'logesh-reel-2' ||
+    String(reel.title || '').toLowerCase().includes('kyoto') ||
+    String(reel.videoUrl || '').includes('kyoto');
+
+  const isOwner = Boolean(
+    (currentUserId && authorUserId && currentUserId === authorUserId) ||
+    (currentUsername && authorUsername && currentUsername === authorUsername) ||
+    (currentFullName && authorFullName && currentFullName === authorFullName)
+  );
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -464,7 +470,11 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
     setComments(Array.isArray(reel.comments) ? reel.comments : []);
   }, [reel._id, reel.comments]);
 
-  const videoSource = reel.videoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+  const rawPoster = reel.poster || reel.thumbnail;
+  const posterUrl = rawPoster
+    ? (resolveImageUrl(rawPoster) || rawPoster)
+    : 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200';
+  const videoSource = resolveReelVideoUrl(reel.videoUrl);
   const videoRef = useRef<any>(null);
 
   const player = useVideoPlayer(videoSource, (p) => {
@@ -625,74 +635,132 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
   return (
     <View style={[styles.reelCardItem, isMobile && { height: Math.min(width * 1.35, 480) }]}>
       {/* ── Video Player / Fallback ── */}
-      <Pressable onPress={togglePlay} style={StyleSheet.absoluteFill}>
-        {Platform.OS === 'web' ? (
-          <video
-            ref={videoRef}
-            src={videoSource}
-            poster={reel.thumbnail || reel.poster}
-            loop
-            preload="metadata"
-            playsInline
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              pointerEvents: 'none',
-              backgroundColor: '#000000',
-            }}
-          />
-        ) : (
-          <>
-            {Boolean((reel.thumbnail || reel.poster) && !isPlaying) ? (
-              <Image
-                source={{ uri: reel.thumbnail || reel.poster }}
-                style={StyleSheet.absoluteFill}
-                resizeMode="cover"
-              />
-            ) : null}
-            <VideoView
-              player={player}
-              style={StyleSheet.absoluteFill}
-              contentFit="cover"
-              nativeControls={false}
+      <Pressable onPress={videoSource ? togglePlay : undefined} style={StyleSheet.absoluteFill}>
+        {videoSource ? (
+          Platform.OS === 'web' ? (
+            <video
+              ref={videoRef}
+              src={videoSource}
+              poster={posterUrl}
+              loop
+              preload="metadata"
+              playsInline
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                pointerEvents: 'none',
+                backgroundColor: '#000000',
+              }}
             />
-          </>
+          ) : (
+            <>
+              {posterUrl && !isPlaying && (
+                <Image
+                  source={{ uri: posterUrl }}
+                  style={StyleSheet.absoluteFill}
+                  resizeMode="cover"
+                />
+              )}
+              <VideoView
+                player={player}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                nativeControls={false}
+              />
+            </>
+          )
+        ) : (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#0f172a', alignItems: 'center', justifyContent: 'center' }]}>
+            {(reel.thumbnail || reel.poster) ? (
+              <>
+                {/* Ambient Blurred Background to eliminate jarring black bars */}
+                {isCoventry && (
+                  <Image
+                    source={{ uri: resolveImageUrl(reel.thumbnail || reel.poster) || (reel.thumbnail || reel.poster) }}
+                    style={[StyleSheet.absoluteFill, { opacity: 0.35 }]}
+                    resizeMode="cover"
+                    blurRadius={Platform.OS === 'web' ? 24 : 16}
+                  />
+                )}
+                <Image
+                  source={{ uri: resolveImageUrl(reel.thumbnail || reel.poster) || (reel.thumbnail || reel.poster) }}
+                  style={[
+                    StyleSheet.absoluteFill,
+                    isCoventry && {
+                      transform: [{ scale: 1.15 }],
+                    },
+                  ]}
+                  resizeMode={isCoventry ? "cover" : "cover"}
+                />
+              </>
+            ) : null}
+          </View>
         )}
 
-        {!isPlaying ? (
+        {videoSource && !isPlaying && (
           <View style={styles.centerPlayOverlay} pointerEvents="none">
             <View style={styles.playIconCircle}>
               <MaterialIcons name="play-arrow" size={36} color="#e6b800" />
             </View>
           </View>
-        ) : null}
+        )}
       </Pressable>
 
-      {/* ── Top Overlay: AI Match Score & Watch in Reels ── */}
+      {/* ── Top Overlay: AI Match Score & Watch in Reels & Illustrative Footage ── */}
       <View style={{ position: 'absolute', top: 12, left: 12, right: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }} pointerEvents="box-none">
-        <View style={styles.reelMatchBadge} pointerEvents="none">
-          <View style={styles.reelMatchDot} />
-          <Text style={styles.reelMatchText}>{reel.aiMatch || 95}% AI MATCH</Text>
-        </View>
-
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/insights')}
-          activeOpacity={0.8}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.65)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 14, borderWidth: 1, borderColor: '#daa520' }}
-        >
-          <MaterialIcons name="ondemand-video" size={13} color="#daa520" />
-          <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '700' }}>Reels Page</Text>
-        </TouchableOpacity>
+        {isKyoto ? (
+          <View style={[styles.reelMatchBadge, { backgroundColor: 'rgba(0, 0, 0, 0.75)', borderColor: '#F5A623' }]} pointerEvents="none">
+            <MaterialIcons name="info-outline" size={12} color="#F5A623" style={{ marginRight: 4 }} />
+            <Text style={[styles.reelMatchText, { color: '#F5A623' }]}>Illustrative footage</Text>
+          </View>
+        ) : (!isCoventry && typeof reel.aiMatch === 'number' && Boolean(reel.aiMatchBasis) ? (
+          <View style={styles.reelMatchBadge} pointerEvents="none">
+            <View style={styles.reelMatchDot} />
+            <Text style={styles.reelMatchText}>{reel.aiMatch}% AI MATCH</Text>
+          </View>
+        ) : <View />)}
       </View>
 
       {/* ── Right Action Sidebar (Like, Comment, Share) ── */}
       <View style={styles.reelRightActions} pointerEvents="box-none">
+        {/* Creator Avatar with initial badge */}
+        <View style={styles.creatorRailItem}>
+          <View style={styles.creatorAvatarRing}>
+            <Avatar
+              user={
+                isCoventry
+                  ? {
+                      id: '6a7a0dbb51a42123f22c4edf',
+                      _id: '6a7a0dbb51a42123f22c4edf',
+                      username: 'saivimenthanvl',
+                      fullName: 'Sai Vimenthan V L',
+                      profilePicture: null,
+                      avatarInitial: 'S',
+                      avatarBgColor: '#F5A623',
+                    }
+                  : typeof reel.author === 'object' && reel.author
+                  ? reel.author
+                  : {
+                      id: authorUserId || undefined,
+                      _id: authorUserId || undefined,
+                      username: authorUsername || undefined,
+                      fullName: reel.authorName || 'Boolok Member',
+                      profilePicture: reel.authorAvatar || null,
+                    }
+              }
+              size={40}
+              showBorder
+              borderColor="#F5A623"
+            />
+          </View>
+        </View>
+
         {/* Like Button */}
         <TouchableOpacity
           onPress={handleLike}
@@ -725,16 +793,13 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
 
         {/* Save / Bookmark Button */}
         <TouchableOpacity
-          onPress={handleSaveReel}
           activeOpacity={0.7}
           style={styles.reelActionBtn}
         >
-          <View style={[styles.reelActionIconBox, isSaved && { backgroundColor: 'rgba(230, 184, 0, 0.35)', borderColor: '#e6b800' }]}>
-            <MaterialIcons name={isSaved ? "bookmark" : "bookmark-border"} size={24} color={isSaved ? "#e6b800" : "#ffffff"} />
+          <View style={styles.reelActionIconBox}>
+            <MaterialIcons name="bookmark-border" size={24} color="#ffffff" />
           </View>
-          <Text style={[styles.reelActionText, isSaved && { color: '#e6b800', fontWeight: 'bold' }]}>
-            {isSaved ? 'Saved' : 'Save'}
-          </Text>
+          <Text style={styles.reelActionText}>Save</Text>
         </TouchableOpacity>
 
         {/* Share Button */}
@@ -747,6 +812,25 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
           </View>
           <Text style={styles.reelActionText}>Share</Text>
         </TouchableOpacity>
+
+        {/* Delete button (Owner only) */}
+        {isOwner && Boolean(onDelete) && (
+          <TouchableOpacity
+            onPress={() => setShowDeleteModal(true)}
+            disabled={deleting}
+            activeOpacity={0.7}
+            style={styles.reelActionBtn}
+          >
+            <View style={[styles.reelActionIconBox, { backgroundColor: 'rgba(239, 68, 68, 0.25)', borderColor: 'rgba(239, 68, 68, 0.5)' }]}>
+              {deleting ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <MaterialIcons name="delete-outline" size={22} color="#ef4444" />
+              )}
+            </View>
+            <Text style={[styles.reelActionText, { color: '#ef4444' }]}>Delete</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* ── Bottom Overlay Info ── */}
@@ -755,12 +839,76 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
         style={styles.reelFooterOverlay}
         pointerEvents="box-none"
       >
-        <Text style={styles.reelTitleHeading}>{reel.title}</Text>
-        <Text style={styles.reelLocationSub}>📍 {reel.location}</Text>
-        <View style={styles.reelInsightBox}>
-          <Text style={styles.reelInsightText}>🤖 {reel.insight}</Text>
+        <Text style={styles.reelTitleHeading} numberOfLines={2}>{reel.title}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginTop: 4, marginBottom: 8 }}>
+          {Boolean(reel.location) && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <MaterialIcons name="location-on" size={14} color="#e6b800" />
+              <Text style={[styles.reelLocationSub, { marginTop: 0, marginBottom: 0 }]}>{reel.location}</Text>
+            </View>
+          )}
+          {((reel.price !== undefined && reel.price !== null && String(reel.price).trim() !== '' && String(reel.price).trim().toLowerCase() !== 'undefined' && String(reel.price).trim().toLowerCase() !== 'null') || isCoventry) && (
+            <View style={{ backgroundColor: 'rgba(230, 184, 0, 0.2)', borderColor: '#e6b800', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+              <Text style={{ color: '#e6b800', fontSize: 12, fontWeight: '800' }}>
+                {reel.price !== undefined && reel.price !== null && String(reel.price).trim() !== '' && String(reel.price).trim().toLowerCase() !== 'undefined' && String(reel.price).trim().toLowerCase() !== 'null' ? String(reel.price) : '£12,242,788'}
+              </Text>
+            </View>
+          )}
         </View>
+        {Boolean(reel.insight) && (
+          <View style={styles.reelInsightBox}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 }}>
+              <MaterialIcons name="info-outline" size={13} color="#e6b800" />
+              <Text style={{ color: '#e6b800', fontSize: 10, fontWeight: '800', letterSpacing: 0.4 }}>PROPERTY OVERVIEW · OWNER SUPPLIED</Text>
+            </View>
+            <Text style={styles.reelInsightText}>{(reel.insight || '').replace(/(?:\$16)?,500,000\./g, '£12,242,788.')}</Text>
+          </View>
+        )}
       </LinearGradient>
+
+      {/* ── Custom Delete Confirmation Modal ── */}
+      <Modal
+        visible={showDeleteModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowDeleteModal(false)}
+      >
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowDeleteModal(false)}>
+          <Pressable style={styles.deleteDialogCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.deleteDialogIconBox}>
+              <MaterialIcons name="delete-forever" size={32} color="#ef4444" />
+            </View>
+            <Text style={styles.deleteDialogTitle}>Delete Property Reel</Text>
+            <Text style={styles.deleteDialogDesc}>
+              Are you sure you want to delete &ldquo;{reel.title}&rdquo;? This listing video and all its analytics will be permanently removed.
+            </Text>
+            <View style={styles.deleteDialogBtnRow}>
+              <TouchableOpacity
+                onPress={() => setShowDeleteModal(false)}
+                style={styles.deleteDialogCancelBtn}
+              >
+                <Text style={styles.deleteDialogCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={async () => {
+                  setShowDeleteModal(false);
+                  setDeleting(true);
+                  try {
+                    if (onDelete) {
+                      await onDelete(reel._id);
+                    }
+                  } finally {
+                    setDeleting(false);
+                  }
+                }}
+                style={styles.deleteDialogConfirmBtn}
+              >
+                <Text style={styles.deleteDialogConfirmText}>Delete Reel</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
 
       {/* ── Comments Modal ── */}
       <Modal
@@ -866,17 +1014,57 @@ export default function ProfessionalUserProfileScreen() {
   const [followingCountState, setFollowingCountState] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
 
-  // Tabs: 'properties' vs 'reels'
-  const [activeTab, setActiveTab] = useState<'properties' | 'reels' | 'saved'>('properties');
+  // Synchronize live follow events across screens
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleFollowChange = (e: any) => {
+        const detail = e.detail;
+        if (!detail) return;
+        const targetIdStr = String(targetId || '').toLowerCase();
+        const currentUname = String(data?.user?.username || id || '').toLowerCase();
+        const currentUid = String(data?.user?.id || data?.user?._id || id || '').toLowerCase();
 
-  // Instagram Media Grid dynamic calculations for perfect 3-column alignment
-  const [gridContainerWidth, setGridContainerWidth] = useState<number>(0);
-  const gridGap = isSmallMobile ? 4 : (isMobile ? 6 : 8);
-  const estimatedCardWidth = Math.min(width, 880) - (isMobile ? 36 : 64);
-  const fallbackTileWidth = Math.max(80, Math.floor((estimatedCardWidth - (gridGap * 2)) / 3));
-  const gridTileWidth = gridContainerWidth > 0 
-    ? Math.floor((gridContainerWidth - (gridGap * 2)) / 3) 
-    : fallbackTileWidth;
+        const matches =
+          (detail.userId && (String(detail.userId).toLowerCase() === targetIdStr || String(detail.userId).toLowerCase() === currentUid)) ||
+          (detail.username && (String(detail.username).toLowerCase() === targetIdStr || String(detail.username).toLowerCase() === currentUname));
+
+        if (matches) {
+          setIsFollowingState(Boolean(detail.isFollowing));
+          if (typeof detail.followerCount === 'number') {
+            setFollowerCountState(detail.followerCount);
+          }
+        }
+      };
+
+      window.addEventListener('boolok_follow_changed', handleFollowChange);
+      return () => window.removeEventListener('boolok_follow_changed', handleFollowChange);
+    }
+  }, [targetId, data?.user?.id, data?.user?._id, data?.user?.username, id]);
+
+  // Tabs: 'properties' vs 'reels' vs 'saved'
+  const [activeTab, setActiveTab] = useState<'properties' | 'reels' | 'saved'>('properties');
+  const [savedItemsList, setSavedItemsList] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadSavedFromStorage = async () => {
+      try {
+        if (Platform.OS === 'web') {
+          const raw = localStorage.getItem('boolok_saved_reels');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setSavedItemsList(parsed);
+          }
+        } else {
+          const raw = await SecureStore.getItemAsync('boolok_saved_reels');
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) setSavedItemsList(parsed);
+          }
+        }
+      } catch (_) {}
+    };
+    loadSavedFromStorage();
+  }, []);
 
   // Username edit state for self
   const [isEditingUsername, setIsEditingUsername] = useState(false);
@@ -1006,6 +1194,7 @@ export default function ProfessionalUserProfileScreen() {
 
   // Google-style "Add Profile Picture" Modal state
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarImgError, setAvatarImgError] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [showAllIllustrations, setShowAllIllustrations] = useState(false);
 
@@ -1027,136 +1216,6 @@ export default function ProfessionalUserProfileScreen() {
   // Property Post Details Modal state (Shows post, likes, and comments)
   const [selectedPostDetails, setSelectedPostDetails] = useState<any>(null);
   const [isPostDetailsModalOpen, setIsPostDetailsModalOpen] = useState(false);
-
-  // Selected Reel Modal state (Full video reel playback)
-  const [selectedReelForModal, setSelectedReelForModal] = useState<any>(null);
-
-  // Saved Collection State (Posts & Reels)
-  const [savedPosts, setSavedPosts] = useState<any[]>([]);
-  const [savedReels, setSavedReels] = useState<any[]>([]);
-  const [savedFilter, setSavedFilter] = useState<'all' | 'posts' | 'reels'>('all');
-
-  const loadSavedData = useCallback(async () => {
-    try {
-      if (Platform.OS === 'web') {
-        const rawP = localStorage.getItem('boolok_saved_posts');
-        if (rawP) {
-          const list = JSON.parse(rawP);
-          if (Array.isArray(list)) setSavedPosts(list);
-        }
-        const rawR = localStorage.getItem('boolok_saved_reels');
-        if (rawR) {
-          const list = JSON.parse(rawR);
-          if (Array.isArray(list)) setSavedReels(list);
-        }
-      } else {
-        const rawP = await SecureStore.getItemAsync('boolok_saved_posts');
-        if (rawP) {
-          const list = JSON.parse(rawP);
-          if (Array.isArray(list)) setSavedPosts(list);
-        }
-        const rawR = await SecureStore.getItemAsync('boolok_saved_reels');
-        if (rawR) {
-          const list = JSON.parse(rawR);
-          if (Array.isArray(list)) setSavedReels(list);
-        }
-      }
-    } catch (_) {}
-  }, []);
-
-  useEffect(() => {
-    loadSavedData();
-  }, [loadSavedData]);
-
-  const isPostSaved = (id: string) => savedPosts.some((p) => (p._id || p.id) === id);
-  const isReelSaved = (id: string) => savedReels.some((r) => (r._id || r.id) === id);
-
-  const handleToggleSavePost = async (post: any) => {
-    if (!post) return;
-    const pId = post._id || post.id;
-    let next: any[];
-    if (isPostSaved(pId)) {
-      next = savedPosts.filter((p) => (p._id || p.id) !== pId);
-    } else {
-      next = [post, ...savedPosts.filter((p) => (p._id || p.id) !== pId)];
-    }
-    setSavedPosts(next);
-    try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem('boolok_saved_posts', JSON.stringify(next));
-      } else {
-        await SecureStore.setItemAsync('boolok_saved_posts', JSON.stringify(next));
-      }
-    } catch (_) {}
-  };
-
-  const handleToggleSaveReel = async (reel: any) => {
-    if (!reel) return;
-    const rId = reel._id || reel.id;
-    let next: any[];
-    if (isReelSaved(rId)) {
-      next = savedReels.filter((r) => (r._id || r.id) !== rId);
-    } else {
-      next = [reel, ...savedReels.filter((r) => (r._id || r.id) !== rId)];
-    }
-    setSavedReels(next);
-    try {
-      if (Platform.OS === 'web') {
-        localStorage.setItem('boolok_saved_reels', JSON.stringify(next));
-      } else {
-        await SecureStore.setItemAsync('boolok_saved_reels', JSON.stringify(next));
-      }
-    } catch (_) {}
-  };
-
-  // Helper functions for real-time counts
-  const getLiveCommentsCount = (id: string, defaultComments: any) => {
-    if (Platform.OS === 'web') {
-      try {
-        const raw = localStorage.getItem(`boolok_comments_${id}`);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) return parsed.length;
-        }
-      } catch (_) {}
-    }
-    return Array.isArray(defaultComments) ? defaultComments.length : (typeof defaultComments === 'number' ? defaultComments : 0);
-  };
-
-  const getLiveLikesCount = (id: string, defaultLikes: any, fallbackCount?: number) => {
-    if (Platform.OS === 'web') {
-      try {
-        const raw = localStorage.getItem('boolok_post_likes');
-        if (raw) {
-          const cache = JSON.parse(raw);
-          if (cache[id] && typeof cache[id].count === 'number') {
-            return cache[id].count;
-          }
-        }
-      } catch (_) {}
-    }
-    if (typeof fallbackCount === 'number') return fallbackCount;
-    return Array.isArray(defaultLikes) ? defaultLikes.length : (typeof defaultLikes === 'number' ? defaultLikes : 0);
-  };
-
-  const getReelViewsDisplay = (reel: any) => {
-    if (reel.views !== undefined && reel.views !== null) {
-      const v = Number(reel.views);
-      return isNaN(v) ? String(reel.views) : (v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(v));
-    }
-    if (reel.viewCount !== undefined) {
-      const v = Number(reel.viewCount);
-      return isNaN(v) ? String(reel.viewCount) : (v >= 1000 ? `${(v / 1000).toFixed(1)}K` : String(v));
-    }
-    const idStr = String(reel._id || reel.id || '1');
-    let hash = 0;
-    for (let i = 0; i < idStr.length; i++) {
-      hash = ((hash << 5) - hash) + idStr.charCodeAt(i);
-      hash |= 0;
-    }
-    const count = Math.abs(hash % 900) + 120;
-    return count >= 1000 ? `${(count / 1000).toFixed(1)}K` : `${count}`;
-  };
 
   const [postDetailsComments, setPostDetailsComments] = useState<any[]>([]);
   const [postDetailsCommentText, setPostDetailsCommentText] = useState('');
@@ -1357,7 +1416,7 @@ export default function ProfessionalUserProfileScreen() {
       _id: `c-detail-${Date.now()}`,
       author: {
         _id: viewer?.id || viewer?._id || 'sai',
-        fullName: viewer?.fullName || 'Sai Vimenthan',
+        fullName: viewer?.fullName || 'Boolok Member',
         username: viewer?.username || 'saivimenthanvl',
         profilePicture: viewer?.profilePicture || null,
       },
@@ -1444,7 +1503,11 @@ export default function ProfessionalUserProfileScreen() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.data?.user) {
-        setData(res.data);
+        setData((prev: any) => ({
+          ...res.data,
+          reels: (Array.isArray(prev?.reels) && prev.reels.length > 0) ? prev.reels : (res.data.reels || []),
+          reelCount: (Array.isArray(prev?.reels) && prev.reels.length > 0) ? prev.reels.length : (res.data.reelCount || 0),
+        }));
         setFollowerCountState(res.data.followerCount ?? res.data.user?.followerCount ?? 0);
         setFollowingCountState(res.data.followingCount ?? res.data.user?.followingCount ?? 0);
         // Only update follow state from the poll if we are NOT in the middle of a toggle
@@ -1463,10 +1526,6 @@ export default function ProfessionalUserProfileScreen() {
   useEffect(() => {
     const activeId = isSelf ? (viewer?.id || viewer?._id || viewer?.username || 'self') : targetId;
     fetchProfile(activeId);
-    const interval = setInterval(() => {
-      fetchProfileSilent(activeId);
-    }, 3000);
-    return () => clearInterval(interval);
   }, [targetId, isSelf, viewer?.id, viewer?._id, viewer?.username]);
 
   const fetchProfile = async (lookupId: string) => {
@@ -1474,11 +1533,49 @@ export default function ProfessionalUserProfileScreen() {
     const fallbackUser = resolveMemberProfile(isSelf ? 'self' : lookupId, viewer);
     try {
       const token = await getToken();
-      const res = await axios.get(`${API_BASE_URL}/api/users/${lookupId}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      const [res, allReelsRes] = await Promise.all([
+        axios.get(`${API_BASE_URL}/api/users/${lookupId}`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }),
+        axios.get(`${API_BASE_URL}/api/reels`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }).catch(() => null),
+      ]);
+
       if (res.data && res.data.user) {
-        setData(res.data);
+        const uId = String(res.data.user?.id || res.data.user?._id || '').toLowerCase();
+        const rawProfileReels = Array.isArray(res.data.reels) ? res.data.reels : [];
+        const seenMap = new Set<string>();
+        const profileReels: any[] = [];
+
+        rawProfileReels.forEach((r: any) => {
+          if (!isEligibleReelRecord(r)) return;
+          const aId = String(r.author?._id || r.author?.id || r.author || '').toLowerCase();
+          if (uId && aId && aId !== uId) return;
+          const rid = String(r._id || r.id || '').trim();
+          if (!rid || seenMap.has(rid)) return;
+          seenMap.add(rid);
+          profileReels.push(r);
+        });
+
+        if (allReelsRes?.data && Array.isArray(allReelsRes.data)) {
+          allReelsRes.data.forEach((r: any) => {
+            if (!isEligibleReelRecord(r)) return;
+            const aId = String(r.author?._id || r.author?.id || r.author || '').toLowerCase();
+            if (!uId || !aId || aId !== uId) return;
+            const rid = String(r._id || r.id || '').trim();
+            if (!rid || seenMap.has(rid)) return;
+            seenMap.add(rid);
+            profileReels.push(r);
+          });
+        }
+
+        const dataWithReels = {
+          ...res.data,
+          reels: profileReels,
+          reelCount: profileReels.length,
+        };
+        setData(dataWithReels);
         setFollowerCountState(res.data.followerCount ?? res.data.user?.followerCount ?? 0);
         setFollowingCountState(res.data.followingCount ?? res.data.user?.followingCount ?? 0);
         const serverFollowing = Boolean(res.data.isFollowing);
@@ -1734,7 +1831,7 @@ export default function ProfessionalUserProfileScreen() {
     if (key.includes('logesh')) {
       return [
         { id: '1', title: 'Margaret River Commercial Vineyard', location: 'Western Australia', price: '$18,500,000', capRate: '7.8% Cap Rate', type: '140-Acre Agricultural Estate & Winery', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '140 Acres' },
-        { id: '2', title: 'Kyoto Forest Eco-Luxury Retreat', location: 'Kyoto, Japan', price: '$12,400,000', capRate: '8.5% Cap Rate', type: 'Boutique Hospitality Estate', date: 'May 2026', status: 'Verified Institutional Settlement', sqft: '28,000 sq ft' },
+        { id: '2', title: 'Kyoto Forest Eco-Luxury Retreat', location: 'Kyoto, Japan', price: '¥1,900,000,000', capRate: '8.5% Cap Rate', type: 'Boutique Hospitality Estate', date: 'May 2026', status: 'Verified Institutional Settlement', sqft: '28,000 sq ft' },
         { id: '3', title: 'Uluwatu Oceanfront Resort', location: 'Bali, Indonesia', price: '$24,000,000', capRate: '9.2% Cap Rate', type: 'Luxury Hospitality Parcel', date: 'Feb 2026', status: 'Verified Institutional Settlement', sqft: '85,000 sq ft' },
       ];
     }
@@ -1747,13 +1844,13 @@ export default function ProfessionalUserProfileScreen() {
     }
     if (key.includes('bava')) {
       return [
-        { id: '1', title: 'Poes Garden Ultra Luxury Penthouse', location: 'Poes Garden, Chennai, TN', price: '$6,200,000', capRate: '7.2% Yield', type: 'Bespoke Architectural Penthouse', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '5,800 sq ft' },
+        { id: '1', title: 'Poes Garden Ultra Luxury Penthouse', location: 'Poes Garden, Chennai, TN', price: '₹58.5 Cr', capRate: '7.2% Yield', type: 'Bespoke Architectural Penthouse', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '5,800 sq ft' },
         { id: '2', title: 'Boat Club Road Contemporary Estate', location: 'RA Puram, Chennai, TN', price: '$8,400,000', capRate: '6.8% Yield', type: 'Modern Custom Villa', date: 'May 2026', status: 'Verified Institutional Settlement', sqft: '7,200 sq ft' },
       ];
     }
     if (key.includes('akshtr') || key.includes('akshat')) {
       return [
-        { id: '1', title: 'OMR Cyber Park Tower B', location: 'OMR IT Corridor, Chennai, TN', price: '$35,000,000', capRate: '8.8% Cap Rate', type: 'Fortune 500 Leased IT Tower', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '110,000 sq ft' },
+        { id: '1', title: 'OMR Cyber Park Tower B', location: 'OMR IT Corridor, Chennai, TN', price: '₹330.4 Cr', capRate: '8.8% Cap Rate', type: 'Fortune 500 Leased IT Tower', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '110,000 sq ft' },
         { id: '2', title: 'Tidel Park Commercial Hub', location: 'Taramani, Chennai, TN', price: '$21,500,000', capRate: '8.4% Cap Rate', type: 'Grade-A Commercial Space', date: 'Jun 2026', status: 'Verified Institutional Settlement', sqft: '75,000 sq ft' },
       ];
     }
@@ -1765,7 +1862,7 @@ export default function ProfessionalUserProfileScreen() {
     }
     if (key.includes('aswin')) {
       return [
-        { id: '1', title: 'Aswin Real Estate Prime Commercial Acquisition', location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets', price: '$12,500,000', capRate: '8.4% Cap Rate', type: 'Institutional Commercial Asset', date: '2026', status: 'Verified Institutional Settlement', sqft: '45,000 sq ft' },
+        { id: '1', title: 'Aswin Real Estate Prime Commercial Acquisition', location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets', price: '₹118.0 Cr', capRate: '8.4% Cap Rate', type: 'Institutional Commercial Asset', date: '2026', status: 'Verified Institutional Settlement', sqft: '45,000 sq ft' },
       ];
     }
     if (key.includes('vignesh') || key.includes('vicky')) {
@@ -1780,13 +1877,13 @@ export default function ProfessionalUserProfileScreen() {
     }
     if (key.includes('sophia')) {
       return [
-        { id: '1', title: 'Beverly Hills Syndicate Share Acquisition', location: 'Beverly Hills, California', price: '$12,500,000', capRate: '6.8% Yield', type: 'Luxury Fractional House Share', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
+        { id: '1', title: 'Beverly Hills Syndicate Share Acquisition', location: 'Beverly Hills, California', price: '₹118.0 Cr', capRate: '6.8% Yield', type: 'Luxury Fractional House Share', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
         { id: '2', title: 'Geneva Lakeside Residence Co-Ownership', location: 'Geneva, Switzerland', price: '$8,900,000', capRate: '5.9% Yield', type: 'Private Family Office Syndicate', date: 'May 2026', status: 'Verified Institutional Settlement', sqft: '6,200 sq ft' },
       ];
     }
     if (key.includes('david')) {
       return [
-        { id: '1', title: 'Beverly Hills Co-Ownership Landmark', location: 'Beverly Hills, California', price: '$12,500,000', capRate: '6.8% Yield', type: 'Bespoke Co-Ownership Syndicate', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
+        { id: '1', title: 'Beverly Hills Co-Ownership Landmark', location: 'Beverly Hills, California', price: '₹118.0 Cr', capRate: '6.8% Yield', type: 'Bespoke Co-Ownership Syndicate', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
         { id: '2', title: 'Mayfair Commercial Townhouse', location: 'London, United Kingdom', price: '$18,500,000', capRate: '6.2% Cap Rate', type: 'Prime Commercial Co-Ownership', date: 'Jun 2026', status: 'Verified Institutional Settlement', sqft: '8,400 sq ft' },
         { id: '3', title: 'Kensington High Street Retail Hub', location: 'London, United Kingdom', price: '$14,200,000', capRate: '7.1% Cap Rate', type: 'Institutional Asset Settlement', date: 'Mar 2026', status: 'Verified Institutional Settlement', sqft: '12,000 sq ft' },
       ];
@@ -1794,12 +1891,12 @@ export default function ProfessionalUserProfileScreen() {
     if (key.includes('marcus')) {
       return [
         { id: '1', title: 'Manhattan Mixed-Use Asset Syndicate', location: 'New York, NY', price: '$22,000,000', capRate: '7.4% Cap Rate', type: 'Commercial Syndicate Settlement', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '35,000 sq ft' },
-        { id: '2', title: 'Beverly Hills House Share Deeded Title', location: 'Beverly Hills, California', price: '$12,500,000', capRate: '6.8% Yield', type: 'Deeded Fractional Title', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
+        { id: '2', title: 'Beverly Hills House Share Deeded Title', location: 'Beverly Hills, California', price: '₹118.0 Cr', capRate: '6.8% Yield', type: 'Deeded Fractional Title', date: 'Jul 2026', status: 'Verified Institutional Settlement', sqft: '9,500 sq ft' },
       ];
     }
     if (key.includes('sai') || key === 'self') {
       return [
-        { id: '1', title: 'Coventry Corporate Headquarters', location: 'Coventry, United Kingdom', price: '$16,500,000', capRate: '8.2% Cap Rate', type: 'Institutional Grade-A Office Hub', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '52,000 sq ft' },
+        { id: '1', title: 'Coventry Corporate Headquarters', location: 'Coventry, United Kingdom', price: '£12,242,788', capRate: '8.2% Cap Rate', type: 'Institutional Grade-A Office Hub', date: 'Aug 2026', status: 'Verified Institutional Settlement', sqft: '52,000 sq ft' },
         { id: '2', title: 'Anna Nagar Prime Retail Flagship', location: 'Chennai, Tamil Nadu', price: '$9,200,000', capRate: '8.9% Cap Rate', type: 'High-Street Multi-Brand Retail', date: 'Jun 2026', status: 'Verified Institutional Settlement', sqft: '34,000 sq ft' },
         { id: '3', title: 'OMR Expressway IT Campus Block A', location: 'Chennai, Tamil Nadu', price: '$26,000,000', capRate: '8.6% Cap Rate', type: 'Commercial Tech Park Syndication', date: 'Apr 2026', status: 'Verified Institutional Settlement', sqft: '88,000 sq ft' },
       ];
@@ -2057,14 +2154,13 @@ export default function ProfessionalUserProfileScreen() {
       _id: `reel-${Date.now()}`,
       title: reelTitle.trim(),
       location: reelLocation.trim() || 'Coventry, United Kingdom',
-      aiMatch: Math.floor(Math.random() * 4) + 96,
-      insight: 'Strong engagement expected based on similar recent listings.',
+      insight: '',
       likes: 0,
       likesCount: 0,
       comments: [],
       commentsCount: 0,
-      videoUrl: reelUrl.trim() || attachedVideo || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      thumbnail: 'https://images.unsplash.com/photo-1613977257363-707ba9348227?w=1200',
+      videoUrl: reelUrl.trim() || attachedVideo || '',
+      thumbnail: '/coventry_corporate.jpg',
     };
 
     setUserReels((prev) => [newReelObj, ...prev]);
@@ -2095,6 +2191,38 @@ export default function ProfessionalUserProfileScreen() {
     setAttachedVideo(null);
     setIsPublishingReel(false);
     alertMsg('Real estate video reel published successfully!');
+  };
+
+  const handleDeleteReel = async (reelId: string) => {
+    try {
+      const token = await getToken();
+      if (token && reelId && !['1', '2', '3', '4'].includes(reelId)) {
+        await axios.delete(`${API_BASE_URL}/api/reels/${reelId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+    } catch (err: any) {
+      console.warn('Backend delete reel response:', err?.response?.data || err.message);
+    }
+
+    // Always update local UI state
+    setUserReels((prev) => prev.filter((r: any) => (r._id || r.id) !== reelId));
+    setData((prev: any) => ({
+      ...prev,
+      reelCount: Math.max(0, (prev?.reelCount || 1) - 1),
+      reels: (prev?.reels || []).filter((r: any) => (r._id || r.id) !== reelId),
+    }));
+
+    if (Platform.OS === 'web') {
+      try {
+        const raw = localStorage.getItem('boolok_user_uploaded_reels');
+        if (raw) {
+          const list = JSON.parse(raw);
+          const filtered = list.filter((r: any) => (r._id || r.id) !== reelId);
+          localStorage.setItem('boolok_user_uploaded_reels', JSON.stringify(filtered));
+        }
+      } catch (_) {}
+    }
   };
 
   const toggleFollow = async () => {
@@ -2132,8 +2260,11 @@ export default function ProfessionalUserProfileScreen() {
 
     try {
       const token = await getToken();
+      const endpoint = nextState
+        ? `${API_BASE_URL}/api/users/${activeTarget}/follow`
+        : `${API_BASE_URL}/api/users/${activeTarget}/unfollow`;
       const res = await axios.post(
-        `${API_BASE_URL}/api/users/${activeTarget}/follow`,
+        endpoint,
         {},
         { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
@@ -2144,6 +2275,7 @@ export default function ProfessionalUserProfileScreen() {
         if (typeof res.data.isFollowing === 'boolean') {
           const serverFollowing = res.data.isFollowing;
           setIsFollowingState(serverFollowing);
+          broadcastFollowChange(activeTarget, profileUser?.username, serverFollowing, res.data?.followerCount);
           const targetUser = res.data.targetUser;
           const confirmedKeys = [
             activeTarget,
@@ -2202,7 +2334,7 @@ export default function ProfessionalUserProfileScreen() {
   const fallbackUser = resolveMemberProfile(isSelf ? 'self' : targetId, viewer);
   const baseProfileUser = isSelf
     ? (data?.user || viewer || fallbackUser)
-    : (data?.user && data.user.id !== viewer?.id && data.user.username !== viewer?.username
+    : (data?.user
       ? { ...fallbackUser, ...data.user }
       : fallbackUser);
 
@@ -2212,38 +2344,66 @@ export default function ProfessionalUserProfileScreen() {
       : (getFallbackDeals(baseProfileUser?.username || 'sai').length.toString())
   );
 
+  const effectiveFullName = baseProfileUser?.fullName || 'Advisor';
+
   const profileUser = {
     ...baseProfileUser,
+    fullName: effectiveFullName,
     closedDeals: calculatedClosedDeals,
   };
 
-  const serverReels = Array.isArray(data?.reels) ? data.reels : [];
+  const serverReels = (Array.isArray(data?.reels) ? data.reels : []).filter((r: any) => isEligibleReelRecord(r));
   const mergedSelfReels = (() => {
     const combined = [...localReels, ...userReels, ...serverReels];
-    const seen = new Set();
+    const seen = new Set<string>();
     const unique: any[] = [];
     combined.forEach((r) => {
-      if (r && r._id && !seen.has(r._id) && !isDummyReelId(r._id) && !isDummyReelId(r.id)) {
-        const authorId = r.author?._id || r.author?.id || (typeof r.author === 'string' ? r.author : '');
-        const viewerId = viewer?.id || viewer?._id || '';
-        const authorUsername = (r.author?.username || r.authorName || '').toLowerCase();
-        const viewerUsername = (viewer?.username || '').toLowerCase();
-        // Skip if author is distinctly someone else
-        if (authorId && viewerId && authorId !== viewerId && authorUsername && viewerUsername && authorUsername !== viewerUsername) {
+      if (r && r._id && !seen.has(String(r._id)) && isEligibleReelRecord(r) && !isDummyReelId(r._id) && !isDummyReelId(r.id)) {
+        const authorId = String(r.author?._id || r.author?.id || (typeof r.author === 'string' ? r.author : '')).toLowerCase();
+        const viewerId = String(viewer?.id || viewer?._id || '').toLowerCase();
+        // Strictly match by immutable owner ID when both IDs are present
+        if (authorId && viewerId && authorId !== viewerId) {
           return;
         }
-        seen.add(r._id);
+        seen.add(String(r._id));
         unique.push(r);
       }
     });
     return unique;
   })();
 
-  const reelsToDisplay = isSelf
-    ? mergedSelfReels
-    : (Array.isArray(data?.reels) ? data.reels.filter((r: any) => !isDummyReelId(r._id) && !isDummyReelId(r.id)) : []);
+  const reelsToDisplay = (() => {
+    const rawList = isSelf
+      ? mergedSelfReels
+      : (Array.isArray(data?.reels) ? data.reels : []);
+    const seen = new Set<string>();
+    const profileOwnerId = String(profileUser?.id || profileUser?._id || '').toLowerCase();
+    return rawList.filter((r: any) => {
+      if (!isEligibleReelRecord(r) || isDummyReelId(r._id) || isDummyReelId(r.id)) return false;
+      const authorId = String(r.author?._id || r.author?.id || (typeof r.author === 'string' ? r.author : '')).toLowerCase();
+      if (profileOwnerId && authorId && authorId !== profileOwnerId) return false;
+      const rid = String(r._id || r.id || '').trim();
+      if (!rid || seen.has(rid)) return false;
+      seen.add(rid);
+      return true;
+    });
+  })();
 
-  const postsToDisplay = Array.isArray(data?.posts) ? data.posts : [];
+  const postsToDisplay = (Array.isArray(data?.posts) ? data.posts : []).map((p: any) => {
+    if ((p?.title || '').toLowerCase().includes('coventry') || (p?.location || '').toLowerCase().includes('coventry') || (p?.content || '').toLowerCase().includes('coventry')) {
+      return {
+        ...p,
+        title: 'Coventry Corporate Headquarters',
+        location: 'Coventry, United Kingdom',
+        price: p?.price || '£12,242,788',
+        specs: p?.specs || '52,000 sq ft · 8.2% Cap Rate',
+        mediaUrl: '/coventry_corporate.jpg',
+        image: '/coventry_corporate.jpg',
+        mediaUrls: ['/coventry_corporate.jpg'],
+      };
+    }
+    return p;
+  });
 
   const postCount = postsToDisplay.length;
   const reelCount = reelsToDisplay.length;
@@ -2266,7 +2426,9 @@ export default function ProfessionalUserProfileScreen() {
   const defaultLocation = profileUser?.location || (isSelf ? 'Chennai, Tamil Nadu · Prime Assets' : 'Global Real Estate Network');
   const defaultBio =
     profileUser?.bio ||
-    'Principal Broker overseeing premium residential estates, commercial office syndication, and institutional real estate acquisitions. Specialized in turnkey acquisitions and AI-driven valuation models.';
+    (isSelf
+      ? 'Principal Broker overseeing premium residential estates, commercial office syndication, and institutional real estate acquisitions. Specialized in turnkey acquisitions and AI-driven valuation models.'
+      : 'No bio provided yet.');
   const rawMutuals = (profileUser?.mutuals || '').trim();
   const mutualsText = (rawMutuals && !rawMutuals.includes('Logeshwaran A, Logeshwaran A'))
     ? rawMutuals
@@ -2287,24 +2449,6 @@ export default function ProfessionalUserProfileScreen() {
             <MaterialIcons name="arrow-back" size={20} color={isDark ? '#ffffff' : '#0f172a'} />
             <Text style={[styles.backText, { color: isDark ? '#ffffff' : '#0f172a' }]}>Back to Real Estate Feed</Text>
           </Pressable>
-
-          {isSelf && (
-            <Pressable
-              onPress={handleSignOut}
-              style={[
-                styles.topSignOutBtn,
-                {
-                  backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEE2E2',
-                  borderColor: isDark ? 'rgba(239, 68, 68, 0.35)' : '#FCA5A5',
-                },
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Sign Out"
-            >
-              <MaterialIcons name="logout" size={17} color="#EF4444" />
-              <Text style={styles.topSignOutText}>Sign Out</Text>
-            </Pressable>
-          )}
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════════════
@@ -2333,48 +2477,23 @@ export default function ProfessionalUserProfileScreen() {
           </View>
 
           {/* Profile Header Content Overlapping Cover */}
-          <View style={[styles.profileHeaderContent, isMobile && { paddingHorizontal: 14, paddingBottom: 16 }]}>
+          <View style={[styles.profileHeaderContent, { zIndex: 30, elevation: 12, position: 'relative' }, isMobile && { paddingHorizontal: 14, paddingBottom: 16 }]}>
             {/* Top Row: Avatar on Left, Organization Badge on Right */}
-            <View style={[styles.avatarRow, isMobile && { marginTop: -42, marginBottom: 10 }]}>
+            <View style={[styles.avatarRow, { zIndex: 40, elevation: 14 }, isMobile && { marginTop: -42, marginBottom: 10 }]}>
               {/* Overlapping Avatar */}
               <Pressable
                 onPress={isSelf ? () => setIsAvatarModalOpen(true) : undefined}
-                style={styles.avatarWrapper}
+                style={[styles.avatarWrapper, { zIndex: 50, elevation: 15 }]}
               >
-                {profileUser.profilePicture && !profileUser.profilePicture.includes('images.unsplash.com') && resolveImageUrl(profileUser.profilePicture) ? (
-                  <Image
-                    source={{ uri: resolveImageUrl(profileUser.profilePicture)! }}
-                    style={[
-                      styles.avatarImage,
-                      { borderColor: cardBg },
-                      isMobile && { width: 84, height: 84, borderRadius: 42, borderWidth: 3 },
-                    ]}
-                  />
-                ) : (
-                  <View
-                    style={[
-                      styles.avatarImage,
-                      {
-                        borderColor: cardBg,
-                        backgroundColor: isDark ? '#1a273c' : '#FEF3C7',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        borderWidth: 3,
-                      },
-                      isMobile && { width: 84, height: 84, borderRadius: 42 },
-                    ]}
-                  >
-                    <Text
-                      style={{
-                        fontSize: isMobile ? 32 : 44,
-                        fontWeight: '800',
-                        color: isDark ? '#daa520' : '#B45309',
-                      }}
-                    >
-                      {(profileUser.fullName || profileUser.username || viewer?.fullName || 'U')[0]?.toUpperCase()}
-                    </Text>
-                  </View>
-                )}
+                <UserAvatar
+                  user={profileUser}
+                  size={isMobile ? 84 : 110}
+                  style={[
+                    styles.avatarImage,
+                    { borderColor: cardBg, borderWidth: isMobile ? 3 : 4 },
+                    isMobile && { width: 84, height: 84, borderRadius: 42 },
+                  ]}
+                />
                 {isSelf ? (
                   <View
                     style={[
@@ -2388,15 +2507,19 @@ export default function ProfessionalUserProfileScreen() {
                         alignItems: 'center',
                         borderWidth: 2,
                         borderColor: cardBg,
+                        zIndex: 20,
+                        elevation: 10,
                       },
                     ]}
                   >
                     <MaterialIcons name="photo-camera" size={isMobile ? 13 : 16} color="#000000" />
                   </View>
                 ) : (
-                  <View style={[styles.avatarVerifiedBadge, { borderColor: cardBg, borderWidth: 2 }]}>
-                    <MaterialIcons name="verified" size={isMobile ? 16 : 20} color="#0095f6" />
-                  </View>
+                  (profileUser?.isVerified || profileUser?.verified) && (
+                    <View style={[styles.avatarVerifiedBadge, { borderColor: cardBg, borderWidth: 2 }]}>
+                      <MaterialIcons name="verified" size={isMobile ? 16 : 20} color="#0095f6" />
+                    </View>
+                  )
                 )}
               </Pressable>
 
@@ -2447,10 +2570,14 @@ export default function ProfessionalUserProfileScreen() {
             <View style={styles.nameBlock}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <Text style={[styles.profileFullName, { color: textPrimary }]}>
-                  {profileUser.fullName || (isSelf ? viewer?.fullName || 'Sai Vimenthan' : 'Advisor')}
+                  {effectiveFullName}
                 </Text>
-                <MaterialIcons name="verified" size={20} color="#0095f6" />
-                <Text style={[styles.profileDegree, { color: textMuted }]}>· 1st (Verified Member)</Text>
+                {Boolean(profileUser?.isVerified || profileUser?.verified) && (
+                  <>
+                    <MaterialIcons name="verified" size={20} color="#0095f6" />
+                    <Text style={[styles.profileDegree, { color: textMuted }]}>· 1st (Verified Member)</Text>
+                  </>
+                )}
               </View>
 
               {/* Editable Username for Self */}
@@ -2580,8 +2707,7 @@ export default function ProfessionalUserProfileScreen() {
                         });
                       }}
                       style={[
-                        styles.primaryCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
+                        styles.primaryCtaBtn, isMobile && { flex: 1, minWidth: 100, paddingHorizontal: 10, justifyContent: 'center' },
                         { backgroundColor: '#0077b5' },
                       ]}
                     >
@@ -2589,27 +2715,20 @@ export default function ProfessionalUserProfileScreen() {
                       <Text style={styles.primaryCtaText}>Message</Text>
                     </Pressable>
 
-                    <Pressable
-                      onPress={toggleFollow}
-                      disabled={followBusy}
-                      style={[
-                        styles.secondaryCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
-                        {
-                          backgroundColor: isFollowingState ? (isDark ? '#1a273c' : '#E2E8F0') : goldPrimary,
-                          borderColor: isFollowingState ? (isDark ? '#1a273c' : '#CBD5E1') : goldPrimary,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.secondaryCtaText,
-                          { color: isFollowingState ? textPrimary : '#000000' },
-                        ]}
-                      >
-                        {isFollowingState ? '✓ Following' : '+ Follow'}
-                      </Text>
-                    </Pressable>
+                    <FollowButton
+                      targetUserId={profileUser?._id || profileUser?.id || targetId}
+                      targetUsername={profileUser?.username}
+                      targetUser={profileUser}
+                      initialIsFollowing={isFollowingState}
+                      size="md"
+                      onFollowChange={(newIsF, newCount) => {
+                        setIsFollowingState(newIsF);
+                        if (typeof newCount === 'number') {
+                          setFollowerCountState(newCount);
+                        }
+                      }}
+                      style={isMobile ? { flex: 1, minWidth: 90, height: 38 } : { minWidth: 100, height: 38 }}
+                    />
 
                     <Pressable
                       onPress={() => alertMsg('Consultation scheduled on Boolok GPT VIP calendar.')}
@@ -2632,8 +2751,7 @@ export default function ProfessionalUserProfileScreen() {
                     <Pressable
                       onPress={handleOpenEditModal}
                       style={[
-                        styles.primaryCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
+                        styles.primaryCtaBtn, isMobile && { flex: 1, minWidth: 100, paddingHorizontal: 10, justifyContent: 'center' },
                         { backgroundColor: goldPrimary },
                       ]}
                     >
@@ -2646,8 +2764,7 @@ export default function ProfessionalUserProfileScreen() {
                     <Pressable
                       onPress={() => setCreateType('post')}
                       style={[
-                        styles.secondaryCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
+                        styles.secondaryCtaBtn, isMobile && { flex: 1, minWidth: 100, paddingHorizontal: 10, justifyContent: 'center' },
                         {
                           borderColor: goldPrimary,
                           backgroundColor: isDark ? 'rgba(218, 165, 32, 0.08)' : '#FFFBEB',
@@ -2663,8 +2780,7 @@ export default function ProfessionalUserProfileScreen() {
                     <Pressable
                       onPress={() => alertMsg('CRE Portfolio PDF downloaded.')}
                       style={[
-                        styles.secondaryCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
+                        styles.secondaryCtaBtn, isMobile && { flex: 1, minWidth: 100, paddingHorizontal: 10, justifyContent: 'center' },
                         {
                           borderColor: isDark ? '#334155' : '#CBD5E1',
                           backgroundColor: isDark ? '#162235' : '#F1F5F9',
@@ -2681,8 +2797,7 @@ export default function ProfessionalUserProfileScreen() {
                       onPress={handleSignOut}
                       style={[
                         styles.secondaryCtaBtn,
-                        styles.signOutCtaBtn,
-                        isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
+                        styles.signOutCtaBtn, { width: '100%', marginTop: 8, justifyContent: 'center' },
                         {
                           borderColor: isDark ? 'rgba(239, 68, 68, 0.45)' : '#FCA5A5',
                           backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2',
@@ -2710,552 +2825,533 @@ export default function ProfessionalUserProfileScreen() {
           <Text style={[styles.sectionHeading, { color: textPrimary }]}>About & Commercial Expertise</Text>
           <Text style={[styles.aboutBodyText, { color: textSecondary }]}>{defaultBio}</Text>
 
-          {/* Core Specialization Pills */}
-          <View style={styles.pillsContainer}>
-            <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor }]}>
-              <Text style={[styles.pillText, { color: goldPrimary }]}>🏢 Commercial Office Buildings</Text>
+          {/* Core Specialization Pills (shown for self or users with custom commercial specialization) */}
+          {(isSelf || (Boolean(profileUser?.bio) && !profileUser?.bio?.toLowerCase().includes('no bio'))) && (
+            <View style={styles.pillsContainer}>
+              <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <MaterialIcons name="business" size={14} color={goldPrimary} />
+                <Text style={[styles.pillText, { color: goldPrimary }]}>Commercial Office Buildings</Text>
+              </View>
+              <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <MaterialIcons name="beach-access" size={14} color={goldPrimary} />
+                <Text style={[styles.pillText, { color: goldPrimary }]}>Luxury Waterfront Estates</Text>
+              </View>
+              <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <MaterialIcons name="trending-up" size={14} color={goldPrimary} />
+                <Text style={[styles.pillText, { color: goldPrimary }]}>Institutional Cap Rate Advisory</Text>
+              </View>
+              <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor, flexDirection: 'row', alignItems: 'center', gap: 6 }]}>
+                <MaterialIcons name="analytics" size={14} color={goldPrimary} />
+                <Text style={[styles.pillText, { color: goldPrimary }]}>Portfolio Valuation & Market Modeling</Text>
+              </View>
             </View>
-            <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor }]}>
-              <Text style={[styles.pillText, { color: goldPrimary }]}>🏖️ Luxury Waterfront Estates</Text>
-            </View>
-            <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor }]}>
-              <Text style={[styles.pillText, { color: goldPrimary }]}>📈 Institutional Cap Rate Advisory</Text>
-            </View>
-            <View style={[styles.pillItem, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor }]}>
-              <Text style={[styles.pillText, { color: goldPrimary }]}>🤖 AI Valuation & Market Modeling</Text>
-            </View>
-          </View>
+          )}
         </View>
 
-
-
-        {/* ════════════════════════════════════════════════════════════════════════
-            INSTAGRAM-STYLE PROFILE MEDIA SECTION (POSTS, REELS, SAVED)
+        {/* ═══════════════════════════════════════════════════════════════════════
+            CREATE LISTING / REEL MODAL (FOR SELF)
         ════════════════════════════════════════════════════════════════════════ */}
-        <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginTop: 16, padding: isMobile ? 8 : 16 }]}>
-          {/* Instagram-Style 3 Sub Navigation Tabs */}
-          <View style={styles.instagramSubNavRow}>
-            {/* Tab 1: POSTS */}
+        {isSelf && (
+          <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginTop: 16 }]}>
+            <Text style={[styles.sectionHeading, { color: textPrimary }]}>Publish Property Listing or Video Reel</Text>
+
+            {/* Type Selector */}
+            <View style={styles.createTypeRow}>
+              <Pressable
+                onPress={() => setCreateType('post')}
+                accessibilityRole="button"
+                accessibilityLabel="Property Listing"
+                style={[
+                  styles.createTypeBtn,
+                  { backgroundColor: createType === 'post' ? goldPrimary : (isDark ? '#162235' : '#E2E8F0'), minHeight: 44 },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="home-plus-outline"
+                  size={18}
+                  color={createType === 'post' ? '#000000' : (isDark ? '#ffffff' : '#0f172a')}
+                />
+                <Text
+                  style={[
+                    styles.createTypeBtnText,
+                    { color: createType === 'post' ? '#000000' : (isDark ? '#ffffff' : '#0f172a'), flexShrink: 1, textAlign: 'center' },
+                  ]}
+                >
+                  Property Listing
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => setCreateType('reel')}
+                accessibilityRole="button"
+                accessibilityLabel="Upload Video Reel / Tour"
+                style={[
+                  styles.createTypeBtn,
+                  { backgroundColor: createType === 'reel' ? goldPrimary : (isDark ? '#162235' : '#E2E8F0'), minHeight: 44 },
+                ]}
+              >
+                <MaterialCommunityIcons
+                  name="video-vintage"
+                  size={18}
+                  color={createType === 'reel' ? '#000000' : (isDark ? '#ffffff' : '#0f172a')}
+                />
+                <Text
+                  style={[
+                    styles.createTypeBtnText,
+                    { color: createType === 'reel' ? '#000000' : (isDark ? '#ffffff' : '#0f172a'), flexShrink: 1, textAlign: 'center' },
+                  ]}
+                >
+                  Video Reel / Tour
+                </Text>
+              </Pressable>
+            </View>
+
+            {createType === 'post' ? (
+              <>
+                <TextInput
+                  placeholder="Property Title (e.g. Luxury Modern French Manor Estate)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor }]}
+                  value={postTitle}
+                  onChangeText={setPostTitle}
+                />
+                <TextInput
+                  placeholder="Asking Price (e.g. $8,900,000)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor, marginTop: 8 }]}
+                  value={postPrice}
+                  onChangeText={setPostPrice}
+                />
+                <TextInput
+                  placeholder="Location (e.g. Beverly Hills, CA)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor, marginTop: 8 }]}
+                  value={postLocation}
+                  onChangeText={setPostLocation}
+                />
+                <TextInput
+                  placeholder="Comprehensive property overview, zoning, cap rates, and amenities..."
+                  placeholderTextColor={textMuted}
+                  multiline
+                  numberOfLines={4}
+                  style={[styles.formTextArea, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor, marginTop: 8 }]}
+                  value={postContent}
+                  onChangeText={setPostContent}
+                />
+
+                {attachedImage && (
+                  <View style={styles.attachedPreviewBox}>
+                    <Image source={{ uri: attachedImage }} style={styles.attachedPreviewImg} />
+                    <Pressable onPress={() => setAttachedImage(null)} style={styles.removePreviewBtn}>
+                      <MaterialIcons name="close" size={16} color="#ffffff" />
+                    </Pressable>
+                  </View>
+                )}
+
+                <View style={styles.formActionsRow}>
+                  <Pressable
+                    onPress={handlePickImage}
+                    style={[
+                      styles.attachMediaBtn,
+                      {
+                        backgroundColor: isDark ? '#162235' : '#F1F5F9',
+                        borderColor: isDark ? '#1a273c' : '#CBD5E1',
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <MaterialIcons name="add-photo-alternate" size={18} color={goldPrimary} />
+                    <Text style={[styles.attachMediaBtnText, { color: textPrimary }]}>
+                      {attachedImage ? 'Change Image' : 'Attach Image (Local/Drive)'}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handleCreatePost}
+                    disabled={isPublishing}
+                    style={[styles.submitFormBtn, { backgroundColor: goldPrimary }]}
+                  >
+                    {isPublishing ? (
+                      <ActivityIndicator size="small" color="#000000" />
+                    ) : (
+                      <Text style={styles.submitFormBtnText}>Publish Listing</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
+            ) : (
+              <>
+                <TextInput
+                  placeholder="Video Tour Title (e.g. Coventry Office Walkthrough)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor }]}
+                  value={reelTitle}
+                  onChangeText={setReelTitle}
+                />
+                <TextInput
+                  placeholder="Location (e.g. Coventry, United Kingdom)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor, marginTop: 8 }]}
+                  value={reelLocation}
+                  onChangeText={setReelLocation}
+                />
+                <TextInput
+                  placeholder="Or paste Direct Video URL (mp4 / Drive link)..."
+                  placeholderTextColor={textMuted}
+                  style={[styles.formInput, { backgroundColor: isDark ? '#070e1a' : '#F8FAFC', color: textPrimary, borderColor, marginTop: 8 }]}
+                  value={reelUrl}
+                  onChangeText={setReelUrl}
+                />
+
+                {attachedVideo && (
+                  <View style={styles.attachedVideoTag}>
+                    <MaterialCommunityIcons name="video-check" size={18} color="#4ade80" />
+                    <Text style={styles.attachedVideoTagText}>Video attached from Local/Drive</Text>
+                    <Pressable onPress={() => setAttachedVideo(null)}>
+                      <MaterialIcons name="close" size={16} color="#ffffff" />
+                    </Pressable>
+                  </View>
+                )}
+
+                <View style={styles.formActionsRow}>
+                  <Pressable
+                    onPress={handlePickVideo}
+                    style={[
+                      styles.attachMediaBtn,
+                      {
+                        backgroundColor: isDark ? '#162235' : '#F1F5F9',
+                        borderColor: isDark ? '#1a273c' : '#CBD5E1',
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <MaterialIcons name="video-library" size={18} color="#60a5fa" />
+                    <Text style={[styles.attachMediaBtnText, { color: textPrimary }]}>
+                      {attachedVideo ? 'Change Video' : 'Attach Video (Local/Drive)'}
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={handlePublishReel}
+                    disabled={isPublishingReel}
+                    style={[styles.submitFormBtn, { backgroundColor: goldPrimary }]}
+                  >
+                    {isPublishingReel ? (
+                      <ActivityIndicator size="small" color="#000000" />
+                    ) : (
+                      <Text style={styles.submitFormBtnText}>Publish Reel</Text>
+                    )}
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </View>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════════════════
+            PORTFOLIO LISTINGS & VIDEO REELS TABS
+        ════════════════════════════════════════════════════════════════════════ */}
+        <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginTop: 16 }]}>
+          {/* Sub Navigation Bar */}
+          <View style={styles.portfolioTabRow}>
             <Pressable
               onPress={() => setActiveTab('properties')}
               style={[
-                styles.instagramTabBtn,
-                activeTab === 'properties' && styles.instagramTabBtnActive,
+                styles.portfolioTabBtn,
+                activeTab === 'properties' && { borderBottomColor: goldPrimary, borderBottomWidth: 3 },
               ]}
             >
               <MaterialCommunityIcons
                 name="grid"
-                size={21}
+                size={18}
                 color={activeTab === 'properties' ? goldPrimary : textMuted}
               />
               <Text
                 style={[
-                  styles.instagramTabText,
-                  { color: activeTab === 'properties' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted },
-                  activeTab === 'properties' && { fontWeight: '800' },
+                  styles.portfolioTabText,
+                  { color: activeTab === 'properties' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted, flexShrink: 1 },
                 ]}
               >
-                POSTS {posts.length > 0 ? `(${posts.length})` : ''}
+                POSTS ({posts.length})
               </Text>
             </Pressable>
 
-            {/* Tab 2: REELS */}
             <Pressable
               onPress={() => setActiveTab('reels')}
               style={[
-                styles.instagramTabBtn,
-                activeTab === 'reels' && styles.instagramTabBtnActive,
+                styles.portfolioTabBtn,
+                activeTab === 'reels' && { borderBottomColor: goldPrimary, borderBottomWidth: 3 },
               ]}
             >
               <MaterialCommunityIcons
                 name="play-box-outline"
-                size={22}
+                size={18}
                 color={activeTab === 'reels' ? goldPrimary : textMuted}
               />
               <Text
                 style={[
-                  styles.instagramTabText,
-                  { color: activeTab === 'reels' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted },
-                  activeTab === 'reels' && { fontWeight: '800' },
+                  styles.portfolioTabText,
+                  { color: activeTab === 'reels' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted, flexShrink: 1 },
                 ]}
               >
-                REELS {reels.length > 0 ? `(${reels.length})` : ''}
+                REELS ({reels.length})
               </Text>
             </Pressable>
 
-            {/* Tab 3: SAVED */}
             <Pressable
               onPress={() => setActiveTab('saved')}
               style={[
-                styles.instagramTabBtn,
-                activeTab === 'saved' && styles.instagramTabBtnActive,
+                styles.portfolioTabBtn,
+                activeTab === 'saved' && { borderBottomColor: goldPrimary, borderBottomWidth: 3 },
               ]}
             >
-              <MaterialIcons
-                name="bookmark-border"
-                size={21}
+              <MaterialCommunityIcons
+                name="bookmark-outline"
+                size={18}
                 color={activeTab === 'saved' ? goldPrimary : textMuted}
               />
               <Text
                 style={[
-                  styles.instagramTabText,
-                  { color: activeTab === 'saved' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted },
-                  activeTab === 'saved' && { fontWeight: '800' },
+                  styles.portfolioTabText,
+                  { color: activeTab === 'saved' ? (isDark ? '#FFFFFF' : '#0F172A') : textMuted, flexShrink: 1 },
                 ]}
               >
-                SAVED {(savedPosts.length + savedReels.length) > 0 ? `(${savedPosts.length + savedReels.length})` : ''}
+                SAVED ({isSelf ? savedItemsList.length : 0})
               </Text>
             </Pressable>
           </View>
 
-          {/* TAB 1: POSTS GRID (with Instagram Real-time Likes & Comments Hover Overlay) */}
-          {activeTab === 'properties' && (
+          {/* Properties Display */}
+          {activeTab === 'properties' ? (
             posts && posts.length > 0 ? (
-              <View 
-                style={[styles.instagramGrid, { gap: gridGap }]}
-                onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
-              >
+              <View style={[styles.propertiesGrid, isMobile && { gap: 12 }]}>
                 {posts.map((post: any) => {
                   const authorId = post.author?._id || post.author?.id || (typeof post.author === 'string' ? post.author : '');
                   const viewerId = viewer?.id || viewer?._id || '';
                   const isPostOwner = isSelf || (authorId && (authorId === viewerId || (viewer?.username && authorId === viewer.username)));
-                  const postLikesCount = getLiveLikesCount(post._id, post.likes, post.likesCount);
-                  const postCommentsCount = getLiveCommentsCount(post._id, post.comments);
-                  const isPinned = Boolean(post.isPinned || post.pinned);
-                  const isSavedItem = isPostSaved(post._id);
+                  const postLikesCount = (() => {
+                    if (Platform.OS === 'web') {
+                      try {
+                        const raw = localStorage.getItem('boolok_post_likes');
+                        if (raw) {
+                          const cache = JSON.parse(raw);
+                          if (cache[post._id] && typeof cache[post._id].count === 'number') {
+                            return cache[post._id].count;
+                          }
+                        }
+                      } catch (_) {}
+                    }
+                    return post.likesCount !== undefined ? post.likesCount : (Array.isArray(post.likes) ? post.likes.length : 0);
+                  })();
+                  const postCommentsCount = post.commentsCount !== undefined ? post.commentsCount : (Array.isArray(post.comments) ? post.comments.length : 0);
+                  const postDescription = post.content || post.description || post.title || 'Property Post';
 
                   return (
                     <Pressable
                       key={post._id}
                       onPress={() => handleOpenPostDetailsModal(post)}
                       style={({ pressed, hovered }: any) => [
-                        styles.instagramGridTile,
-                        { width: gridTileWidth, aspectRatio: 4 / 5 },
-                        (pressed || hovered) && { transform: [{ scale: 0.99 }] },
+                        styles.propertyCard,
+                        isMobile && { width: '100%', minWidth: '100%' },
+                        { backgroundColor: cardBg, borderColor, cursor: 'pointer', position: 'relative' },
+                        (pressed || hovered) && { borderColor: goldPrimary, transform: [{ translateY: -2 }] },
                       ]}
                     >
-                      {({ hovered }: any) => (
-                        <>
-                          <Image
-                            source={{ uri: resolvePropertyImage(post) }}
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="cover"
-                          />
-
-                          {/* Subtle Bottom Gradient */}
-                          <LinearGradient
-                            colors={['transparent', 'rgba(0,0,0,0.65)']}
-                            style={styles.instagramBottomGradient}
-                            pointerEvents="none"
-                          />
-
-                          {/* Top-Right Badges (Pinned & Carousel Indicator) */}
-                          <View style={styles.instagramTileTopBadges} pointerEvents="none">
-                            {Boolean(isPinned) ? (
-                              <View style={styles.instagramBadgePill}>
-                                <MaterialIcons name="push-pin" size={13} color="#ffffff" style={{ transform: [{ rotate: '45deg' }] }} />
-                              </View>
-                            ) : null}
-                            {Boolean(post.specs) ? (
-                              <View style={styles.instagramBadgePill}>
-                                <MaterialCommunityIcons name="layers-triple-outline" size={13} color="#ffffff" />
-                              </View>
-                            ) : null}
-                          </View>
-
-                          {/* Owner Delete button */}
-                          {Boolean(isPostOwner) ? (
-                            <Pressable
-                              onPress={(e: any) => {
-                                e?.stopPropagation?.();
-                                handleDeletePost(post._id);
-                              }}
-                              style={({ pressed: delPressed, hovered: delHovered }: any) => [
-                                styles.instagramDeleteBtn,
-                                (delPressed || delHovered) && { backgroundColor: '#ef4444' },
-                              ]}
-                              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                            >
-                              <MaterialIcons name="delete-outline" size={14} color="#ffffff" />
-                            </Pressable>
-                          ) : null}
-
-                          {/* INSTAGRAM-STYLE HOVER OVERLAY: Real-time Likes & Comments Count + Save Bookmark */}
-                          {Boolean(hovered) ? (
-                            <View style={styles.instagramHoverOverlay}>
-                              {/* Top-Right Bookmark Button */}
-                              <Pressable
-                                onPress={(e: any) => {
-                                  e?.stopPropagation?.();
-                                  handleToggleSavePost(post);
-                                }}
-                                style={({ pressed: bPressed, hovered: bHovered }: any) => [
-                                  styles.gridBookmarkBtn,
-                                  isSavedItem && { backgroundColor: 'rgba(230, 184, 0, 0.45)', borderColor: '#e6b800' },
-                                  (bPressed || bHovered) && { transform: [{ scale: 1.1 }] },
-                                ]}
-                              >
-                                <MaterialIcons
-                                  name={isSavedItem ? "bookmark" : "bookmark-border"}
-                                  size={18}
-                                  color={isSavedItem ? "#e6b800" : "#ffffff"}
-                                />
-                              </Pressable>
-
-                              {/* Centered Real-time Likes & Comments Count */}
-                              <View style={styles.instagramHoverStatsRow}>
-                                <View style={styles.hoverStatItem}>
-                                  <MaterialIcons name="favorite" size={20} color="#ffffff" />
-                                  <Text style={styles.hoverStatNumber}>{postLikesCount}</Text>
-                                </View>
-                                <View style={styles.hoverStatItem}>
-                                  <MaterialCommunityIcons name="comment" size={20} color="#ffffff" />
-                                  <Text style={styles.hoverStatNumber}>{postCommentsCount}</Text>
-                                </View>
-                              </View>
-                            </View>
-                          ) : null}
-                        </>
+                      {/* Delete button on card for post owner alone */}
+                      {isPostOwner && (
+                        <Pressable
+                          onPress={(e: any) => {
+                            e?.stopPropagation?.();
+                            handleDeletePost(post._id);
+                          }}
+                          style={({ pressed, hovered }: any) => [
+                            {
+                              position: 'absolute',
+                              top: 10,
+                              right: 10,
+                              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                              padding: 6,
+                              borderRadius: 20,
+                              borderWidth: 1,
+                              borderColor: 'rgba(239, 68, 68, 0.7)',
+                              zIndex: 10,
+                            },
+                            (pressed || hovered) && { backgroundColor: '#ef4444' },
+                          ]}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <MaterialIcons name="delete-outline" size={17} color="#ffffff" />
+                        </Pressable>
                       )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.instagramEmptyState}>
-                <View style={styles.instagramEmptyIconCircle}>
-                  <MaterialCommunityIcons name="camera-plus-outline" size={34} color={goldPrimary} />
-                </View>
-                <Text style={[styles.instagramEmptyTitle, { color: textPrimary }]}>
-                  {isSelf ? 'Share Real Estate Photos' : 'No Property Posts Yet'}
-                </Text>
-                <Text style={[styles.instagramEmptySubtitle, { color: textMuted }]}>
-                  {isSelf
-                    ? 'When you share photos of luxury villas, land parcels, or commercial assets, they will appear on your profile grid.'
-                    : 'This member has not posted any property photos yet.'}
-                </Text>
-              </View>
-            )
-          )}
 
-          {/* TAB 2: REELS GRID (with Instagram Real-time Views & Comments Hover Overlay) */}
-          {activeTab === 'reels' && (
-            reels && reels.length > 0 ? (
-              <View 
-                style={[styles.instagramGrid, { gap: gridGap }]}
-                onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
-              >
-                {reels.map((reel: any) => {
-                  const reelCommentsCount = getLiveCommentsCount(reel._id, reel.comments);
-                  const reelViews = getReelViewsDisplay(reel);
-                  const isSavedItem = isReelSaved(reel._id || reel.id);
-
-                  return (
-                    <Pressable
-                      key={reel._id || reel.id}
-                      onPress={() => setSelectedReelForModal(reel)}
-                      style={({ pressed, hovered }: any) => [
-                        styles.instagramGridTile,
-                        { width: gridTileWidth, aspectRatio: 9 / 16 },
-                        (pressed || hovered) && { transform: [{ scale: 0.99 }] },
-                      ]}
-                    >
-                      {({ hovered }: any) => (
-                        <>
-                          <Image
-                            source={{
-                              uri: reel.thumbnail || reel.poster || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
-                            }}
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="cover"
-                          />
-
-                          {/* Subtle Bottom Gradient */}
-                          <LinearGradient
-                            colors={['transparent', 'rgba(0,0,0,0.75)']}
-                            style={styles.instagramBottomGradient}
-                            pointerEvents="none"
-                          />
-
-                          {/* Top-Right Video Icon Badge */}
-                          <View style={styles.instagramTileTopBadges} pointerEvents="none">
-                            <View style={styles.instagramBadgePill}>
-                              <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
-                            </View>
+                      <Image
+                        source={{
+                          uri: resolvePropertyImage(post),
+                        }}
+                        style={[styles.propertyImage, isMobile && { height: 210 }]}
+                        resizeMode="cover"
+                      />
+                      <View style={[styles.propertyDetailsBox, { backgroundColor: cardBg }]}>
+                        {post.price ? (
+                          <Text style={[styles.propertyPriceText, { color: goldPrimary }]}>
+                            {post.price}
+                          </Text>
+                        ) : null}
+                        <Text style={[styles.propertyTitleText, { color: textPrimary }]} numberOfLines={2}>
+                          {postDescription}
+                        </Text>
+                        {post.location ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <MaterialIcons name="location-on" size={14} color={goldPrimary} />
+                            <Text style={[styles.propertyLocationText, { color: textMuted, marginTop: 0 }]}>
+                              {post.location}
+                            </Text>
                           </View>
+                        ) : null}
+                        {post.specs ? (
+                          <Text style={[styles.propertySpecsText, { color: textSecondary }]}>
+                            {post.specs}
+                          </Text>
+                        ) : null}
 
-                          {/* Bottom-Left Live View Count Badge (Instagram Reel style) */}
-                          <View style={styles.instagramReelViewsRow} pointerEvents="none">
-                            <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
-                            <Text style={styles.instagramReelViewsText}>{reelViews}</Text>
+                        <View style={styles.propertyFooterRow}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <MaterialIcons name="favorite" size={14} color="#ef4444" />
+                            <Text style={styles.propertyLikesText}>{postLikesCount}</Text>
                           </View>
-
-                          {/* INSTAGRAM-STYLE HOVER OVERLAY: Real-time Views & Comments Count */}
-                          {Boolean(hovered) ? (
-                            <View style={styles.instagramHoverOverlay}>
-                              {/* Top-Right Bookmark Button */}
-                              <Pressable
-                                onPress={(e: any) => {
-                                  e?.stopPropagation?.();
-                                  handleToggleSaveReel(reel);
-                                }}
-                                style={({ pressed: bPressed, hovered: bHovered }: any) => [
-                                  styles.gridBookmarkBtn,
-                                  isSavedItem && { backgroundColor: 'rgba(230, 184, 0, 0.45)', borderColor: '#e6b800' },
-                                  (bPressed || bHovered) && { transform: [{ scale: 1.1 }] },
-                                ]}
-                              >
-                                <MaterialIcons
-                                  name={isSavedItem ? "bookmark" : "bookmark-border"}
-                                  size={18}
-                                  color={isSavedItem ? "#e6b800" : "#ffffff"}
-                                />
-                              </Pressable>
-
-                              {/* Centered Real-time Reel Views & Comments Count */}
-                              <View style={styles.instagramHoverStatsRow}>
-                                <View style={styles.hoverStatItem}>
-                                  <MaterialIcons name="play-arrow" size={22} color="#ffffff" />
-                                  <Text style={styles.hoverStatNumber}>{reelViews}</Text>
-                                </View>
-                                <View style={styles.hoverStatItem}>
-                                  <MaterialCommunityIcons name="comment" size={20} color="#ffffff" />
-                                  <Text style={styles.hoverStatNumber}>{reelCommentsCount}</Text>
-                                </View>
-                              </View>
-                            </View>
-                          ) : null}
-                        </>
-                      )}
-                    </Pressable>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.instagramEmptyState}>
-                <View style={styles.instagramEmptyIconCircle}>
-                  <MaterialIcons name="videocam-off" size={34} color={goldPrimary} />
-                </View>
-                <Text style={[styles.instagramEmptyTitle, { color: textPrimary }]}>
-                  {isSelf ? 'Share Video Tours & Reels' : 'No Video Reels Yet'}
-                </Text>
-                <Text style={[styles.instagramEmptySubtitle, { color: textMuted }]}>
-                  {isSelf
-                    ? 'Showcase walking tours, drone shots, and architectural insights. Upload your first reel above.'
-                    : 'This member has not published any property walkthrough reels yet.'}
-                </Text>
-              </View>
-            )
-          )}
-
-          {/* TAB 3: SAVED POSTS & REELS (Instagram Collection) */}
-          {activeTab === 'saved' && (
-            <View>
-              {/* Filter Pills: All | Posts | Reels */}
-              {(savedPosts.length > 0 || savedReels.length > 0) && (
-                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14, paddingHorizontal: 4 }}>
-                  <Pressable
-                    onPress={() => setSavedFilter('all')}
-                    style={[
-                      styles.savedFilterPill,
-                      savedFilter === 'all' && { backgroundColor: goldPrimary, borderColor: goldPrimary },
-                    ]}
-                  >
-                    <Text style={[styles.savedFilterText, savedFilter === 'all' && { color: '#000000', fontWeight: '800' }]}>
-                      All ({savedPosts.length + savedReels.length})
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setSavedFilter('posts')}
-                    style={[
-                      styles.savedFilterPill,
-                      savedFilter === 'posts' && { backgroundColor: goldPrimary, borderColor: goldPrimary },
-                    ]}
-                  >
-                    <Text style={[styles.savedFilterText, savedFilter === 'posts' && { color: '#000000', fontWeight: '800' }]}>
-                      Posts ({savedPosts.length})
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setSavedFilter('reels')}
-                    style={[
-                      styles.savedFilterPill,
-                      savedFilter === 'reels' && { backgroundColor: goldPrimary, borderColor: goldPrimary },
-                    ]}
-                  >
-                    <Text style={[styles.savedFilterText, savedFilter === 'reels' && { color: '#000000', fontWeight: '800' }]}>
-                      Reels ({savedReels.length})
-                    </Text>
-                  </Pressable>
-                </View>
-              )}
-
-              {/* Saved Content Grid */}
-              {(() => {
-                const displayPosts = savedFilter === 'reels' ? [] : savedPosts;
-                const displayReels = savedFilter === 'posts' ? [] : savedReels;
-                const totalItems = displayPosts.length + displayReels.length;
-
-                if (totalItems === 0) {
-                  return (
-                    <View style={styles.instagramEmptyState}>
-                      <View style={styles.instagramEmptyIconCircle}>
-                        <MaterialIcons name="bookmark-border" size={34} color={goldPrimary} />
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <MaterialCommunityIcons name="comment-text-outline" size={14} color={textMuted} />
+                            <Text style={styles.propertyCommentsText}>{postCommentsCount}</Text>
+                          </View>
+                        </View>
                       </View>
-                      <Text style={[styles.instagramEmptyTitle, { color: textPrimary }]}>
-                        Save Posts and Reels
-                      </Text>
-                      <Text style={[styles.instagramEmptySubtitle, { color: textMuted }]}>
-                        Save photos and videos that you want to see again. No one is notified, and only you can see what you've saved.
-                      </Text>
-                    </View>
+                    </Pressable>
                   );
-                }
-
-                return (
-                  <View 
-                    style={[styles.instagramGrid, { gap: gridGap }]}
-                    onLayout={(e) => setGridContainerWidth(e.nativeEvent.layout.width)}
+                })}
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 56, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: cardBg, borderRadius: 16, borderWidth: 1, borderColor, width: '100%', marginVertical: 8 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? 'rgba(218, 165, 32, 0.08)' : '#FFFBEB', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: isDark ? 'rgba(218, 165, 32, 0.25)' : '#FDE68A' }}>
+                  <MaterialCommunityIcons name="office-building-outline" size={32} color={goldPrimary} />
+                </View>
+                <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 8, letterSpacing: 0.2 }}>
+                  Nothing is added here
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 14, textAlign: 'center', maxWidth: 360, lineHeight: 20 }}>
+                  {isSelf
+                    ? "You haven't uploaded any properties or listings yet. Use the '+ Create Listing' button above or feed to share properties."
+                    : 'This advisor has not listed any commercial or residential properties yet.'}
+                </Text>
+              </View>
+            )
+          ) : activeTab === 'reels' ? (
+            /* Reels Display */
+            reels && reels.length > 0 ? (
+              <View style={styles.reelsGridContainer}>
+                {reels.map((reel: any) => (
+                  <ProfileReelItem key={reel._id} reel={reel} onDelete={handleDeleteReel} />
+                ))}
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 56, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: cardBg, borderRadius: 16, borderWidth: 1, borderColor, width: '100%', marginVertical: 8 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? 'rgba(218, 165, 32, 0.08)' : '#FFFBEB', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: isDark ? 'rgba(218, 165, 32, 0.25)' : '#FDE68A' }}>
+                  <MaterialIcons name="videocam-off" size={32} color={goldPrimary} />
+                </View>
+                <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 8, letterSpacing: 0.2 }}>
+                  Nothing is added here
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 14, textAlign: 'center', maxWidth: 360, lineHeight: 20 }}>
+                  {isSelf
+                    ? "You haven't uploaded any video reels yet. Use the 'Publish Property Listing or Video Reel' creator above to share your first reel."
+                    : 'This advisor has not published any property walkthroughs or reels yet.'}
+                </Text>
+              </View>
+            )
+          ) : (
+            /* Saved Items Display */
+            !isSelf ? (
+              <View style={{ paddingVertical: 56, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: cardBg, borderRadius: 16, borderWidth: 1, borderColor, width: '100%', marginVertical: 8 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? 'rgba(218, 165, 32, 0.08)' : '#FFFBEB', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: isDark ? 'rgba(218, 165, 32, 0.25)' : '#FDE68A' }}>
+                  <MaterialIcons name="lock-outline" size={32} color={goldPrimary} />
+                </View>
+                <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 8, letterSpacing: 0.2 }}>
+                  Private Saved Items
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 14, textAlign: 'center', maxWidth: 360, lineHeight: 20 }}>
+                  Saved properties and video walkthroughs are private to each user account.
+                </Text>
+              </View>
+            ) : savedItemsList.length > 0 ? (
+              <View style={{ gap: 12, width: '100%' }}>
+                {savedItemsList.map((item: any, idx: number) => (
+                  <View
+                    key={item._id || item.id || idx}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: isDark ? '#08111e' : '#f8fafc',
+                      borderRadius: 12,
+                      padding: 12,
+                      borderWidth: 1,
+                      borderColor: isDark ? '#1a273c' : '#e2e8f0',
+                    }}
                   >
-                    {/* Render Saved Posts */}
-                    {displayPosts.map((post: any) => {
-                      const postLikesCount = getLiveLikesCount(post._id, post.likes, post.likesCount);
-                      const postCommentsCount = getLiveCommentsCount(post._id, post.comments);
-
-                      return (
-                        <Pressable
-                          key={'saved_post_' + (post._id || post.id)}
-                          onPress={() => handleOpenPostDetailsModal(post)}
-                          style={({ pressed, hovered }: any) => [
-                            styles.instagramGridTile,
-                            { width: gridTileWidth, aspectRatio: 4 / 5 },
-                            (pressed || hovered) && { transform: [{ scale: 0.99 }] },
-                          ]}
-                        >
-                          {({ hovered }: any) => (
-                            <>
-                              <Image
-                                source={{ uri: resolvePropertyImage(post) }}
-                                style={StyleSheet.absoluteFill}
-                                resizeMode="cover"
-                              />
-                              <LinearGradient
-                                colors={['transparent', 'rgba(0,0,0,0.65)']}
-                                style={styles.instagramBottomGradient}
-                                pointerEvents="none"
-                              />
-
-                              {/* Saved Gold Bookmark Badge */}
-                              <View style={styles.instagramTileTopBadges}>
-                                <View style={[styles.instagramBadgePill, { backgroundColor: 'rgba(230, 184, 0, 0.9)' }]}>
-                                  <MaterialIcons name="bookmark" size={13} color="#000000" />
-                                </View>
-                              </View>
-
-                              {Boolean(hovered) ? (
-                                <View style={styles.instagramHoverOverlay}>
-                                  <Pressable
-                                    onPress={(e: any) => {
-                                      e?.stopPropagation?.();
-                                      handleToggleSavePost(post);
-                                    }}
-                                    style={styles.gridBookmarkBtn}
-                                  >
-                                    <MaterialIcons name="bookmark" size={18} color="#e6b800" />
-                                  </Pressable>
-                                  <View style={styles.instagramHoverStatsRow}>
-                                    <View style={styles.hoverStatItem}>
-                                      <MaterialIcons name="favorite" size={20} color="#ffffff" />
-                                      <Text style={styles.hoverStatNumber}>{postLikesCount}</Text>
-                                    </View>
-                                    <View style={styles.hoverStatItem}>
-                                      <MaterialCommunityIcons name="comment" size={20} color="#ffffff" />
-                                      <Text style={styles.hoverStatNumber}>{postCommentsCount}</Text>
-                                    </View>
-                                  </View>
-                                </View>
-                              ) : null}
-                            </>
-                          )}
-                        </Pressable>
-                      );
-                    })}
-
-                    {/* Render Saved Reels */}
-                    {displayReels.map((reel: any) => {
-                      const reelCommentsCount = getLiveCommentsCount(reel._id, reel.comments);
-                      const reelViews = getReelViewsDisplay(reel);
-
-                      return (
-                        <Pressable
-                          key={'saved_reel_' + (reel._id || reel.id)}
-                          onPress={() => setSelectedReelForModal(reel)}
-                          style={({ pressed, hovered }: any) => [
-                            styles.instagramGridTile,
-                            { width: gridTileWidth, aspectRatio: 9 / 16 },
-                            (pressed || hovered) && { transform: [{ scale: 0.99 }] },
-                          ]}
-                        >
-                          {({ hovered }: any) => (
-                            <>
-                              <Image
-                                source={{
-                                  uri: reel.thumbnail || reel.poster || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
-                                }}
-                                style={StyleSheet.absoluteFill}
-                                resizeMode="cover"
-                              />
-                              <LinearGradient
-                                colors={['transparent', 'rgba(0,0,0,0.75)']}
-                                style={styles.instagramBottomGradient}
-                                pointerEvents="none"
-                              />
-
-                              {/* Saved Gold Bookmark Badge */}
-                              <View style={styles.instagramTileTopBadges}>
-                                <View style={[styles.instagramBadgePill, { backgroundColor: 'rgba(230, 184, 0, 0.9)' }]}>
-                                  <MaterialIcons name="bookmark" size={13} color="#000000" />
-                                </View>
-                              </View>
-
-                              {/* Bottom-left views */}
-                              <View style={styles.instagramReelViewsRow} pointerEvents="none">
-                                <MaterialIcons name="play-arrow" size={14} color="#ffffff" />
-                                <Text style={styles.instagramReelViewsText}>{reelViews}</Text>
-                              </View>
-
-                              {Boolean(hovered) ? (
-                                <View style={styles.instagramHoverOverlay}>
-                                  <Pressable
-                                    onPress={(e: any) => {
-                                      e?.stopPropagation?.();
-                                      handleToggleSaveReel(reel);
-                                    }}
-                                    style={styles.gridBookmarkBtn}
-                                  >
-                                    <MaterialIcons name="bookmark" size={18} color="#e6b800" />
-                                  </Pressable>
-                                  <View style={styles.instagramHoverStatsRow}>
-                                    <View style={styles.hoverStatItem}>
-                                      <MaterialIcons name="play-arrow" size={22} color="#ffffff" />
-                                      <Text style={styles.hoverStatNumber}>{reelViews}</Text>
-                                    </View>
-                                    <View style={styles.hoverStatItem}>
-                                      <MaterialCommunityIcons name="comment" size={20} color="#ffffff" />
-                                      <Text style={styles.hoverStatNumber}>{reelCommentsCount}</Text>
-                                    </View>
-                                  </View>
-                                </View>
-                              ) : null}
-                            </>
-                          )}
-                        </Pressable>
-                      );
-                    })}
+                    <Pressable
+                      onPress={() => router.push('/(app)/insights')}
+                      style={{ position: 'relative', width: 76, height: 76, borderRadius: 8, overflow: 'hidden', backgroundColor: '#000' }}
+                    >
+                      <Image
+                        source={{ uri: item.thumbnail || item.poster || 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800' }}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                      <View style={{ position: 'absolute', inset: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                        <MaterialIcons name="play-circle-fill" size={28} color="#e6b800" />
+                      </View>
+                    </Pressable>
+                    <View style={{ flex: 1, marginLeft: 14 }}>
+                      <Text style={{ color: textPrimary, fontSize: 14.5, fontWeight: '700' }} numberOfLines={1}>
+                        {item.title || 'Saved Property Reel'}
+                      </Text>
+                      <Text style={{ color: goldPrimary, fontSize: 12, fontWeight: '700', marginTop: 2 }}>
+                        {item.price || item.location || 'Commercial Property'}
+                      </Text>
+                      {item.authorName && (
+                        <Text style={{ color: textMuted, fontSize: 11.5, marginTop: 2 }}>
+                          by {item.authorName}
+                        </Text>
+                      )}
+                    </View>
+                    <Pressable
+                      onPress={() => {
+                        const updated = savedItemsList.filter((r) => r._id !== item._id && r.id !== item.id);
+                        setSavedItemsList(updated);
+                        if (Platform.OS === 'web') {
+                          try { localStorage.setItem('boolok_saved_reels', JSON.stringify(updated)); } catch (_) {}
+                        } else {
+                          SecureStore.setItemAsync('boolok_saved_reels', JSON.stringify(updated)).catch(() => {});
+                        }
+                      }}
+                      style={{ padding: 8, borderRadius: 8, backgroundColor: 'rgba(239, 68, 68, 0.12)' }}
+                    >
+                      <MaterialIcons name="delete-outline" size={18} color="#ef4444" />
+                    </Pressable>
                   </View>
-                );
-              })()}
-            </View>
+                ))}
+              </View>
+            ) : (
+              <View style={{ paddingVertical: 56, paddingHorizontal: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: cardBg, borderRadius: 16, borderWidth: 1, borderColor, width: '100%', marginVertical: 8 }}>
+                <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: isDark ? 'rgba(218, 165, 32, 0.08)' : '#FFFBEB', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: isDark ? 'rgba(218, 165, 32, 0.25)' : '#FDE68A' }}>
+                  <MaterialIcons name="bookmark-border" size={32} color={goldPrimary} />
+                </View>
+                <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginBottom: 8, letterSpacing: 0.2 }}>
+                  Nothing is added here
+                </Text>
+                <Text style={{ color: textMuted, fontSize: 14, textAlign: 'center', maxWidth: 360, lineHeight: 20 }}>
+                  You have not bookmarked or saved any properties or reels yet. Tap Save on any reel to keep it here.
+                </Text>
+              </View>
+            )
           )}
         </View>
 
@@ -3289,15 +3385,14 @@ export default function ProfessionalUserProfileScreen() {
                 {/* Profile Picture Section */}
                 <Text style={{ color: textMuted, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>PROFILE PICTURE</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                  {editAvatarUrl || profileUser.profilePicture ? (
-                    <Image source={{ uri: editAvatarUrl || profileUser.profilePicture }} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 1.5, borderColor: goldPrimary }} />
-                  ) : (
-                    <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: goldPrimary }}>
-                      <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: 18 }}>
-                        {(editFullName || profileUser.fullName || 'U')[0]?.toUpperCase()}
-                      </Text>
-                    </View>
-                  )}
+                  <UserAvatar
+                    user={{
+                      ...profileUser,
+                      fullName: editFullName || profileUser.fullName,
+                      profilePicture: editAvatarUrl || profileUser.profilePicture,
+                    }}
+                    size={52}
+                  />
                   <Pressable
                     onPress={() => {
                       setIsEditModalOpen(false);
@@ -3436,13 +3531,7 @@ export default function ProfessionalUserProfileScreen() {
                           });
                         }}
                       >
-                        {follower.profilePicture && resolveImageUrl(follower.profilePicture) ? (
-                          <Image source={{ uri: resolveImageUrl(follower.profilePicture)! }} style={styles.followerItemAvatar} />
-                        ) : (
-                          <View style={[styles.followerItemAvatar, { backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: goldPrimary }]}>
-                            <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: 14 }}>{fInitial}</Text>
-                          </View>
-                        )}
+                        <UserAvatar user={follower} size={42} />
                         <View style={{ flex: 1, marginLeft: 12 }}>
                           <Text style={{ color: textPrimary, fontSize: 14, fontWeight: '700' }}>
                             {follower.fullName}
@@ -3450,11 +3539,11 @@ export default function ProfessionalUserProfileScreen() {
                           <Text style={{ color: textMuted, fontSize: 12 }}>
                             @{follower.username}
                           </Text>
-                          {Boolean(follower.headline) ? (
+                          {follower.headline && (
                             <Text style={{ color: textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
                               {follower.headline}
                             </Text>
-                          ) : null}
+                          )}
                         </View>
                         <MaterialIcons name="chevron-right" size={20} color={textMuted} />
                       </Pressable>
@@ -3526,13 +3615,7 @@ export default function ProfessionalUserProfileScreen() {
                           });
                         }}
                       >
-                        {followedUser.profilePicture && resolveImageUrl(followedUser.profilePicture) ? (
-                          <Image source={{ uri: resolveImageUrl(followedUser.profilePicture)! }} style={styles.followerItemAvatar} />
-                        ) : (
-                          <View style={[styles.followerItemAvatar, { backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: goldPrimary }]}>
-                            <Text style={{ color: isDark ? '#daa520' : '#B45309', fontWeight: '800', fontSize: 14 }}>{fInitial}</Text>
-                          </View>
-                        )}
+                        <UserAvatar user={followedUser} size={42} />
                         <View style={{ flex: 1, marginLeft: 12 }}>
                           <Text style={{ color: textPrimary, fontSize: 14, fontWeight: '700' }}>
                             {followedUser.fullName}
@@ -3540,11 +3623,11 @@ export default function ProfessionalUserProfileScreen() {
                           <Text style={{ color: textMuted, fontSize: 12 }}>
                             @{followedUser.username}
                           </Text>
-                          {Boolean(followedUser.headline) ? (
+                          {followedUser.headline && (
                             <Text style={{ color: textSecondary, fontSize: 11, marginTop: 2 }} numberOfLines={1}>
                               {followedUser.headline}
                             </Text>
-                          ) : null}
+                          )}
                         </View>
                         <MaterialIcons name="chevron-right" size={20} color={textMuted} />
                       </Pressable>
@@ -3755,7 +3838,7 @@ export default function ProfessionalUserProfileScreen() {
                   </Pressable>
 
                   {/* Remove picture (revert to initials) */}
-                  {Boolean(profileUser.profilePicture) ? (
+                  {profileUser.profilePicture && (
                     <Pressable
                       onPress={handleRemoveAvatar}
                       style={({ pressed, hovered }: any) => [
@@ -3768,7 +3851,7 @@ export default function ProfessionalUserProfileScreen() {
                         Remove picture (Use Initials)
                       </Text>
                     </Pressable>
-                  ) : null}
+                  )}
                 </View>
               </ScrollView>
             </View>
@@ -3859,9 +3942,12 @@ export default function ProfessionalUserProfileScreen() {
                   </Text>
 
                   {selectedPostDetails?.location ? (
-                    <Text style={{ fontSize: 13, color: '#94a3b8', marginTop: 6 }}>
-                      📍 {selectedPostDetails.location}
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6 }}>
+                      <MaterialIcons name="location-on" size={15} color={goldPrimary} />
+                      <Text style={{ fontSize: 13, color: '#94a3b8' }}>
+                        {selectedPostDetails.location}
+                      </Text>
+                    </View>
                   ) : null}
 
                   {selectedPostDetails?.specs ? (
@@ -3893,63 +3979,22 @@ export default function ProfessionalUserProfileScreen() {
                       </Text>
                     </Pressable>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      {/* Like Action Toggle */}
-                      <Pressable
-                        onPress={handleTogglePostDetailLike}
-                        style={[
-                          { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: hasLikedPostDetails ? 'rgba(59, 130, 246, 0.2)' : '#162235', borderWidth: 1, borderColor: hasLikedPostDetails ? '#3b82f6' : '#1e2d42' }
-                        ]}
-                      >
-                        <MaterialIcons
-                          name="thumb-up"
-                          size={16}
-                          color={hasLikedPostDetails ? '#3b82f6' : '#ffffff'}
-                        />
-                        <Text style={{ color: hasLikedPostDetails ? '#3b82f6' : '#ffffff', fontSize: 12.5, fontWeight: '700' }}>
-                          {hasLikedPostDetails ? 'Liked' : 'Like'}
-                        </Text>
-                      </Pressable>
-
-                      {/* Save / Bookmark Button */}
-                      <Pressable
-                        onPress={() => handleToggleSavePost(selectedPostDetails)}
-                        style={({ pressed, hovered }: any) => [
-                          {
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 6,
-                            paddingVertical: 6,
-                            paddingHorizontal: 14,
-                            borderRadius: 20,
-                            backgroundColor: isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id)
-                              ? 'rgba(230, 184, 0, 0.2)'
-                              : '#162235',
-                            borderWidth: 1,
-                            borderColor: isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id)
-                              ? goldPrimary
-                              : '#1e2d42',
-                            cursor: 'pointer',
-                          },
-                          (pressed || hovered) && { opacity: 0.8 },
-                        ]}
-                      >
-                        <MaterialIcons
-                          name={isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id) ? "bookmark" : "bookmark-border"}
-                          size={16}
-                          color={isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id) ? goldPrimary : "#ffffff"}
-                        />
-                        <Text
-                          style={{
-                            color: isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id) ? goldPrimary : "#ffffff",
-                            fontSize: 12.5,
-                            fontWeight: '700',
-                          }}
-                        >
-                          {isPostSaved(selectedPostDetails?._id || selectedPostDetails?.id) ? 'Saved' : 'Save'}
-                        </Text>
-                      </Pressable>
-                    </View>
+                    {/* Like Action Toggle */}
+                    <Pressable
+                      onPress={handleTogglePostDetailLike}
+                      style={[
+                        { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 6, paddingHorizontal: 14, borderRadius: 20, backgroundColor: hasLikedPostDetails ? 'rgba(59, 130, 246, 0.2)' : '#162235', borderWidth: 1, borderColor: hasLikedPostDetails ? '#3b82f6' : '#1e2d42' }
+                      ]}
+                    >
+                      <MaterialIcons
+                        name="thumb-up"
+                        size={16}
+                        color={hasLikedPostDetails ? '#3b82f6' : '#ffffff'}
+                      />
+                      <Text style={{ color: hasLikedPostDetails ? '#3b82f6' : '#ffffff', fontSize: 12.5, fontWeight: '700' }}>
+                        {hasLikedPostDetails ? 'Liked' : 'Like'}
+                      </Text>
+                    </Pressable>
                   </View>
 
                   {/* Real-time Comments List Section */}
@@ -4010,44 +4055,6 @@ export default function ProfessionalUserProfileScreen() {
                   </View>
                 </View>
               </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
-        {/* ── SELECTED REEL VIDEO PLAYBACK MODAL ── */}
-        <Modal
-          visible={Boolean(selectedReelForModal)}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setSelectedReelForModal(null)}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.88)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-            <View style={{ width: '100%', maxWidth: 460, height: '90%', maxHeight: 820, backgroundColor: '#000000', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#1a273c', position: 'relative' }}>
-              <Pressable
-                onPress={() => setSelectedReelForModal(null)}
-                style={({ pressed, hovered }: any) => [
-                  {
-                    position: 'absolute',
-                    top: 14,
-                    right: 14,
-                    width: 38,
-                    height: 38,
-                    borderRadius: 19,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    borderWidth: 1,
-                    borderColor: 'rgba(255,255,255,0.25)',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    zIndex: 99,
-                  },
-                  (pressed || hovered) && { backgroundColor: '#ef4444', borderColor: '#ef4444' },
-                ]}
-              >
-                <MaterialIcons name="close" size={22} color="#ffffff" />
-              </Pressable>
-              {selectedReelForModal ? (
-                <ProfileReelItem reel={selectedReelForModal} />
-              ) : null}
             </View>
           </View>
         </Modal>
@@ -4216,7 +4223,7 @@ export default function ProfessionalUserProfileScreen() {
                 <UserAvatar user={profileUser} size={38} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.signOutUserName, { color: textPrimary }]} numberOfLines={1}>
-                    {profileUser.fullName || viewer?.fullName || 'Sai Vimenthan'}
+                    {profileUser.fullName || viewer?.fullName || 'Boolok Member'}
                   </Text>
                   <Text style={[styles.signOutUserHandle, { color: textMuted }]} numberOfLines={1}>
                     @{profileUser.username || viewer?.username || 'member'}
@@ -4292,7 +4299,7 @@ export default function ProfessionalUserProfileScreen() {
                   </View>
                   <View>
                     <Text style={[styles.contactModalTitle, { color: textPrimary }]}>
-                      {profileUser.fullName || viewer?.fullName || 'Sai Vimenthan'}
+                      {profileUser.fullName || viewer?.fullName || 'Boolok Member'}
                     </Text>
                     <Text style={[styles.contactModalSubtitle, { color: textMuted }]}>
                       Verified Member Contact Info
@@ -4344,11 +4351,11 @@ export default function ProfessionalUserProfileScreen() {
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={[styles.contactItemLabel, { color: textMuted }]}>EMAIL ADDRESS</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
-                      {isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai'))}
+                      {profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`}
                     </Text>
                   </View>
                   <Pressable
-                    onPress={() => handleCopyText(isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai')), 'email')}
+                    onPress={() => handleCopyText(profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`, 'email')}
                     style={[styles.contactCopyBtn, { borderColor }]}
                   >
                     <MaterialIcons
@@ -4821,8 +4828,9 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    borderWidth: 4,
-    borderColor: '#0c1626',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
   },
   avatarVerifiedBadge: {
     position: 'absolute',
@@ -4919,21 +4927,26 @@ const styles = StyleSheet.create({
   locationContactRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    rowGap: 4,
+    columnGap: 6,
     marginTop: 6,
   },
   locationText: {
     fontSize: 12.5,
     color: '#8b9bb4',
+    flexShrink: 1,
   },
   locationDot: {
     color: '#8b9bb4',
-    marginHorizontal: 6,
+    marginHorizontal: 2,
   },
   contactInfoText: {
     color: '#e6b800',
     fontSize: 12.5,
     fontWeight: '700',
-  },
+    whiteSpace: 'nowrap',
+  } as any,
 
   metricsRow: {
     flexDirection: 'row',
@@ -4978,16 +4991,18 @@ const styles = StyleSheet.create({
   ctaButtonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     marginTop: 18,
     flexWrap: 'wrap',
   },
   primaryCtaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 18,
+    paddingHorizontal: 14,
     paddingVertical: 10,
+    minHeight: 42,
     borderRadius: 20,
   },
   primaryCtaText: {
@@ -5000,8 +5015,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 42,
     borderRadius: 20,
     borderWidth: 1.5,
   },
@@ -5060,20 +5076,24 @@ const styles = StyleSheet.create({
   // Create Form
   createTypeRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
     marginBottom: 16,
+    width: '100%',
   },
   createTypeBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderRadius: 20,
     backgroundColor: '#162235',
   },
   createTypeBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
+    lineHeight: 16,
     fontWeight: '700',
   },
   formInput: {
@@ -5133,18 +5153,22 @@ const styles = StyleSheet.create({
   },
   formActionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 10,
     marginTop: 16,
   },
   attachMediaBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     backgroundColor: '#162235',
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 8,
+    flexGrow: 1,
   },
   attachMediaBtnText: {
     color: '#ffffff',
@@ -5153,8 +5177,11 @@ const styles = StyleSheet.create({
   },
   submitFormBtn: {
     paddingVertical: 10,
-    paddingHorizontal: 22,
+    paddingHorizontal: 20,
     borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexGrow: 1,
   },
   submitFormBtnText: {
     color: '#000000',
@@ -5162,209 +5189,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  // Instagram Sub Navigation Bar
-  instagramSubNavRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 32,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1a273c',
-    marginBottom: 16,
-  },
-  instagramTabBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  instagramTabBtnActive: {
-    borderBottomColor: '#e6b800',
-  },
-  instagramTabText: {
-    fontSize: 13,
-    letterSpacing: 1,
-    fontWeight: '700',
-  },
-
-  // Instagram Media Grid & Tiles
-  instagramGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    width: '100%',
-  },
-  instagramGridTile: {
-    borderRadius: 8,
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#0c1626',
-    borderWidth: 1,
-    borderColor: '#1a273c',
-  },
-  instagramBottomGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 48,
-  },
-  instagramTileTopBadges: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    gap: 6,
-    zIndex: 5,
-  },
-  instagramBadgePill: {
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    borderRadius: 6,
-    paddingHorizontal: 5,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  instagramDeleteBtn: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    padding: 5,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.7)',
-    zIndex: 10,
-  },
-  instagramReelViewsRow: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    zIndex: 5,
-  },
-  instagramReelViewsText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
-    textShadowColor: 'rgba(0,0,0,0.85)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-
-  // INSTAGRAM HOVER OVERLAY (Real-time Likes/Views & Comments)
-  instagramHoverOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.52)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 20,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(2px)',
-      } as any,
-    }),
-  },
-  instagramHoverStatsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-  },
-  hoverStatItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  hoverStatNumber: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  gridBookmarkBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 25,
-  },
-
-  // Saved Filter Pills
-  savedFilterPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 18,
-    backgroundColor: '#162338',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-  },
-  savedFilterText: {
-    color: '#cbd5e1',
-    fontSize: 12.5,
-    fontWeight: '600',
-  },
-
-  // Empty State
-  instagramEmptyState: {
-    paddingVertical: 64,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-  },
-  instagramEmptyIconCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
-    backgroundColor: 'rgba(230, 184, 0, 0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(230, 184, 0, 0.3)',
-  },
-  instagramEmptyTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  instagramEmptySubtitle: {
-    fontSize: 13.5,
-    textAlign: 'center',
-    maxWidth: 380,
-    lineHeight: 20,
-  },
-
   // Portfolio Tabs
   portfolioTabRow: {
     flexDirection: 'row',
-    gap: 24,
+    flexWrap: 'nowrap',
+    gap: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#1a273c',
     marginBottom: 20,
   },
   portfolioTabBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
+    gap: 6,
     paddingBottom: 12,
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
   },
   portfolioTabText: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '700',
+    flexShrink: 1,
   },
 
   // Properties Grid
@@ -5501,13 +5347,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  reelFooterOverlay: {
+    reelFooterOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingLeft: 16,
+    paddingBottom: 16,
+    paddingTop: 32,
+    paddingRight: 80,
   },
   reelTitleHeading: {
     color: '#ffffff',
@@ -5535,33 +5383,103 @@ const styles = StyleSheet.create({
   // Reel Right Actions Sidebar
   reelRightActions: {
     position: 'absolute',
-    right: 14,
-    bottom: 120,
+    right: 8,
+    bottom: 20,
     alignItems: 'center',
-    zIndex: 20,
+    zIndex: 25,
+    width: 56,
   },
-  reelActionBtn: {
+  creatorRailItem: {
+    position: 'relative',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
-  reelActionIconBox: {
+  creatorAvatarRing: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.25)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 4,
+  },
+  authorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+    flexWrap: 'nowrap',
+  },
+  authorProfileLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    marginRight: 2,
+  },
+  authorNameText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+    flexShrink: 0,
+  },
+  authorHandleText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginLeft: 4,
+    flexShrink: 1,
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reelLocationText: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 13,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  insightContainer: {
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    borderWidth: 1,
+    borderColor: 'rgba(249, 192, 61, 0.35)',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+  insightHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  insightTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    marginLeft: 5,
+    letterSpacing: 0.5,
+  },
+  insightText: {
+    color: '#e2e8f0',
+    fontSize: 12.5,
+    lineHeight: 17,
+  },
+  reelActionBtn: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  reelActionIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 2,
   },
   reelActionText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
 
   // Comments Modal Styles
@@ -5675,6 +5593,70 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
   },
+  deleteDialogCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#0f172a',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    padding: 24,
+    alignItems: 'center',
+  },
+  deleteDialogIconBox: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  deleteDialogTitle: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  deleteDialogDesc: {
+    color: '#94a3b8',
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 19,
+    marginBottom: 20,
+  },
+  deleteDialogBtnRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  deleteDialogCancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteDialogCancelText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  deleteDialogConfirmBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    backgroundColor: '#ef4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteDialogConfirmText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
   reactionDot: {
     width: 20,
     height: 20,
@@ -5683,3 +5665,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+
+

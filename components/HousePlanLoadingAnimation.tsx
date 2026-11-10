@@ -213,12 +213,12 @@ function StageTitle({ clk }: { clk: Clock }) {
   );
 }
 
-function PercentLabel({ clk }: { clk: Clock }) {
+function StageBadgeLabel({ clk }: { clk: Clock }) {
   const C = useTokens();
-  const pct = useClockSelect(clk, (t) => Math.min(100, Math.floor((t / DURATION_S) * 100)));
+  const idx = useClockSelect(clk, stageAt);
   return (
-    <SvgText x={410} y={771} fontSize={8} textAnchor="end" letterSpacing={0.5} fill={C.amber}>
-      {String(pct).padStart(2, '0')}%
+    <SvgText x={445} y={771} fontSize={8} textAnchor="end" letterSpacing={0.5} fill={C.amber}>
+      STAGE {idx + 1}/{STAGES.length} · {STAGES[idx].title.toUpperCase()}
     </SvgText>
   );
 }
@@ -617,7 +617,7 @@ function Chrome({ clk }: { clk: Clock }) {
       <SvgText x={31} y={771} fontSize={7.5} letterSpacing={0.8} fill={C.mute}>
         DESIGNED AROUND YOU
       </SvgText>
-      <PercentLabel clk={clk} />
+      <StageBadgeLabel clk={clk} />
       <SvgText x={31} y={803} fontSize={7.5} letterSpacing={0.8} fill={C.sub}>
         BOOLOK  ·  AI HOUSE PLAN
       </SvgText>
@@ -632,6 +632,8 @@ export interface HouseDesignLoaderProps {
   onViewPlan?: () => void;
   /** fires when the 12s sequence finishes */
   onComplete?: () => void;
+  /** fires when the user taps "Skip" to dismiss the animation overlay without faking completion */
+  onSkip?: () => void;
   /** real playback time in ms (default 12000 = same speed as the video) */
   durationMs?: number;
   style?: StyleProp<ViewStyle>;
@@ -643,6 +645,7 @@ export interface HouseDesignLoaderProps {
 export default function HouseDesignLoader({
   onViewPlan,
   onComplete,
+  onSkip,
   durationMs = 12000,
   style,
   isDark: propIsDark,
@@ -665,6 +668,14 @@ export default function HouseDesignLoader({
       onViewPlan();
     } else if (onComplete) {
       onComplete();
+    }
+  };
+
+  const handleSkipPress = () => {
+    if (onSkip) {
+      onSkip();
+    } else {
+      handleFinish();
     }
   };
 
@@ -722,7 +733,7 @@ export default function HouseDesignLoader({
       <View style={[styles.root, { backgroundColor: C.outerBg }, style]} onLayout={onLayout}>
         {/* Full Viewport Blueprint Grid Pattern */}
         {containerW > 0 && containerH > 0 && (
-          <Svg width={containerW} height={containerH} style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
+          <Svg width={containerW} height={containerH} style={StyleSheet.absoluteFill} pointerEvents="none">
             <Path d={gridPath} stroke={C.grid} strokeWidth={1} />
           </Svg>
         )}
@@ -730,10 +741,10 @@ export default function HouseDesignLoader({
         {/* Laptop Elevation Frame / Backdrop Card */}
         {isLaptop && s > 0 && (
           <View
+            pointerEvents="none"
             style={[
               styles.laptopFrame,
               {
-                pointerEvents: 'none',
                 left: ox,
                 top: oy,
                 width: cw,
@@ -751,7 +762,7 @@ export default function HouseDesignLoader({
 
         {/* Floating Top Right Skip Button */}
         <Pressable
-          onPress={handleFinish}
+          onPress={handleSkipPress}
           style={({ pressed }) => [
             styles.skipBtn,
             {
@@ -772,7 +783,8 @@ export default function HouseDesignLoader({
               width={cw}
               height={ch}
               viewBox={`0 0 ${VB_W} ${VB_H}`}
-              style={{ position: 'absolute', left: ox, top: oy, pointerEvents: 'none' }}
+              style={{ position: 'absolute', left: ox, top: oy }}
+              pointerEvents="none"
             >
               <Chrome clk={clk} />
               <StageTitle clk={clk} />

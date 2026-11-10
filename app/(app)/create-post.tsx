@@ -21,6 +21,7 @@ import { API_BASE_URL } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
+import Avatar from '../../components/Avatar';
 
 async function getStoredToken(): Promise<string | null> {
     if (Platform.OS === 'web') {
@@ -168,15 +169,7 @@ export default function CreatePostScreen() {
                 </View>
 
                 <View style={styles.userRow}>
-                    {user?.profilePicture ? (
-                        <Image source={{ uri: user.profilePicture }} style={styles.avatar} />
-                    ) : (
-                        <View style={[styles.avatar, styles.avatarFallback, { backgroundColor: theme.primary }]}>
-                            <Text style={styles.avatarInitial}>
-                                {(user?.fullName?.charAt(0) || 'U').toUpperCase()}
-                            </Text>
-                        </View>
-                    )}
+                    <Avatar user={user} size={36} style={{ marginRight: spacing.sm }} />
                     <Text style={[typography.labelMd, { color: theme.onSurface }]}>
                         {user?.fullName || 'You'}
                     </Text>

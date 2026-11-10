@@ -28,50 +28,50 @@ export type ColorTheme = {
 };
 
 export const lightColors: ColorTheme = {
-  background: '#F8FAFC',          // Elegant, clean off-white canvas (Slate 50)
-  onBackground: '#0F172A',        // Deep Slate 900 for high-contrast crisp text
-  inverseSurface: '#0F172A',
-  onSurface: '#0F172A',           // Slate 900
-  onSurfaceVariant: '#475569',    // Slate 600 for secondary text
-  secondary: '#1E293B',           // Slate 800
-  secondaryContainer: '#F1F5F9',  // Slate 100
-  primary: '#D97706',             // Warm, professional luxury gold/amber
-  primaryFixed: '#F59E0B',        // Amber 500
-  primaryContainer: '#D97706',    // Warm luxury gold/amber container (matches primary)
-  onPrimary: '#FFFFFF',           // Crisp white text on primary
-  outline: '#94A3B8',             // Slate 400
-  outlineVariant: '#E2E8F0',      // Slate 200 - refined micro borders
-  surfaceContainerLowest: '#FFFFFF', // Pure white card surface
+  background: '#FFFFFF',          // Clean white canvas per Task 2 spec
+  onBackground: '#111827',        // Deep Charcoal 900
+  inverseSurface: '#111827',
+  onSurface: '#111827',           // Text primary #111827
+  onSurfaceVariant: '#475569',    // Text secondary #475569
+  secondary: '#F8FAFC',           // Surface secondary #F8FAFC
+  secondaryContainer: '#F1F5F9',  // Light container
+  primary: '#D97706',             // Brand primary #D97706
+  primaryFixed: '#B45309',        // Brand hover #B45309
+  primaryContainer: 'rgba(217, 119, 6, 0.1)',
+  onPrimary: '#FFFFFF',           // Crisp white text on primary buttons
+  outline: '#64748B',             // Text muted #64748B
+  outlineVariant: '#E2E8F0',      // Border #E2E8F0
+  surfaceContainerLowest: '#FFFFFF', // Pure white
   surfaceContainerLow: '#F8FAFC',
-  surfaceContainer: '#F1F5F9',
-  surfaceContainerHigh: '#E2E8F0',
-  surface: '#FFFFFF',             // Pure white card surfaces
-  error: '#DC2626',
-  success: '#16A34A',
+  surfaceContainer: '#FFFFFF',
+  surfaceContainerHigh: '#F1F5F9',
+  surface: '#FFFFFF',             // Pure white cards #FFFFFF
+  error: '#EF4444',
+  success: '#10B981',
   isDark: false,
 };
 
 export const darkColors: ColorTheme = {
-  background: '#060B13',
-  onBackground: '#FFFFFF',
-  inverseSurface: '#FFFFFF',
-  onSurface: '#FFFFFF',
-  onSurfaceVariant: '#94A3B8',
-  secondary: '#1C2238',
-  secondaryContainer: '#1C2238',
-  primary: '#DAA520',
-  primaryFixed: '#B8860B',
-  primaryContainer: '#DAA520',
-  onPrimary: '#0A0F23',
-  outline: '#8E91A1',
-  outlineVariant: '#1E293B',
-  surfaceContainerLowest: '#060A16',
-  surfaceContainerLow: '#0D142E',
-  surfaceContainer: '#162235',
-  surfaceContainerHigh: '#2A3353',
-  surface: '#0C1626',
+  background: '#080D17',          // Dark Navy / Black canvas #080D17
+  onBackground: '#F8FAFC',        // Text primary #F8FAFC
+  inverseSurface: '#F8FAFC',
+  onSurface: '#F8FAFC',           // Slate 50
+  onSurfaceVariant: '#CBD5E1',    // Text secondary #CBD5E1
+  secondary: '#111D30',           // Surface secondary #111D30
+  secondaryContainer: '#172238',  // Surface elevated #172238
+  primary: '#F59E0B',             // Brand primary #F59E0B
+  primaryFixed: '#FBBF24',        // Brand hover #FBBF24
+  primaryContainer: 'rgba(245, 158, 11, 0.14)',
+  onPrimary: '#080D17',           // High contrast on primary
+  outline: '#94A3B8',             // Text muted #94A3B8
+  outlineVariant: '#293548',      // Border #293548
+  surfaceContainerLowest: '#050A14',
+  surfaceContainerLow: '#080D17',
+  surfaceContainer: '#0B1424',     // Surface #0B1424
+  surfaceContainerHigh: '#111D30',
+  surface: '#0B1424',             // Surface card #0B1424
   error: '#EF4444',
-  success: '#22C55E',
+  success: '#10B981',
   isDark: true,
 };
 
