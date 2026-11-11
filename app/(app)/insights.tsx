@@ -414,6 +414,7 @@ const HeartBurst = ({ visible, onAnimationEnd }: { visible: boolean; onAnimation
 const VideoItem = ({
   item,
   isActive,
+  shouldPreload,
   cardHeight,
   cardWidth,
   isMobile,
@@ -1463,11 +1464,20 @@ const VideoItem = ({
             loop
             muted
             playsInline
-            preload={isActive ? 'auto' : 'metadata'}
+            preload={isActive || shouldPreload ? 'auto' : 'metadata'}
+            onCanPlay={() => {
+              setIsVideoLoaded(true);
+              setVideoHasError(false);
+              if (isActiveRef.current && webVideoRef.current && webVideoRef.current.paused) {
+                playWeb();
+              }
+            }}
             onLoadedData={() => {
               setIsVideoLoaded(true);
               setVideoHasError(false);
-              if (isActiveRef.current) playWeb();
+              if (isActiveRef.current && webVideoRef.current && webVideoRef.current.paused) {
+                playWeb();
+              }
             }}
             onError={handleVideoError}
             onPlay={() => setIsPlaying(true)}
@@ -3172,6 +3182,7 @@ export default function InsightsScreen() {
               <VideoItem
                 item={item}
                 isActive={canPlay && activeVideoIndex === index}
+                shouldPreload={canPlay && Math.abs(activeVideoIndex - index) <= 1}
                 cardHeight={cardHeight}
                 cardWidth={cardWidth}
                 isMobile={true}
@@ -3251,6 +3262,7 @@ export default function InsightsScreen() {
                   <VideoItem
                     item={item}
                     isActive={canPlay && activeVideoIndex === index}
+                    shouldPreload={canPlay && Math.abs(activeVideoIndex - index) <= 1}
                     cardHeight={cardHeight}
                     cardWidth={cardWidth}
                     isMobile={false}
