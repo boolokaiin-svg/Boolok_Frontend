@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as SecureStore from 'expo-secure-store';
@@ -268,6 +268,8 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
   const [isExchanging, setIsExchanging] = useState(false);
   const [nonce] = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
+  const processedRef = useRef<string | null>(null);
+
   const [request, response, promptAsync] = Google.useAuthRequest({
     webClientId,
     redirectUri,
@@ -295,12 +297,20 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
 
       if (response.type !== 'success') return;
 
-      const idToken = response.authentication?.idToken || response.params?.id_token;
+      const idToken =
+        response.authentication?.idToken ||
+        response.params?.id_token ||
+        response.authentication?.accessToken ||
+        response.params?.access_token;
 
       if (!idToken) {
         onError?.('Google did not return an ID token.');
         return;
       }
+
+      const responseKey = `${idToken.slice(0, 32)}_${response.type}`;
+      if (processedRef.current === responseKey) return;
+      processedRef.current = responseKey;
 
       setIsExchanging(true);
 
