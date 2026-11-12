@@ -48,6 +48,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [focused, setFocused] = useState(false);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
+  const [notRegistered, setNotRegistered] = useState(false);
 
   const { signIn } = useAuth();
 
@@ -57,16 +59,24 @@ export default function LoginScreen() {
   const handleGoogleSuccess = useCallback(
     async (idToken: string) => {
       setIsGoogleSigningIn(true);
+      setWarningMessage(null);
+      setNotRegistered(false);
       try {
         const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
           idToken,
+          mode: 'signin',
         });
         if (response.data.token) {
           await signIn(response.data.token, response.data.user);
           router.push('/(app)/dashboard');
         }
       } catch (error: any) {
-        alert(error.response?.data?.message || 'Google sign-in failed. Please try again.');
+        const msg =
+          error.response?.data?.message ||
+          'Google sign-in failed. Please try again.';
+        const isUnregistered = Boolean(error.response?.data?.notRegistered) || error.response?.status === 404;
+        setWarningMessage(msg);
+        setNotRegistered(isUnregistered);
       } finally {
         setIsGoogleSigningIn(false);
       }
@@ -76,7 +86,10 @@ export default function LoginScreen() {
 
   const { promptGoogleSignIn, isGoogleLoading } = useGoogleAuth({
     onSuccess: handleGoogleSuccess,
-    onError: (msg: string) => alert(msg),
+    onError: (msg: string) => {
+      setWarningMessage(msg);
+      setNotRegistered(false);
+    },
   });
   // ────────────────────────────────────────────────────────────────
 
@@ -87,6 +100,8 @@ export default function LoginScreen() {
     if (!canSubmit) return;
 
     setSubmitState('loading');
+    setWarningMessage(null);
+    setNotRegistered(false);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/auth/login`, {
@@ -105,7 +120,9 @@ export default function LoginScreen() {
     } catch (error: any) {
       console.error('Login failed:', error.response?.data?.message || error.message);
       setSubmitState('idle');
-      alert(error.response?.data?.message || 'Login failed. Please check your credentials.');
+      const err = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      setWarningMessage(err);
+      setNotRegistered(false);
     }
   };
 
@@ -180,6 +197,50 @@ export default function LoginScreen() {
                     Sign in to your Boolok AI account
                   </Text>
                 </View>
+
+                {/* Warning / Error Alert Banner */}
+                {warningMessage && (
+                  <View
+                    style={[
+                      styles.warningBox,
+                      notRegistered ? styles.warningBoxUnregistered : styles.warningBoxError,
+                    ]}
+                  >
+                    <View style={styles.warningHeader}>
+                      <MaterialIcons
+                        name={notRegistered ? 'warning' : 'error-outline'}
+                        size={22}
+                        color={notRegistered ? '#b45309' : '#dc2626'}
+                      />
+                      <Text
+                        style={[
+                          styles.warningTitle,
+                          { color: notRegistered ? '#92400e' : '#991b1b' },
+                        ]}
+                      >
+                        {notRegistered ? 'Account Not Registered' : 'Sign-In Failed'}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.warningText,
+                        { color: notRegistered ? '#78350f' : '#7f1d1d' },
+                      ]}
+                    >
+                      {warningMessage}
+                    </Text>
+                    {notRegistered && (
+                      <Pressable
+                        style={styles.registerCtaBtn}
+                        onPress={() => router.push('/(auth)/register')}
+                      >
+                        <Text style={styles.registerCtaBtnText}>
+                          Create an Account on Register Page →
+                        </Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
 
                 {/* Username or Email */}
                 <View style={{ marginBottom: spacing.md }}>
@@ -415,5 +476,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexWrap: 'wrap',
     marginTop: spacing.lg,
+  },
+  warningBox: {
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+  },
+  warningBoxUnregistered: {
+    backgroundColor: '#fffbeb',
+    borderColor: '#fde68a',
+  },
+  warningBoxError: {
+    backgroundColor: '#fef2f2',
+    borderColor: '#fca5a5',
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: 4,
+  },
+  warningTitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins_700Bold',
+  },
+  warningText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 18,
+    marginTop: 2,
+  },
+  registerCtaBtn: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  registerCtaBtnText: {
+    color: '#000000',
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 13,
   },
 });

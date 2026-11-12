@@ -286,6 +286,7 @@ export default function RegisterScreen() {
       try {
         const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
           idToken,
+          mode: 'register',
         });
         if (response.data.token) {
           await signIn(response.data.token, response.data.user);
