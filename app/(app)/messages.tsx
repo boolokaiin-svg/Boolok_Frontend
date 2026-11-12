@@ -36,16 +36,7 @@ import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime, formatConversationTime, formatLastSeen, getMessageDateSeparator, isSameCalendarDay } from '../../lib/dateTime';
 import BoolokLogo from '../../components/BoolokLogo';
 
-const COMMUNITY_MEMBERS_DIRECTORY = [
-  { id: 'shreekutti', fullName: 'Shreekutti', username: 'shreekutti', headline: 'Tech Park Portfolio Lead' },
-  { id: 'ajmal', fullName: 'Mohammed Ajmal', username: 'ajmal', headline: 'Luxury Living & Villas Lead' },
-  { id: 'logeshwarana', fullName: 'Logeshwaran A', username: 'logeshwarana', headline: 'Architectural Consultant' },
-  { id: 'saivimenthanvl', fullName: 'Sai Vimenthan', username: 'saivimenthanvl', headline: 'Elite Real Estate Broker' },
-  { id: 'vignesh', fullName: 'Vigneshwaran', username: 'vignesh', headline: 'Beverly Hills & OMR Acquisitions' },
-  { id: 'aswin', fullName: 'Aswin Real Estate', username: 'aswin', headline: 'Commercial Assets Lead' },
-  { id: 'bavadharini_rs', fullName: 'Bavadharini RS', username: 'bavadharini_rs', headline: 'Interior Architecture Lead' },
-  { id: 'the_akshtr_estate', fullName: 'Akshat Commercials', username: 'the_akshtr_estate', headline: 'Institutional Syndications' },
-];
+const COMMUNITY_MEMBERS_DIRECTORY: any[] = [];
 
 export interface ReelShareData {
   reelId: string;
@@ -780,38 +771,40 @@ export default function MessagesScreen() {
             </View>
 
             {/* Quick Community Broker Start Row */}
-            <View style={{ paddingHorizontal: 14, marginBottom: 10 }}>
-              <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-                Connect With Boolok Brokers
-              </Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {COMMUNITY_MEMBERS_DIRECTORY.slice(0, 6).map((b) => (
-                  <Pressable
-                    key={b.id}
-                    onPress={() => startChatWithUser(undefined, b.username)}
-                    style={({ pressed, hovered }: any) => [
-                      {
-                        backgroundColor: innerCardBg,
-                        borderWidth: 1,
-                        borderColor: borderColor,
-                        paddingVertical: 6,
-                        paddingHorizontal: 10,
-                        borderRadius: 20,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 5,
-                      },
-                      (pressed || hovered) && { borderColor: goldPrimary },
-                    ]}
-                  >
-                    <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 9, fontWeight: '800', color: goldPrimary }}>{b.fullName[0]}</Text>
-                    </View>
-                    <Text style={{ color: textPrimary, fontSize: 12, fontWeight: '600' }}>{b.fullName.split(' ')[0]}</Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </View>
+            {COMMUNITY_MEMBERS_DIRECTORY.length > 0 && (
+              <View style={{ paddingHorizontal: 14, marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                  Connect With Boolok Brokers
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {COMMUNITY_MEMBERS_DIRECTORY.slice(0, 6).map((b) => (
+                    <Pressable
+                      key={b.id}
+                      onPress={() => startChatWithUser(undefined, b.username)}
+                      style={({ pressed, hovered }: any) => [
+                        {
+                          backgroundColor: innerCardBg,
+                          borderWidth: 1,
+                          borderColor: borderColor,
+                          paddingVertical: 6,
+                          paddingHorizontal: 10,
+                          borderRadius: 20,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                        },
+                        (pressed || hovered) && { borderColor: goldPrimary },
+                      ]}
+                    >
+                      <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 9, fontWeight: '800', color: goldPrimary }}>{b.fullName[0]}</Text>
+                      </View>
+                      <Text style={{ color: textPrimary, fontSize: 12, fontWeight: '600' }}>{b.fullName.split(' ')[0]}</Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
 
             {/* Matching Broker Search Results */}
             {matchingBrokers.length > 0 && (

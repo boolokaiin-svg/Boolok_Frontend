@@ -160,6 +160,7 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
 }
 
 const WEB_AUTH_CALLBACK_PATH = '/auth-callback';
+const FALLBACK_GOOGLE_WEB_CLIENT_ID = '545137297910-bb01bb7c26jiuh0qbl5cg05q120b97r9.apps.googleusercontent.com';
 
 type GoogleAuthOptions = {
   onSuccess: (idToken: string) => Promise<void>;
@@ -171,7 +172,8 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [configurationError, setConfigurationError] = useState<string | null>(null);
 
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const rawWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const webClientId = rawWebClientId && rawWebClientId.trim() ? rawWebClientId.trim() : FALLBACK_GOOGLE_WEB_CLIENT_ID;
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
 
   useEffect(() => {
@@ -260,7 +262,8 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
     });
   }, []);
 
-  const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const rawWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const webClientId = rawWebClientId && rawWebClientId.trim() ? rawWebClientId.trim() : FALLBACK_GOOGLE_WEB_CLIENT_ID;
 
   const [isExchanging, setIsExchanging] = useState(false);
   const [nonce] = useState(() => `${Date.now()}-${Math.random().toString(36).slice(2)}`);

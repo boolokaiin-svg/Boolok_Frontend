@@ -82,180 +82,7 @@ const UserAvatar = ({ user, size = 40, style }: { user?: any; size?: number; sty
   );
 };
 
-const COMMUNITY_MEMBERS = [
-  {
-    id: 'shreekutti',
-    _id: 'shreekutti',
-    fullName: 'Shreekutti',
-    username: 'shreekutti',
-    headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok',
-    location: 'Bangalore, Karnataka · Tech Parks',
-    bio: 'Specialized in commercial land development, Grade-A tech hub transactions, and IT SEZ acquisitions across South India.',
-    closedDeals: '4',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: '6a8af34812ef34aed25ae8d2',
-    _id: '6a8af34812ef34aed25ae8d2',
-    fullName: 'Logeshwaran A',
-    username: 'logeshwarana',
-    headline: 'Architectural Consultant & Real Estate Lead',
-    location: 'Western Australia · Vineyard Estates',
-    bio: 'Focused on precision cap-rate calculations, commercial yield optimization, and real estate investment portfolios.',
-    closedDeals: '3',
-    followerCount: 0,
-    followingCount: 0,
-    mutuals: '',
-    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
-    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'ajmal',
-    _id: 'ajmal',
-    fullName: 'Mohammed Ajmal',
-    username: 'ajmal',
-    email: 'ajmal@boolok.ai',
-    headline: 'Luxury Living & High-End Residential Broker',
-    location: 'Dubai & Kochi · Luxury Villas',
-    bio: 'Connecting international investors to premier waterfront villas and bespoke residential developments.',
-    closedDeals: '3',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'bavadharini_rs',
-    _id: 'bavadharini_rs',
-    fullName: 'Bavadharini RS',
-    username: 'bavadharini_rs',
-    headline: 'Interior Designer & Modern Living Specialist',
-    location: 'Chennai, Tamil Nadu · Modern Living',
-    bio: 'Bespoke high-end interior architecture, penthouse makeovers, and custom luxury styling.',
-    closedDeals: '2',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'the_akshtr_estate',
-    _id: 'the_akshtr_estate',
-    fullName: 'Akshat Commercials',
-    username: 'the_akshtr_estate',
-    headline: 'Commercial Property & Tech Park Portfolio Lead @ Boolok Network',
-    location: 'Chennai, Tamil Nadu · Prime Assets',
-    bio: 'Specializing in Grade-A IT SEZ parks, commercial lease syndications, and institutional asset acquisitions on OMR Chennai.',
-    closedDeals: '2',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'prasanth_properties',
-    _id: 'prasanth_properties',
-    fullName: 'Prasanth Properties',
-    username: 'prasanth_properties',
-    headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates',
-    location: 'Miami, Florida · Coastal Estates',
-    bio: 'Luxury real estate advisory focused on ultra-prime beachfront residences and waterfront villas.',
-    closedDeals: '2',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'aswin',
-    _id: 'aswin',
-    fullName: 'Aswin Real Estate',
-    username: 'aswin',
-    headline: 'Principal Real Estate Broker & Multi-Family Asset Advisor',
-    location: 'Chennai, Tamil Nadu · Luxury & Commercial Assets',
-    bio: 'Expert commercial multi-family portfolio manager with deep market analytics on cap rates and returns.',
-    closedDeals: '1',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'vignesh',
-    _id: 'vignesh',
-    fullName: 'Vigneshwaran',
-    username: 'vignesh',
-    headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist',
-    location: 'Beverly Hills, California · Ultra Luxury',
-    bio: 'Curating custom luxury properties, penthouses, and architectural landmarks for high net worth clients.',
-    closedDeals: '1',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'yashwanth',
-    _id: 'yashwanth',
-    fullName: 'Yashwanth',
-    username: 'yashwanth',
-    headline: 'Prime Commercial Hubs & Institutional Realty Lead',
-    location: 'Chennai & Bangalore · Commercial Hubs',
-    bio: 'Acquiring prime commercial buildings, corporate hubs, and investment estates across South India.',
-    closedDeals: '1',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'sophia_luxury',
-    _id: 'sophia_luxury',
-    fullName: 'Sophia Sterling',
-    username: 'sophia_luxury',
-    headline: 'European Family Office Principal & Luxury Syndication Client',
-    location: 'Geneva, Switzerland & London · Private Capital',
-    bio: 'Managing cross-border real estate acquisitions and luxury fractional syndicates for European private wealth clients.',
-    closedDeals: '2',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'david_sterling',
-    _id: 'david_sterling',
-    fullName: 'David Sterling',
-    username: 'david_sterling',
-    headline: 'Managing Director · Sterling Global Capital & Asset Co-Owner',
-    location: 'London, UK & Beverly Hills · Private Equity',
-    bio: 'Directing private equity allocation in architectural landmarks, luxury fractional estates, and prime commercial assets.',
-    closedDeals: '3',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200',
-    reels: [],
-    posts: [],
-  },
-  {
-    id: 'marcus_vance',
-    _id: 'marcus_vance',
-    fullName: 'Marcus Vance',
-    username: 'marcus_vance',
-    headline: 'Institutional Real Estate Syndicate Lead & Co-Ownership Client',
-    location: 'New York, NY · Real Estate Private Equity',
-    bio: 'Partnering in deeded fractional syndicates, commercial co-ownership models, and turnkey trophy estate acquisitions.',
-    closedDeals: '2',
-    profilePicture: null,
-    coverImage: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200',
-    reels: [],
-    posts: [],
-  },
-];
+const COMMUNITY_MEMBERS: any[] = [];
 
 const resolvePropertyImage = (post: any) => {
   const url = post?.mediaUrl || post?.image || post?.mediaUrls?.[0];
@@ -303,17 +130,17 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     return {
       id: viewer?.id || viewer?._id || 'self',
       _id: viewer?.id || viewer?._id || 'self',
-      fullName: viewer?.fullName || 'Sai Vimenthan',
-      username: viewer?.username || 'saivimenthanvl',
-      headline: viewer?.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead',
-      location: viewer?.location || 'Chennai, Tamil Nadu · Prime Assets',
-      bio: viewer?.bio || 'Real estate professional and advisor on the Boolok AI network.',
+      fullName: viewer?.fullName || 'User',
+      username: viewer?.username || 'member',
+      headline: viewer?.headline || 'Real Estate Professional',
+      location: viewer?.location || '',
+      bio: viewer?.bio || '',
       profilePicture: viewer?.profilePicture || null,
       coverImage: viewer?.coverImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
       closedDeals: viewer?.closedDeals || '0',
-      followerCount: 0,
-      followingCount: 0,
-      mutuals: '0 followers in Boolok Real Estate Network',
+      followerCount: viewer?.followerCount ?? 0,
+      followingCount: viewer?.followingCount ?? 0,
+      mutuals: '',
       reels: [],
       posts: [],
     };
@@ -880,7 +707,7 @@ export default function ProfessionalUserProfileScreen() {
 
   // Username edit state for self
   const [isEditingUsername, setIsEditingUsername] = useState(false);
-  const [usernameInput, setUsernameInput] = useState(viewer?.username || 'saivimenthanvl');
+  const [usernameInput, setUsernameInput] = useState(viewer?.username || '');
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   // Create Mode: 'post' vs 'reel'
@@ -1356,9 +1183,9 @@ export default function ProfessionalUserProfileScreen() {
     const newCommentObj = {
       _id: `c-detail-${Date.now()}`,
       author: {
-        _id: viewer?.id || viewer?._id || 'sai',
-        fullName: viewer?.fullName || 'Sai Vimenthan',
-        username: viewer?.username || 'saivimenthanvl',
+        _id: viewer?.id || viewer?._id || '',
+        fullName: viewer?.fullName || 'User',
+        username: viewer?.username || 'member',
         profilePicture: viewer?.profilePicture || null,
       },
       text: commentToSend,
@@ -2447,7 +2274,7 @@ export default function ProfessionalUserProfileScreen() {
             <View style={styles.nameBlock}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <Text style={[styles.profileFullName, { color: textPrimary }]}>
-                  {profileUser.fullName || (isSelf ? viewer?.fullName || 'Sai Vimenthan' : 'Advisor')}
+                  {profileUser.fullName || (isSelf ? viewer?.fullName || 'User' : 'Advisor')}
                 </Text>
                 <MaterialIcons name="verified" size={20} color="#0095f6" />
                 <Text style={[styles.profileDegree, { color: textMuted }]}>· 1st (Verified Member)</Text>
@@ -4216,7 +4043,7 @@ export default function ProfessionalUserProfileScreen() {
                 <UserAvatar user={profileUser} size={38} />
                 <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={[styles.signOutUserName, { color: textPrimary }]} numberOfLines={1}>
-                    {profileUser.fullName || viewer?.fullName || 'Sai Vimenthan'}
+                    {profileUser.fullName || viewer?.fullName || 'User'}
                   </Text>
                   <Text style={[styles.signOutUserHandle, { color: textMuted }]} numberOfLines={1}>
                     @{profileUser.username || viewer?.username || 'member'}
@@ -4292,7 +4119,7 @@ export default function ProfessionalUserProfileScreen() {
                   </View>
                   <View>
                     <Text style={[styles.contactModalTitle, { color: textPrimary }]}>
-                      {profileUser.fullName || viewer?.fullName || 'Sai Vimenthan'}
+                      {profileUser.fullName || viewer?.fullName || 'User'}
                     </Text>
                     <Text style={[styles.contactModalSubtitle, { color: textMuted }]}>
                       Verified Member Contact Info

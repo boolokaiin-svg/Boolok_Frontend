@@ -247,56 +247,7 @@ const cropAndFrameImage = (
   });
 };
 
-const DEFAULT_COMMUNITY_ADVISORS = [
-  {
-    id: 'shreekutti',
-    _id: 'shreekutti',
-    fullName: 'Shreekutti',
-    username: 'shreekutti',
-    headline: 'Tech Park Campus Acquisitions Lead @ Boolok',
-    distance: '0.8 km away',
-    location: 'Outer Ring Road, Bangalore',
-    deals: '18 deals closed',
-    followerCount: 4,
-    profilePicture: null,
-  },
-  {
-    id: 'logeshwarana',
-    _id: 'logeshwarana',
-    fullName: 'Logeshwaran A',
-    username: 'logeshwarana',
-    headline: 'Architectural Consultant & Real Estate Lead',
-    distance: '1.4 km away',
-    location: 'Whitefield & Commercial Hubs',
-    deals: '22 deals closed',
-    followerCount: 4,
-    profilePicture: 'https://lh3.googleusercontent.com/a/ACg8ocJ_TV7-lpSTfRAQI0wc76yPHoIWaWg_5lgW-i9RxbiPx4tlFk0r=s96-c',
-  },
-  {
-    id: 'ajmal',
-    _id: 'ajmal',
-    fullName: 'Mohammed Ajmal',
-    username: 'ajmal',
-    headline: 'Luxury Living & High-End Residential Broker',
-    distance: '2.1 km away',
-    location: 'Indiranagar & Prime Districts',
-    deals: '14 deals closed',
-    followerCount: 4,
-    profilePicture: null,
-  },
-  {
-    id: 'the_akshtr_estate',
-    _id: 'the_akshtr_estate',
-    fullName: 'Akshat Commercials',
-    username: 'the_akshtr_estate',
-    headline: 'Commercial Property & Tech Park Lead @ Boolok',
-    distance: '3.2 km away',
-    location: 'OMR IT Corridor, Chennai',
-    deals: '12 deals closed',
-    followerCount: 3,
-    profilePicture: null,
-  },
-];
+const DEFAULT_COMMUNITY_ADVISORS: any[] = [];
 
 // ── Feed Posts (loaded live from the backend API) ───────────────────────────
 const DEFAULT_FEED_POSTS: any[] = [];
@@ -323,7 +274,7 @@ export default function ProfessionalSocialFeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [newsList, setNewsList] = useState(DEFAULT_REAL_ESTATE_NEWS);
   const [showAllNews, setShowAllNews] = useState(false);
-  const [suggestedUsers, setSuggestedUsers] = useState<any[]>(DEFAULT_COMMUNITY_ADVISORS);
+  const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>(() => {
     // Pre-populate from the shared localStorage cache so the feed's + Follow
     // button reflects the same state as Insights and Profile screens.
@@ -359,7 +310,7 @@ export default function ProfessionalSocialFeedScreen() {
   const [isLoadingLikes, setIsLoadingLikes] = useState(false);
   const [activeReactionPickerPostId, setActiveReactionPickerPostId] = useState<string | null>(null);
   const [isFollowersModalOpen, setIsFollowersModalOpen] = useState(false);
-  const [followersList, setFollowersList] = useState<any[]>(DEFAULT_COMMUNITY_ADVISORS);
+  const [followersList, setFollowersList] = useState<any[]>([]);
   const [isLoadingFollowers, setIsLoadingFollowers] = useState(false);
   const [savedReelsList, setSavedReelsList] = useState<any[]>([]);
   const [isSavedModalOpen, setIsSavedModalOpen] = useState(false);
@@ -496,17 +447,7 @@ export default function ProfessionalSocialFeedScreen() {
       }
 
       // Add other likers from the post.likes array (may be usernames or IDs for fallback posts)
-      const DEFAULT_ADVISORS: Record<string, { fullName: string; headline: string }> = {
-        shreekutti: { fullName: 'Shreekutti', headline: 'Tech Park Campus Acquisitions Lead @ Boolok' },
-        logeshwarana: { fullName: 'Logeshwaran A', headline: 'Architectural Consultant & Real Estate Lead' },
-        ajmal: { fullName: 'Mohammed Ajmal', headline: 'Luxury Living & High-End Residential Broker' },
-        the_akshtr_estate: { fullName: 'Akshat Commercials', headline: 'Commercial Property & Tech Park Lead @ Boolok' },
-        saivimenthanvl: { fullName: 'Sai Vimenthan', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
-        bavadharini_rs: { fullName: 'Bavadharini RS', headline: 'Interior Designer & Modern Living Specialist' },
-        prasanth_properties: { fullName: 'Prasanth Properties', headline: 'Luxury Waterfront Specialist · Miami & Coastal Estates' },
-        vignesh: { fullName: 'Vigneshwaran', headline: 'Prime Architectural Estates & Beverly Hills Luxury Specialist' },
-        sai: { fullName: 'Sai Vimenthan', headline: 'Elite Real Estate Broker & Commercial Portfolio Lead' },
-      };
+      const DEFAULT_ADVISORS: Record<string, { fullName: string; headline: string }> = {};
 
       if (Array.isArray(p.likes)) {
         p.likes.forEach((likerId: string) => {
@@ -2763,7 +2704,11 @@ export default function ProfessionalSocialFeedScreen() {
             </View>
 
             <ScrollView style={{ marginTop: 12 }} showsVerticalScrollIndicator={false}>
-              {DEFAULT_COMMUNITY_ADVISORS.map((broker: any) => {
+              {suggestedUsers.length === 0 ? (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: isDark ? '#8b9bb4' : '#64748b', fontSize: 13 }}>No nearby brokers active in your radius.</Text>
+                </View>
+              ) : suggestedUsers.map((broker: any) => {
                 const bId = broker.id || broker._id;
                 const isF = isUserFollowed(broker);
                 return (
