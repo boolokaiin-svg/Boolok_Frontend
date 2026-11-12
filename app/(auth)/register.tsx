@@ -239,14 +239,19 @@ export default function RegisterScreen() {
     }
     setIsSendingEmailOtp(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/api/auth/send-otp`, {
-        email: clean,
-      });
+      const res = await axios.post(
+        `${API_BASE_URL}/api/auth/send-otp`,
+        { email: clean },
+        { timeout: 12000 }
+      );
       setIsEmailOtpSent(true);
       setEmailCountdown(45);
       notify(res.data.message || `Verification code sent to ${clean}`, 'success');
     } catch (err: any) {
-      notify(err.response?.data?.message || 'Failed to send email verification code.', 'error');
+      const msg = err.code === 'ECONNABORTED'
+        ? 'Request timed out. Please check your connection or try again.'
+        : (err.response?.data?.message || 'Failed to send email verification code.');
+      notify(msg, 'error');
     } finally {
       setIsSendingEmailOtp(false);
     }
@@ -262,14 +267,18 @@ export default function RegisterScreen() {
     }
     setIsVerifyingEmailOtp(true);
     try {
-      await axios.post(`${API_BASE_URL}/api/auth/verify-email-otp`, {
-        email: clean,
-        otp: code,
-      });
+      await axios.post(
+        `${API_BASE_URL}/api/auth/verify-email-otp`,
+        { email: clean, otp: code },
+        { timeout: 12000 }
+      );
       setIsEmailVerified(true);
       notify('Email verified successfully!', 'success');
     } catch (err: any) {
-      notify(err.response?.data?.message || 'Invalid or expired email OTP.', 'error');
+      const msg = err.code === 'ECONNABORTED'
+        ? 'Request timed out. Please try again.'
+        : (err.response?.data?.message || 'Invalid or expired email OTP.');
+      notify(msg, 'error');
     } finally {
       setIsVerifyingEmailOtp(false);
     }
