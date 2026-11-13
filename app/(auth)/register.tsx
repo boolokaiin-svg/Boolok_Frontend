@@ -242,7 +242,7 @@ export default function RegisterScreen() {
       const res = await axios.post(
         `${API_BASE_URL}/api/auth/send-otp`,
         { email: clean },
-        { timeout: 12000 }
+        { timeout: 35000 }
       );
       setIsEmailOtpSent(true);
       setEmailCountdown(45);
@@ -270,7 +270,7 @@ export default function RegisterScreen() {
       await axios.post(
         `${API_BASE_URL}/api/auth/verify-email-otp`,
         { email: clean, otp: code },
-        { timeout: 12000 }
+        { timeout: 20000 }
       );
       setIsEmailVerified(true);
       notify('Email verified successfully!', 'success');
