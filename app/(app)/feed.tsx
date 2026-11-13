@@ -1301,6 +1301,8 @@ export default function ProfessionalSocialFeedScreen() {
                 ? post.mediaUrls
                 : post.mediaUrl
                 ? [post.mediaUrl]
+                : post.image
+                ? [post.image]
                 : [];
 
               const mediaList = rawMedia

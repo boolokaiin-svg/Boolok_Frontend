@@ -41,8 +41,12 @@ function resolveApiBaseUrl(): string {
       window.location.hostname !== '127.0.0.1';
 
     if (isNonLocalWeb) {
-      // In remote web environments like Vercel, ensure we don't accidentally try to hit localhost
-      if (webUrl && !webUrl.includes('localhost') && !webUrl.includes('127.0.0.1')) {
+      // In remote web environments like Vercel, ensure we don't hit localhost or dead legacy Render instances
+      const isDeadRenderInstance = typeof webUrl === 'string' && (
+        webUrl.includes('boolok-backend-zcpn') ||
+        (webUrl.includes('boolok-backend.onrender.com') && !webUrl.includes('-r4py'))
+      );
+      if (webUrl && !webUrl.includes('localhost') && !webUrl.includes('127.0.0.1') && !isDeadRenderInstance) {
         return stripTrailingSlash(webUrl);
       }
       return PRODUCTION_FALLBACK_API_URL;
