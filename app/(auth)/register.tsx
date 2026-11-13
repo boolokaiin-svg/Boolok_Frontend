@@ -242,7 +242,7 @@ export default function RegisterScreen() {
       const res = await axios.post(
         `${API_BASE_URL}/api/auth/send-otp`,
         { email: clean },
-        { timeout: 35000 }
+        { timeout: 45000 }
       );
       setIsEmailOtpSent(true);
       setEmailCountdown(45);

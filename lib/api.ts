@@ -5,7 +5,7 @@ import * as SecureStore from 'expo-secure-store';
 
 const TOKEN_KEY = 'userToken';
 
-const PRODUCTION_FALLBACK_API_URL = 'https://boolok-backend.onrender.com';
+const PRODUCTION_FALLBACK_API_URL = 'https://boolok-backend-r4py.onrender.com';
 
 function stripTrailingSlash(value: string): string {
   return value.replace(/\/+$/, '');
