@@ -24,6 +24,9 @@ function RootLayoutNav() {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.body.style.backgroundColor = isDark ? '#060b13' : '#ffffff';
+      if (!document.title || document.title === 'boolokgpt') {
+        document.title = 'Boolok AI - AI Agent For Real Estate Services';
+      }
     }
   }, [isDark]);
 
