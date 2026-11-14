@@ -90,6 +90,7 @@ export default function RegisterScreen() {
 
   // ── Email OTP Verification State ───────────────────────────────
   const [emailOtp, setEmailOtp] = useState('');
+  const [verificationToken, setVerificationToken] = useState('');
   const [isEmailOtpSent, setIsEmailOtpSent] = useState(false);
   const [isSendingEmailOtp, setIsSendingEmailOtp] = useState(false);
   const [isVerifyingEmailOtp, setIsVerifyingEmailOtp] = useState(false);
@@ -267,11 +268,14 @@ export default function RegisterScreen() {
     }
     setIsVerifyingEmailOtp(true);
     try {
-      await axios.post(
+      const res = await axios.post(
         `${API_BASE_URL}/api/auth/verify-email-otp`,
         { email: clean, otp: code },
         { timeout: 20000 }
       );
+      if (res.data?.verificationToken) {
+        setVerificationToken(res.data.verificationToken);
+      }
       setIsEmailVerified(true);
       notify('Email verified successfully!', 'success');
     } catch (err: any) {
@@ -351,9 +355,8 @@ export default function RegisterScreen() {
         phoneNumber: phoneToSend,
         password,
         phoneOtp: phoneOtp.trim(),
-        emailOtp: isEmailVerified ? '' : emailOtp.trim(),
-        isPhoneVerified: false,
-        isEmailVerified,
+        verificationToken: verificationToken || undefined,
+        emailOtp: emailOtp.trim(),
       });
 
       if (response.data.token) {

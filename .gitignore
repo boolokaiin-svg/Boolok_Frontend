@@ -48,6 +48,8 @@ yarn-error.*
 /android
 .vercel
 .env*
+credentials.json
+
 
 # Google / Firebase config files
 # Note: google-services.json must be tracked so EAS Cloud Builder can bundle it
