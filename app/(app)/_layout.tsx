@@ -460,7 +460,9 @@ function AppLayoutContent() {
     { id: 'settings', icon: 'settings', label: 'Settings', route: '/(app)/settings', category: 'Account' },
   ];
 
-  const MobileSideDrawer = () => {
+  // Render in the existing layout tree so parent updates do not create a new
+  // component type and remount the native Modal during its animation.
+  const renderMobileSideDrawer = () => {
     if (!drawerMounted || isWide) return null;
 
     const drawerBg = isDark ? '#080e1a' : '#FFFFFF';
@@ -1123,7 +1125,7 @@ function AppLayoutContent() {
                 </Pressable>
               )}
               {!isWide && !shouldHideBottomNav && <BottomNav />}
-              {!isWide && <MobileSideDrawer />}
+              {!isWide && renderMobileSideDrawer()}
             </>
           );
         })()}
