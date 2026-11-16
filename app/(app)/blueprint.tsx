@@ -1,3 +1,4 @@
+import { SvgXml } from 'react-native-svg';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Pressable, TextInput,
@@ -2289,11 +2290,12 @@ export default function BlueprintScreen() {
 
                     {plan2dUrl ? (
                       <Pressable onPress={() => setFullscreenImage(plan2dUrl)}>
-                        <Image
+                        {plan2dSvg ? <SvgXml xml={plan2dSvg} width="100%" height={320} /> : <Image
                           source={{ uri: resolveImageUrl(plan2dUrl) || plan2dUrl }}
                           style={styles.planImage}
+                          onError={() => { setPlan2dUrl(null); setPlan2dError('The generated image could not be loaded. Please retry this view.'); }}
                           resizeMode="contain"
-                        />
+                        />}
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
@@ -2350,11 +2352,12 @@ export default function BlueprintScreen() {
 
                     {plan3dUrl ? (
                       <Pressable onPress={() => setFullscreenImage(plan3dUrl)}>
-                        <Image
+                        {plan3dSvg ? <SvgXml xml={plan3dSvg} width="100%" height={320} /> : <Image
                           source={{ uri: resolveImageUrl(plan3dUrl) || plan3dUrl }}
                           style={styles.planImage}
+                          onError={() => { setPlan3dUrl(null); setPlan3dError('The generated image could not be loaded. Please retry this view.'); }}
                           resizeMode="contain"
-                        />
+                        />}
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
