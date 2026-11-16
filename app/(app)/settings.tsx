@@ -323,8 +323,8 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="email"
             label="Contact Us"
-            sublabel="[YOUR_CONTACT_EMAIL]"
-            onPress={() => Linking.openURL('mailto:[YOUR_CONTACT_EMAIL]?subject=Boolok GPT Support')}
+            sublabel="boolokai.in@gmail.com"
+            onPress={() => Linking.openURL('mailto:boolokai.in@gmail.com?subject=Boolok GPT Support')}
             accessibilityLabel="Send us an email"
           />
           <SettingsRow

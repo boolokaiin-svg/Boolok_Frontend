@@ -164,7 +164,7 @@ export async function apiFetch<T = any>(endpoint: string, options: RequestInit =
 }
 
 const WEB_AUTH_CALLBACK_PATH = '/auth-callback';
-const FALLBACK_GOOGLE_WEB_CLIENT_ID = '545137297910-bb01bb7c26jiuh0qbl5cg05q120b97r9.apps.googleusercontent.com';
+const FALLBACK_GOOGLE_WEB_CLIENT_ID = '930993891303-9tadsr1d3kle9b11mfsp28q286mpsde6.apps.googleusercontent.com';
 
 type GoogleAuthOptions = {
   onSuccess: (idToken: string) => Promise<void>;

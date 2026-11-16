@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "boolokgpt",
-    "slug": "boolok-gpt",
+    "slug": "boolokai",
     "version": "1.0.0",
     "scheme": "boolokgpt",
     "orientation": "portrait",
@@ -49,9 +49,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "6515823e-f817-4275-999a-a11e6d3a8daf"
+        "projectId": "b5d5944c-0044-44a2-9c0f-1a4d2d395287"
       }
     },
-    "owner": "logesh0406"
+    "owner": "boolok"
   }
 }

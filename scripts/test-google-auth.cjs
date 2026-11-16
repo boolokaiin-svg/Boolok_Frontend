@@ -50,7 +50,7 @@ function loadAuth(options = {}) {
   const exports = {};
   const sandbox = {
     exports,
-    process: { env: { EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '545137297910-test.apps.googleusercontent.com' } },
+    process: { env: { EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: '930993891303-test.apps.googleusercontent.com' } },
     console: { error() {}, warn() {} },
     window: { location: { hostname: 'boolok.ai', origin: 'https://boolok.ai' } },
     require: name => {
@@ -170,6 +170,7 @@ test('all Android build profiles use the same Web OAuth client and release API',
   for (const profile of Object.values(eas.build)) {
     assert.equal(profile.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, eas.build.production.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
   }
+  assert.equal(eas.build.production.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, '930993891303-9tadsr1d3kle9b11mfsp28q286mpsde6.apps.googleusercontent.com');
   for (const name of ['preview', 'production']) {
     assert.equal(eas.build[name].env.EXPO_PUBLIC_API_URL_NATIVE, 'https://boolok-backend-r4py.onrender.com');
     assert.equal(eas.build[name].env.EXPO_PUBLIC_API_URL, eas.build[name].env.EXPO_PUBLIC_API_URL_NATIVE);
