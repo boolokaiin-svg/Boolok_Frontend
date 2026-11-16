@@ -410,7 +410,7 @@ function AppLayoutContent() {
     const activeNavItems = MOBILE_NAV_ITEMS;
 
     return (
-      <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 10), borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', ...(!isDark ? shadows.md : {}) }]}>
+      <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 4), borderTopColor: isDark ? 'rgba(255,255,255,0.1)' : '#E2E8F0', ...(!isDark ? shadows.md : {}) }]}>
         <BlurView
           intensity={isDark ? 50 : 80}
           tint={isDark ? 'dark' : 'light'}
@@ -424,6 +424,9 @@ function AppLayoutContent() {
               <Pressable
                 key={item.id}
                 style={styles.bottomNavItem}
+                accessibilityRole="tab"
+                accessibilityLabel={item.label}
+                accessibilityState={{ selected: isActive }}
                 onPress={() => router.push(item.route as any)}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
@@ -435,9 +438,7 @@ function AppLayoutContent() {
                     </View>
                   )}
                 </View>
-                <Text style={{ fontSize: 10, marginTop: 4, color: isActive ? theme.primary : theme.onSurfaceVariant, fontWeight: isActive ? '800' : '500' }}>
-                  {item.label}
-                </Text>
+
               </Pressable>
             );
           })}
@@ -704,7 +705,7 @@ function AppLayoutContent() {
       {isWide && <Sidebar />}
       {/* mainContent fills all remaining space; sidebar overlay floats above it */}
       <View style={styles.mainContent}>
-        <View style={[styles.header, {
+        <View style={[styles.header, pathname?.includes('insights') && !isWide && { display: 'none' }, {
           paddingHorizontal: isWide ? spacing.lg : 12,
           borderBottomColor: isDark ? theme.outlineVariant : '#E2E8F0',
           backgroundColor: isDark ? 'rgba(10, 15, 35, 0.85)' : '#FFFFFF',
@@ -1108,12 +1109,19 @@ function AppLayoutContent() {
                 {
                   backgroundColor: isDark ? '#060B13' : '#F8FAFC',
                   flex: 1,
-                  paddingBottom: (!isWide && !shouldHideBottomNav) ? (56 + Math.max(insets.bottom, 10)) : 0,
+                  paddingBottom: (!isWide && !shouldHideBottomNav) ? (48 + Math.max(insets.bottom, 4)) : 0,
                 }
               ]}>
                 <Stack screenOptions={{ headerShown: false, animation: 'fade', contentStyle: { backgroundColor: isDark ? '#060B13' : '#F8FAFC', flex: 1, height: '100%' } }} />
               </View>
 
+              {!isWide && pathname?.includes('insights') && (
+                <Pressable accessibilityRole="button" accessibilityLabel="Open menu"
+                  onPress={openMobileDrawer}
+                  style={{ position: 'absolute', top: insets.top + 10, left: 12, zIndex: 100, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' }}>
+                  <MaterialIcons name="menu" size={24} color="#FFFFFF" />
+                </Pressable>
+              )}
               {!isWide && !shouldHideBottomNav && <BottomNav />}
               {!isWide && <MobileSideDrawer />}
             </>
@@ -1256,6 +1264,7 @@ const styles = StyleSheet.create({
     zIndex: 100,
   },
   bottomNavInner: {
+    height: 48,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',

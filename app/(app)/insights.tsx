@@ -1562,7 +1562,7 @@ const VideoItem = ({
         pointerEvents="box-none"
       >
         {/* Left: AI Match micro badge */}
-        <View style={styles.topLeftContainer}>
+        <View style={[styles.topLeftContainer, isMobile && { marginLeft: 48 }]}> 
           <View style={styles.aiMatchBadge}>
             <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
             <Text style={[styles.aiMatchText, { color: theme.primary }]}>
