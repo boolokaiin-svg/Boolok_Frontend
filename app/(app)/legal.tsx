@@ -10,6 +10,7 @@ import {
   StyleSheet,
   useWindowDimensions,
   Platform,
+  Linking,
   ActivityIndicator,
   Modal,
 } from 'react-native';
@@ -248,19 +249,28 @@ export default function LegalVerificationScreen() {
     try { await downloadCertificate(filename); }
     catch (error: any) { setErrorMsg(error.message || 'Certificate download failed. Please retry.'); }
   };
-  const getVerdictTheme = (verdict: string) => {
+  const getVerdictTheme = (verdict: string, ecConfirmed: boolean = false) => {
     const v = (verdict || '').toUpperCase();
     if (v === 'ERROR' || !v || v === 'UNKNOWN') {
       return { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.35)',
         icon: 'error-outline', title: 'VERIFICATION COULD NOT BE COMPLETED' };
     }
-    if (v.includes('PASS')) {
+    if (!ecConfirmed && (v.includes('PASS') || v.includes('CLEAN'))) {
+      return {
+        color: '#F59E0B',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.35)',
+        icon: 'warning',
+        title: 'EC MISSING / INCOMPLETE — RISK NOT ASSESSED',
+      };
+    }
+    if (v.includes('PASS') && ecConfirmed) {
       return {
         color: '#10B981',
         bg: 'rgba(16, 185, 129, 0.12)',
         border: 'rgba(16, 185, 129, 0.35)',
         icon: 'check-circle',
-        title: 'PASS — TITLE CLEAN & VERIFIED',
+        title: 'VERIFIED — TITLE CLEAN & EC CONFIRMED',
       };
     }
     if (v.includes('WARN')) {
@@ -281,13 +291,13 @@ export default function LegalVerificationScreen() {
         title: 'FAIL — TITLE DEFECT DETECTED',
       };
     }
-    if (v.includes('MANUAL') || v.includes('INCOMPLETE')) {
+    if (v.includes('MANUAL') || v.includes('INCOMPLETE') || !ecConfirmed) {
       return {
-        color: '#3B82F6',
-        bg: 'rgba(59, 130, 246, 0.12)',
-        border: 'rgba(59, 130, 246, 0.35)',
-        icon: 'file-upload',
-        title: 'NEEDS MANUAL EC UPLOAD',
+        color: '#F59E0B',
+        bg: 'rgba(245, 158, 11, 0.12)',
+        border: 'rgba(245, 158, 11, 0.35)',
+        icon: 'warning',
+        title: 'EC MISSING — RISK NOT ASSESSED',
       };
     }
     return {
@@ -309,7 +319,7 @@ export default function LegalVerificationScreen() {
   const normalized = auditResult?.data?.normalized || {};
   const portalCheck = auditResult?.data?.portal_check || {};
   const checks = verificationChecks(auditResult);
-  const verdictTheme = auditResult ? getVerdictTheme(auditResult.verdict || auditResult.data?.verdict) : null;
+  const verdictTheme = auditResult ? getVerdictTheme(auditResult.verdict || auditResult.data?.verdict, checks.ec.confirmed) : null;
 
   return (
     <View style={[styles.root, { backgroundColor: isDark ? '#060B13' : '#F8FAFC' }]}>
@@ -607,7 +617,7 @@ export default function LegalVerificationScreen() {
                   <MaterialIcons name={verdictTheme.icon as any} size={isWide ? 36 : 28} color={verdictTheme.color} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.verdictStatusPill, { color: verdictTheme.color }]}>
-                      OFFICIAL LEGAL VERDICT
+                      VERIFICATION STATUS
                     </Text>
                     <Text style={[styles.verdictTitle, { color: textPrimary, fontSize: isWide ? 20 : 17 }]} numberOfLines={2}>
                       {verdictTheme.title}
@@ -778,6 +788,25 @@ export default function LegalVerificationScreen() {
                   </View>
                 </View>
               </View>
+
+              {/* Official TNREGINET Portal Link & Guidance when EC is missing */}
+              {!checks.ec.confirmed && (
+                <View style={{ marginTop: 14, padding: 12, borderRadius: 8, backgroundColor: isDark ? 'rgba(218,165,32,0.08)' : '#FEF3C7', borderWidth: 1, borderColor: goldPrimary }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: textPrimary, marginBottom: 4 }}>
+                    Official Government Portal Direct Link
+                  </Text>
+                  <Text style={{ fontSize: 12, color: textSecondary, marginBottom: 10 }}>
+                    Download your official Encumbrance Certificate from the Tamil Nadu Inspector General of Registration (TNREGINET) portal and attach the PDF to complete title verification.
+                  </Text>
+                  <Pressable
+                    onPress={() => Linking.openURL('https://tnreginet.gov.in/portal/webContent/encumbrance_certificate.html')}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 6, paddingHorizontal: 12, backgroundColor: goldPrimary, borderRadius: 6 }}
+                  >
+                    <MaterialCommunityIcons name="open-in-new" size={16} color="#000" />
+                    <Text style={{ color: '#000', fontWeight: '700', fontSize: 12 }}>Open TNREGINET Portal</Text>
+                  </Pressable>
+                </View>
+              )}
 
               {/* Download EC Button */}
               {Array.isArray(auditResult.ec_download?.warnings) && auditResult.ec_download.warnings.map((warning: string, index: number) => <Text key={index} accessibilityRole="alert" style={{ color: textMuted, marginTop: 12 }}>{warning}</Text>)}              {!auditResult.downloaded_files?.ec && auditResult.ec_download?.message && <Text accessibilityRole="alert" style={{ color: textMuted, marginTop: 12 }}>{auditResult.ec_download.message}</Text>}              {auditResult.downloaded_files?.ec && (
