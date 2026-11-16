@@ -36,6 +36,8 @@ import * as SecureStore from 'expo-secure-store';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
+import SafetyActions from '../../components/SafetyActions';
+import { useSafetyRefresh } from '../../lib/safetyEvents';
 
 // No hardcoded seeded videos: reels are loaded live from the user and backend
 const DUMMY_VIDEOS: any[] = [];
@@ -1693,6 +1695,7 @@ const VideoItem = ({
           <MaterialCommunityIcons name="share" size={26} color="#ffffff" style={styles.actionIconShadow} />
         </TouchableOpacity>
 
+        <SafetyActions targetType="reel" targetId={item._id} authorId={item.author?._id || item.author?.id} authorName={authorName} color="#ffffff" />
         {/* Delete button for user's uploaded reels */}
         {isDeletable && (
           <TouchableOpacity
@@ -2850,6 +2853,7 @@ export default function InsightsScreen() {
     }
   }, [reelId, videos.length, cardHeight]);
 
+  useSafetyRefresh(() => { setVideos([]); fetchReels(); });
   const fetchReels = async () => {
     try {
       const token = Platform.OS === 'web'

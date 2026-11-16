@@ -45,6 +45,7 @@
     "typescript": "~5.9.2"
   },
   "scripts": {
+    "test:google-auth": "node scripts/test-google-auth.cjs",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

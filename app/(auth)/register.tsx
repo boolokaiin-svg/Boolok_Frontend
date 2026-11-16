@@ -300,14 +300,23 @@ export default function RegisterScreen() {
         const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
           idToken,
           mode: 'register',
-        });
+        }, { timeout: 60000 });
+        if (!response.data.token || !response.data.user) {
+          throw new Error('The sign-in server returned an incomplete response. Please try again.');
+        }
         if (response.data.token) {
           await signIn(response.data.token, response.data.user);
           // New Google users go to personalize, returning users go to feed
           router.push('/(auth)/personalize');
         }
       } catch (error: any) {
-        notify(error.response?.data?.message || 'Google sign-up failed. Please try again.', 'error');
+        notify(
+          error.response?.data?.message ||
+          (error.code === 'ECONNABORTED' ? 'The sign-in server took too long to respond. Please try again.' : null) ||
+          (!error.response && error.isAxiosError ? 'Unable to reach the sign-in server. Check your connection and try again.' : null) ||
+          error.message || 'Google sign-up failed. Please try again.',
+          'error'
+        );
       } finally {
         setIsGoogleSigningIn(false);
       }

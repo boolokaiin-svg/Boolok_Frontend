@@ -3,6 +3,7 @@ import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 import { API_BASE_URL } from '../lib/api';
 import axios from 'axios';
+import { notifySafetyChanged } from '../lib/safetyEvents';
 
 type SocketContextType = {
   socket: Socket | null;
@@ -77,6 +78,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     });
 
     socketRef.current = socketInstance;
+    socketInstance.on('safety_changed', () => {
+      setOnlineUserIds(new Set());
+      notifySafetyChanged();
+      refreshUnreadTotal();
+    });
 
     socketInstance.on('connect', () => {
       setIsConnected(true);

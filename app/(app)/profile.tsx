@@ -28,6 +28,8 @@ import BoolokLogo from '../../components/BoolokLogo';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
+import SafetyActions from '../../components/SafetyActions';
+import { useSafetyRefresh, useHiddenUsers, isVisibleSavedItem } from '../../lib/safetyEvents';
 
 // ── Shared follow tracker ───────────────────────────────────────────────────
 const GLOBAL_FOLLOWED_USERS = new Set<string>();
@@ -1296,6 +1298,9 @@ export default function ProfessionalUserProfileScreen() {
     return () => clearInterval(interval);
   }, [targetId, isSelf, viewer?.id, viewer?._id, viewer?.username]);
 
+  const [profileUnavailable, setProfileUnavailable] = useState(false);
+  const hiddenUsers = useHiddenUsers();
+  useSafetyRefresh(() => { if (!isSelf) setProfileUnavailable(true); fetchProfile(targetId); });
   const fetchProfile = async (lookupId: string) => {
     setLoading(true);
     const fallbackUser = resolveMemberProfile(isSelf ? 'self' : lookupId, viewer);
@@ -1305,6 +1310,7 @@ export default function ProfessionalUserProfileScreen() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.data && res.data.user) {
+        setProfileUnavailable(false);
         setData(res.data);
         setFollowerCountState(res.data.followerCount ?? res.data.user?.followerCount ?? 0);
         setFollowingCountState(res.data.followingCount ?? res.data.user?.followingCount ?? 0);
@@ -1361,6 +1367,11 @@ export default function ProfessionalUserProfileScreen() {
         setIsFollowingState(false);
       }
     } catch (error: any) {
+      if (error.response?.status === 404 || error.response?.status === 403) {
+        setProfileUnavailable(true);
+        setData(null);
+        return;
+      }
       console.warn('Profile loaded via member registry:', error.message);
       setData({
         user: fallbackUser,
@@ -2101,6 +2112,10 @@ export default function ProfessionalUserProfileScreen() {
       ? `${followerCount} ${followerCount === 1 ? 'follower' : 'followers'} in Boolok Network`
       : '0 followers in Boolok Network');
 
+  if (profileUnavailable) return <View style={{ padding: 24, flex: 1, backgroundColor: bgDark }}>
+    <Text style={{ color: textPrimary, fontSize: 20, marginBottom: 16 }}>This profile is unavailable.</Text>
+    <Pressable onPress={() => router.replace('/(app)/feed')}><Text style={{ color: goldPrimary }}>Back to feed</Text></Pressable>
+  </View>;
   return (
     <ScrollView
       style={[styles.root, { backgroundColor: bgDark }]}
@@ -2108,6 +2123,10 @@ export default function ProfessionalUserProfileScreen() {
       showsVerticalScrollIndicator={false}
     >
       <View style={styles.container}>
+        {!isSelf && <View style={{ alignItems: 'flex-end' }}>
+          <SafetyActions targetId={profileUser._id || profileUser.id} authorName={profileUser.fullName}
+            onBlocked={() => router.replace('/(app)/feed')} />
+        </View>}
         {/* Top header navigation bar & Sign Out */}
         <View style={styles.topNavRow}>
           <Pressable onPress={() => router.push('/(app)/feed')} style={styles.backBtn}>
@@ -2919,8 +2938,8 @@ export default function ProfessionalUserProfileScreen() {
 
               {/* Saved Content Grid */}
               {(() => {
-                const displayPosts = savedFilter === 'reels' ? [] : savedPosts;
-                const displayReels = savedFilter === 'posts' ? [] : savedReels;
+                const displayPosts = savedFilter === 'reels' ? [] : savedPosts.filter(item => isVisibleSavedItem(item, hiddenUsers));
+                const displayReels = savedFilter === 'posts' ? [] : savedReels.filter(item => isVisibleSavedItem(item, hiddenUsers));
                 const totalItems = displayPosts.length + displayReels.length;
 
                 if (totalItems === 0) {
@@ -3615,6 +3634,10 @@ export default function ProfessionalUserProfileScreen() {
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#162338' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, marginRight: 10 }}>
                   <UserAvatar user={selectedPostDetails?.author || profileUser} size={36} />
+                  <SafetyActions targetType="post" targetId={selectedPostDetails?._id}
+                    authorId={selectedPostDetails?.author?._id || selectedPostDetails?.author?.id || profileUser._id || profileUser.id}
+                    authorName={selectedPostDetails?.author?.fullName || profileUser.fullName} color="#ffffff"
+                    onBlocked={() => router.replace('/(app)/feed')} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 14 }} numberOfLines={1}>
                       {selectedPostDetails?.author?.fullName || profileUser.fullName}

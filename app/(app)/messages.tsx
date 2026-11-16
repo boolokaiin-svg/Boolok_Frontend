@@ -31,6 +31,8 @@ import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import SafetyActions from '../../components/SafetyActions';
+import { useSafetyRefresh } from '../../lib/safetyEvents';
 import { useSocket } from '../../context/SocketContext';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime, formatConversationTime, formatLastSeen, getMessageDateSeparator, isSameCalendarDay } from '../../lib/dateTime';
@@ -361,6 +363,11 @@ export default function MessagesScreen() {
     token || (Platform.OS === 'web' ? localStorage.getItem('userToken') : await SecureStore.getItemAsync('userToken'));
 
   // 1. Fetch conversations list
+  useSafetyRefresh(() => {
+    setActiveConversation(null);
+    router.setParams({ conv: '', userId: '', username: '' });
+    fetchConversations();
+  });
   const fetchConversations = useCallback(async () => {
     try {
       const authToken = await getToken();
@@ -972,6 +979,8 @@ export default function MessagesScreen() {
               >
                 {/* Chat Top Header */}
                 <View style={[styles.chatHeader, { borderBottomColor: borderColor, backgroundColor: cardBg }]}>
+                  <SafetyActions targetId={activeConversation.otherUser?._id || activeConversation.otherUser?.id}
+                    authorName={activeConversation.otherUser?.fullName} />
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
                     {!isWide && (
                       <Pressable

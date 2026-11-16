@@ -21,6 +21,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
 import { API_BASE_URL } from '../../lib/api';
 import axios from 'axios';
+import BlockedUsers from '../../components/BlockedUsers';
+import { clearAccountStorage } from '../../lib/clearAccountStorage';
 import * as SecureStore from 'expo-secure-store';
 
 // ─── Token helper ─────────────────────────────────────────────────────────────
@@ -124,7 +126,7 @@ export default function SettingsScreen() {
   // ── Account Deletion ───────────────────────────────────────────────────────
   const confirmDeleteAccount = () => {
     const msg =
-      'This will permanently delete your account, all your posts, and all your data. This action cannot be undone.\n\nAre you absolutely sure?';
+      'This permanently deletes your account, posts, reels, private conversations, audit history, and associated uploaded media. If file cleanup takes longer, your account will be disabled while deletion finishes. This action cannot be undone.\n\nAre you absolutely sure?';
 
     if (Platform.OS === 'web') {
       const confirmed = window.confirm(msg);
@@ -149,12 +151,17 @@ export default function SettingsScreen() {
       const authToken = token || storedToken;
       if (!authToken) throw new Error('Not authenticated.');
 
-      await axios.delete(`${API_BASE_URL}/api/users/me`, {
+      const response = await axios.delete(`${API_BASE_URL}/api/users/me`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
+      try { await clearAccountStorage(); } catch (_) { console.warn('Could not clear all local account cache.'); }
       await signOut();
       router.replace('/(auth)/login');
+      if (response.data?.status === 'pending') {
+        if (Platform.OS === 'web') window.alert(response.data.message);
+        else Alert.alert('Deletion in progress', response.data.message);
+      }
     } catch (error: any) {
       const msg =
         error.response?.data?.message ||
@@ -267,6 +274,7 @@ export default function SettingsScreen() {
         {/* ── Privacy & Legal ── */}
         <SectionHeader title="Privacy & Legal" />
         <View style={[styles.card, { borderColor: theme.outlineVariant }]}>
+          <BlockedUsers />
           <SettingsRow
             icon="shield"
             label="Privacy Policy"

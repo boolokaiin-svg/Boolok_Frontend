@@ -28,6 +28,8 @@ import { router } from 'expo-router';
 import BoolokLogo from '../../components/BoolokLogo';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
+import SafetyActions from '../../components/SafetyActions';
+import { useSafetyRefresh, useHiddenUsers, isVisibleSavedItem } from '../../lib/safetyEvents';
 
 // ── Real Estate & Buildings For Sale News ───────────────────────────────────
 const DEFAULT_REAL_ESTATE_NEWS = [
@@ -597,6 +599,8 @@ export default function ProfessionalSocialFeedScreen() {
     }
   }, []);
 
+  useSafetyRefresh(() => { setPosts([]); setSuggestedUsers([]); fetchPostsAndNews(); });
+  const hiddenUsers = useHiddenUsers();
   useEffect(() => {
     fetchPostsAndNews();
   }, [fetchPostsAndNews]);
@@ -1370,8 +1374,11 @@ export default function ProfessionalSocialFeedScreen() {
                         </Text>
                       </Pressable>
                     )}
+                    {!isSelfPost &&
+                    <SafetyActions targetType="post" targetId={post._id} authorId={author._id || author.id} authorName={authorName}
+                      onBlocked={() => setPosts(current => current.filter(p => String(p.author?._id || p.author?.id) !== String(author._id || author.id)))} />
+                    }
                   </View>
-
                   {/* Post Text Description */}
                   {(post.content && post.content.trim()) ? (
                     <Text style={styles.postBodyContent}>{post.content}</Text>
@@ -2608,7 +2615,7 @@ export default function ProfessionalSocialFeedScreen() {
 
             <ScrollView style={{ marginTop: 12 }} showsVerticalScrollIndicator={false}>
               {savedReelsList.length > 0 ? (
-                savedReelsList.map((item: any, idx: number) => (
+                savedReelsList.filter(item => isVisibleSavedItem(item, hiddenUsers)).map((item: any, idx: number) => (
                   <View
                     key={item._id || item.id || idx}
                     style={{

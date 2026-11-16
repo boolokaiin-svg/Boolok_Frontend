@@ -87,7 +87,7 @@ function LastUpdated({ date }: { date: string }) {
 function PrivacyPolicy() {
   return (
     <>
-      <LastUpdated date="15 September 2025" />
+      <LastUpdated date="16 November 2026" />
 
       <Section title="1. Who We Are">
         <Para>
@@ -100,6 +100,7 @@ function PrivacyPolicy() {
       </Section>
 
       <Section title="2. Data We Collect">
+        <Bullet>Community safety: reports you submit, their reasons and details, limited snapshots of reported content, moderation decisions, and your block preferences. Reports are accessible to authorized moderators and are not shown to the reported user.</Bullet>
         <Para>We collect only the minimum data necessary to provide and safeguard our real estate intelligence platform:</Para>
         <Bullet>
           <Text style={{ fontWeight: '700' }}>Account credentials:</Text> Full name, username, email address, and cryptographically hashed passwords upon registration.
@@ -146,7 +147,7 @@ function PrivacyPolicy() {
 
       <Section title="5. Data Retention &amp; Erasure">
         <Para>
-          Your data is retained for the lifetime of your active profile. You may permanently delete your account at any time via Settings → Delete Account or by contacting support@boolok.com. Upon request, all profile records, listings, and stored media are deleted in compliance with the Digital Personal Data Protection Act (DPDP), 2023.
+          You can request account deletion in Settings. Deletion covers your profile, posts, reels, private conversations, audit history, community interactions, and associated media that we can identify as yours. Your account is disabled while storage cleanup is pending, and failed cleanup is retried. Shared legacy files without clear ownership may be retained where another account still references them. Copies downloaded by others, third-party processing records, and provider backups are subject to their respective retention policies. Contact support@boolok.com for deletion questions.
         </Para>
       </Section>
 
@@ -171,7 +172,7 @@ function PrivacyPolicy() {
 function TermsAndConditions() {
   return (
     <>
-      <LastUpdated date="15 September 2025" />
+      <LastUpdated date="16 November 2026" />
 
       <Section title="1. Acceptance of Agreement">
         <Para>
@@ -206,6 +207,8 @@ function TermsAndConditions() {
       </Section>
 
       <Section title="5. Content Standards &amp; Fair Use">
+        <Para>Use the three-dot safety menu on posts, reels, profiles, and conversations to report content or users, or to block a user. Manage blocks in Settings. Reports are private to our moderation team. We review reports and may remove content or suspend accounts.</Para>
+        <Bullet>Child sexual abuse and exploitation, sexual exploitation, hate speech, threats, scams, and harassment are prohibited.</Bullet>
         <Para>Users agree not to:</Para>
         <Bullet>Publish fraudulent property listings or unauthorized photos of restricted assets.</Bullet>
         <Bullet>Transmit abusive, defamatory, or unlawful communications.</Bullet>

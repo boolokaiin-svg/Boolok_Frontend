@@ -65,7 +65,10 @@ export default function LoginScreen() {
         const response = await axios.post(`${API_BASE_URL}/api/auth/google`, {
           idToken,
           mode: 'signin',
-        });
+        }, { timeout: 60000 });
+        if (!response.data.token || !response.data.user) {
+          throw new Error('The sign-in server returned an incomplete response. Please try again.');
+        }
         if (response.data.token) {
           await signIn(response.data.token, response.data.user);
           router.push('/(app)/dashboard');
@@ -73,6 +76,9 @@ export default function LoginScreen() {
       } catch (error: any) {
         const msg =
           error.response?.data?.message ||
+          (error.code === 'ECONNABORTED' ? 'The sign-in server took too long to respond. Please try again.' : null) ||
+          (!error.response && error.isAxiosError ? 'Unable to reach the sign-in server. Check your connection and try again.' : null) ||
+          error.message ||
           'Google sign-in failed. Please try again.';
         const isUnregistered = Boolean(error.response?.data?.notRegistered) || error.response?.status === 404;
         setWarningMessage(msg);

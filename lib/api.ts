@@ -174,14 +174,20 @@ type GoogleAuthOptions = {
 // ── Native (Android / iOS) ──────────────────────────────────────────────
 function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [configurationError, setConfigurationError] = useState<string | null>(null);
+  const configurationError = useRef<string | null>(null);
+  const configured = useRef(false);
+  const inProgress = useRef(false);
 
   const rawWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   const webClientId = rawWebClientId && rawWebClientId.trim() ? rawWebClientId.trim() : FALLBACK_GOOGLE_WEB_CLIENT_ID;
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID_IOS;
 
   useEffect(() => {
+    configured.current = false;
     try {
+      if (Constants.executionEnvironment === 'storeClient') {
+        throw new Error('Google Sign-In requires an installed development or release build. It is unavailable in Expo Go.');
+      }
       if (!webClientId) {
         throw new Error('EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID is missing in your .env or EAS environment variables.');
       }
@@ -196,28 +202,39 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
         iosClientId: Platform.OS === 'ios' ? iosClientId : undefined,
         offlineAccess: false,
       });
-      setConfigurationError(null);
+      configurationError.current = null;
+      configured.current = true;
     } catch (error: any) {
       const message = error?.message || 'Google Sign-In configuration failed.';
       console.error('[GoogleSignin Config Error]:', message);
-      setConfigurationError(message);
+      configurationError.current = message;
     }
   }, [webClientId, iosClientId]);
 
   const promptGoogleSignIn = useCallback(async () => {
-    if (configurationError) {
-      onError?.(configurationError);
+    if (configurationError.current) {
+      onError?.(configurationError.current);
       return;
     }
+    if (!configured.current) {
+      onError?.('Google Sign-In is still loading. Please try again.');
+      return;
+    }
+    if (inProgress.current) return;
 
+    inProgress.current = true;
     setIsGoogleLoading(true);
-
-    const { GoogleSignin, statusCodes } = require('@react-native-google-signin/google-signin');
+    let statusCodes: Record<string, string> = {};
 
     try {
+      const googleModule = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin } = googleModule;
+      statusCodes = googleModule.statusCodes;
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
       const result = await GoogleSignin.signIn();
+      // v16 returns a cancelled response instead of rejecting the promise.
+      if (result?.type === 'cancelled') return;
       const idToken = result?.data?.idToken ?? result?.idToken;
 
       if (!idToken) {
@@ -226,24 +243,29 @@ function useNativeGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
 
       await onSuccess(idToken);
     } catch (error: any) {
-      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
+      // Keep module loading inside try: older APKs may not contain this native module.
+      // DEVELOPER_ERROR is Android code 10, not an exported statusCodes constant.
+      const code = String(error?.code ?? '');
+      const message = error?.message || 'Google sign-in failed.';
+      if (code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled — not an error
-      } else if (error?.code === statusCodes.IN_PROGRESS) {
+      } else if (code === statusCodes.IN_PROGRESS) {
         // Already in progress
-      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         onError?.('Play services not available or outdated.');
-      } else if (error?.code === statusCodes.DEVELOPER_ERROR) {
+      } else if (code === '10' || code === 'DEVELOPER_ERROR' || /DEVELOPER_ERROR/.test(message)) {
         onError?.(
           'Google Sign-In is misconfigured for this build (DEVELOPER_ERROR). ' +
-          'The SHA-1 fingerprint of this build does not match the one registered in Google Cloud Console for this package name.'
+          'Register this installed build\'s signing SHA-1 and package com.boolokgpt as an Android OAuth client in the same Google Cloud project as the configured Web client ID. APK and Google Play signing certificates may differ.'
         );
       } else {
-        onError?.(error?.message || 'Google sign-in failed.');
+        onError?.(code ? `${message} (Google error ${code})` : message);
       }
     } finally {
+      inProgress.current = false;
       setIsGoogleLoading(false);
     }
-  }, [configurationError, onError, onSuccess]);
+  }, [onError, onSuccess]);
 
   return { promptGoogleSignIn, isGoogleLoading };
 }
@@ -303,16 +325,14 @@ function useWebGoogleAuth({ onSuccess, onError }: GoogleAuthOptions) {
 
       const idToken =
         response.authentication?.idToken ||
-        response.params?.id_token ||
-        response.authentication?.accessToken ||
-        response.params?.access_token;
+        response.params?.id_token;
 
       if (!idToken) {
         onError?.('Google did not return an ID token.');
         return;
       }
 
-      const responseKey = `${idToken.slice(0, 32)}_${response.type}`;
+      const responseKey = idToken;
       if (processedRef.current === responseKey) return;
       processedRef.current = responseKey;
 
