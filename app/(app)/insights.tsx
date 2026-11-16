@@ -33,7 +33,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
-import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 import SafetyActions from '../../components/SafetyActions';
@@ -1597,15 +1597,7 @@ const VideoItem = ({
             <MaterialIcons name="visibility" size={16} color="rgba(255,255,255,0.85)" />
           </TouchableOpacity>
 
-          {isMobile && onOpenUpload && (
-            <TouchableOpacity
-              onPress={onOpenUpload}
-              style={[styles.topUploadBtn, { backgroundColor: theme.primary }]}
-              activeOpacity={0.8}
-            >
-              <MaterialIcons name="add" size={14} color="#000000" />
-            </TouchableOpacity>
-          )}
+
         </View>
       </View>
       )}
@@ -3138,7 +3130,7 @@ export default function InsightsScreen() {
         Upload property tours, commercial walkthroughs, or architectural reels to start streaming.
       </Text>
       <TouchableOpacity
-        onPress={() => setShowUpload(true)}
+        onPress={() => router.push('/(app)/profile')}
         style={{
           backgroundColor: theme.primary,
           paddingHorizontal: 22,
@@ -3191,7 +3183,7 @@ export default function InsightsScreen() {
                 cardWidth={cardWidth}
                 isMobile={true}
                 onDelete={handleDelete}
-                onOpenUpload={() => setShowUpload(true)}
+                onOpenUpload={undefined}
               />
             )}
             keyExtractor={(item) => item._id}
@@ -3245,16 +3237,7 @@ export default function InsightsScreen() {
                 </Text>
               </View>
 
-              <TouchableOpacity
-                onPress={() => setShowUpload(true)}
-                style={[styles.desktopUploadBtn, { backgroundColor: theme.primary }]}
-                activeOpacity={0.8}
-              >
-                <MaterialIcons name="video-call" size={20} color="#000000" />
-                <Text style={{ color: '#000000', fontSize: 13, fontWeight: '800', marginLeft: 6 }}>
-                  Upload Property Reel
-                </Text>
-              </TouchableOpacity>
+
             </View>
 
             {/* Desktop Reel Frame & Side Navigation Controls */}
@@ -3271,7 +3254,7 @@ export default function InsightsScreen() {
                     cardWidth={cardWidth}
                     isMobile={false}
                     onDelete={handleDelete}
-                    onOpenUpload={() => setShowUpload(true)}
+                    onOpenUpload={undefined}
                   />
                 )}
                 keyExtractor={(item) => item._id}
