@@ -2192,7 +2192,7 @@ const VideoItem = ({
 
 // ── Upload Modal ─────────────────────────────────────────────────────────────
 // ── Upload Modal ─────────────────────────────────────────────────────────────
-function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any) {
+export function UploadModal({ visible, onClose, onUploaded, theme, isDark, user }: any) {
   const [video, setVideo] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [coverAsset, setCoverAsset] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [authorName, setAuthorName] = useState<string>(user?.fullName || '');

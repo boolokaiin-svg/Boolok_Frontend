@@ -1,3 +1,4 @@
+import { UploadModal as ReelUploadModal } from './insights';
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import {
   View,
@@ -713,6 +714,7 @@ export default function ProfessionalUserProfileScreen() {
   const [isSavingUsername, setIsSavingUsername] = useState(false);
 
   // Create Mode: 'post' vs 'reel'
+  const [showProfileUpload, setShowProfileUpload] = useState(false);
   const [createType, setCreateType] = useState<'post' | 'reel'>('post');
 
   // Create Post state
@@ -1868,11 +1870,12 @@ export default function ProfessionalUserProfileScreen() {
         setPostPrice('');
         setPostLocation('');
         setAttachedImage(null);
-        alertMsg('Property listing published successfully!');
+        setShowProfileUpload(false);
+        alertMsg('Post published successfully!');
       }
     } catch (error: any) {
       console.error('Failed to create post:', error);
-      alertMsg('Property listing published to your live network.');
+      alertMsg(error?.response?.data?.message || 'Could not publish the post. Please retry.');
     } finally {
       setIsPublishing(false);
     }
@@ -2490,7 +2493,7 @@ export default function ProfessionalUserProfileScreen() {
                     </Pressable>
 
                     <Pressable
-                      onPress={() => setCreateType('post')}
+                      onPress={() => { setCreateType('post'); setShowProfileUpload(true); }}
                       style={[
                         styles.secondaryCtaBtn,
                         isMobile && { flex: 1, minWidth: 90, paddingHorizontal: 10, justifyContent: 'center' },
@@ -2653,6 +2656,30 @@ export default function ProfessionalUserProfileScreen() {
               </Text>
             </Pressable>
           </View>
+
+          {isSelf && activeTab !== 'saved' && (
+            <Pressable accessibilityRole="button" accessibilityLabel={activeTab === 'reels' ? 'Upload reel' : 'Create post'}
+              onPress={() => { setCreateType(activeTab === 'reels' ? 'reel' : 'post'); setShowProfileUpload(true); }}
+              style={{ marginVertical: 12, padding: 12, borderRadius: 12, backgroundColor: goldPrimary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
+              <MaterialIcons name={activeTab === 'reels' ? 'video-call' : 'add-photo-alternate'} size={22} color="#000" />
+              <Text style={{ color: '#000', fontWeight: '800' }}>{activeTab === 'reels' ? 'Upload Reel' : 'Create Post'}</Text>
+            </Pressable>
+          )}
+          <ReelUploadModal visible={isSelf && showProfileUpload && createType === 'reel'}
+            onClose={() => setShowProfileUpload(false)} theme={theme} isDark={isDark} user={viewer}
+            onUploaded={(reel: any) => { setUserReels(prev => [reel, ...prev]); setShowProfileUpload(false); }} />
+          <Modal visible={isSelf && showProfileUpload && createType === 'post'} transparent animationType="slide" onRequestClose={() => setShowProfileUpload(false)}>
+            <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.65)', padding: 20 }}>
+              <View style={{ backgroundColor: cardBg, borderRadius: 18, padding: 20, gap: 14 }}>
+                <Text style={{ color: textPrimary, fontSize: 20, fontWeight: '800' }}>Create Post</Text>
+                <TextInput value={postContent} onChangeText={setPostContent} multiline placeholder="Write a caption or property details?" placeholderTextColor={textMuted} style={{ color: textPrimary, minHeight: 100, borderWidth: 1, borderColor, padding: 12, borderRadius: 10 }} />
+                <Pressable onPress={handlePickImage}><Text style={{ color: goldPrimary }}>{attachedImage ? 'Change selected photo' : 'Add Photo'}</Text></Pressable>
+                {attachedImage && <Image source={{ uri: attachedImage }} style={{ height: 140, width: '100%' }} resizeMode="contain" />}
+                <Pressable disabled={isPublishing} onPress={handlePublishPost} style={{ backgroundColor: goldPrimary, padding: 12, borderRadius: 10 }}><Text style={{ color: '#000', textAlign: 'center', fontWeight: '800' }}>{isPublishing ? 'Publishing?' : 'Publish Post'}</Text></Pressable>
+                <Pressable disabled={isPublishing} onPress={() => setShowProfileUpload(false)}><Text style={{ color: textMuted, textAlign: 'center' }}>Close</Text></Pressable>
+              </View>
+            </View>
+          </Modal>
 
           {/* TAB 1: POSTS GRID (with Instagram Real-time Likes & Comments Hover Overlay) */}
           {activeTab === 'properties' && (
