@@ -27,6 +27,12 @@ function RootLayoutNav() {
       if (!document.title || document.title === 'boolokgpt') {
         document.title = 'Boolok AI - AI Agent For Real Estate Services';
       }
+      if (!document.querySelector('meta[name="google-site-verification"]')) {
+        const meta = document.createElement('meta');
+        meta.setAttribute('name', 'google-site-verification');
+        meta.setAttribute('content', '1EGLvEwSBWIt9oM3P3XbSWZ8hgGFrF-Jr4rnAlWv28E');
+        document.head.appendChild(meta);
+      }
     }
   }, [isDark]);
 
