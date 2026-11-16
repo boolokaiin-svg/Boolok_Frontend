@@ -11,6 +11,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing } from '../../constants/theme';
 import HousePlanLoadingAnimation from '../../components/HousePlanLoadingAnimation';
 import { API_BASE_URL, resolveImageUrl, getStoredToken } from '../../lib/api';
+import { synthesizeCanonicalBlueprint } from '../../lib/canonicalBlueprintEngine';
 import * as SecureStore from 'expo-secure-store';
 
 // ─── Data Contracts & Types ──────────────────────────────────────────────────
@@ -861,6 +862,17 @@ export default function BlueprintScreen() {
   const [aiGenError, setAiGenError] = useState<string | null>(null);
   const [activePlanTab, setActivePlanTab] = useState<'both' | '2d' | '3d'>('both');
   const [fullscreenImage, setFullscreenImage] = useState<string | null>(null);
+  const [plan2dSvg, setPlan2dSvg] = useState<string | null>(null);
+  const [plan3dSvg, setPlan3dSvg] = useState<string | null>(null);
+  const [technicalCadSvg, setTechnicalCadSvg] = useState<string | null>(null);
+  const [canonicalLayout, setCanonicalLayout] = useState<any>(null);
+  const [plan2dError, setPlan2dError] = useState<string | null>(null);
+  const [plan3dError, setPlan3dError] = useState<string | null>(null);
+  const [animationSkipped, setAnimationSkipped] = useState<boolean>(false);
+
+  const activeRequestIdRef = useRef<number>(0);
+  const animationSkippedRef = useRef<boolean>(false);
+  const generationDoneRef = useRef<boolean>(false);
 
   // Load saved OpenAI Key if available
   useEffect(() => {
@@ -902,6 +914,93 @@ export default function BlueprintScreen() {
       });
     }
   }, []);
+
+  // ─── JSON Export Specification (Declared before executeGeneration to prevent TDZ) ──
+  const buildJson = useCallback(() => {
+    const rooms: any[] = [];
+    if (form.livingRoom) rooms.push({ type: 'living_room', quantity: 1 });
+    rooms.push({
+      type: 'bedroom',
+      quantity: form.bedrooms,
+      master_features: {
+        attached_bathroom: form.mbAttachedBath,
+        walk_in_wardrobe: form.mbWardrobe,
+        study_corner: form.mbStudy,
+        balcony_access: form.mbBalcony,
+      },
+    });
+    rooms.push({
+      type: 'bathroom',
+      preference: form.bathPref,
+      quantity: form.bathPref === 'attached' ? form.bedrooms : Math.max(2, Math.ceil(form.bedrooms / 2)),
+    });
+    if (form.dining !== 'none') rooms.push({ type: 'dining', style: form.dining, capacity: form.diningCapacity });
+    rooms.push({ type: 'kitchen', kitchen_type: form.kitchenType, features: form.kitchenFeatures });
+    if (form.poojaRoom) rooms.push({ type: 'pooja_room' });
+    if (form.study) rooms.push({ type: 'study' });
+    if (form.storeRoom) rooms.push({ type: 'store_room' });
+    if (form.balconies > 0) rooms.push({ type: 'balcony', quantity: form.balconies });
+    if (form.carParking) rooms.push({ type: 'parking', parking_type: form.parkingType, cars: form.cars });
+    if (form.domesticHelp && form.servantQuarter) rooms.push({ type: 'servant_quarter' });
+
+    return {
+      metadata: {
+        engine: 'Boolok BIM Specification Core',
+        version: '2026.4',
+        standard: 'National Building Code / CMDA Development Regulations',
+      },
+      plot: {
+        width: form.plotWidth,
+        depth: form.plotDepth,
+        unit: form.plotUnit,
+        shape: form.plotShape,
+        ...(form.plotShape === 'irregular' && { shape_description: form.plotShapeDesc }),
+        facing: form.facing,
+        road_access: form.roadAccess,
+        road_width_front: form.roadWidth,
+        calculated_area_sqft: form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639),
+      },
+      family: {
+        adults: form.adults,
+        children: form.children,
+        elders: form.elders,
+        pets: form.pets,
+        domestic_help: form.domesticHelp,
+        frequent_guests: form.guestFreq,
+        vehicles: { cars: form.cars, bikes: form.bikes },
+      },
+      requirements: {
+        stories: form.stories,
+        rooms,
+        terrace_access: form.terraceAccess,
+        ...(form.stories >= 2 && {
+          staircase: {
+            staircase_type: form.stairLoc,
+            width: form.stairWidth,
+            shape: form.stairShape,
+          },
+        }),
+      },
+      vastu: form.vastuEnabled
+        ? { enabled: true, strictness: form.vastuStrictness, specific_requirements: form.vastuReqs }
+        : { enabled: false },
+      style: {
+        type: form.archStyle,
+        finish: form.finish,
+        window_preference: form.windowPref,
+        future_expansion: form.futureExpansion,
+      },
+      site_context: {
+        slope: form.siteSlope,
+        existing_features: form.existingFeatures,
+        neighboring_walls: form.neighborSides,
+      },
+      additional_notes: {
+        special_requirements: form.specialNotes,
+        things_to_avoid: form.avoidNotes,
+      },
+    };
+  }, [form]);
 
   const executeGeneration = useCallback(async (modeToGenerate?: '2d' | '3d' | 'both') => {
     const targetMode = modeToGenerate || outputMode;
@@ -1058,96 +1157,7 @@ export default function BlueprintScreen() {
     }
   };
 
-  // ─── JSON Export Specification ──
-  const buildJson = () => {
-    const rooms: any[] = [];
-    if (form.livingRoom) rooms.push({ type: 'living_room', quantity: 1 });
-    rooms.push({
-      type: 'bedroom',
-      quantity: form.bedrooms,
-      master_features: {
-        attached_bathroom: form.mbAttachedBath,
-        walk_in_wardrobe: form.mbWardrobe,
-        study_corner: form.mbStudy,
-        balcony_access: form.mbBalcony,
-      },
-    });
-    rooms.push({
-      type: 'bathroom',
-      preference: form.bathPref,
-      quantity: form.bathPref === 'attached' ? form.bedrooms : Math.max(2, Math.ceil(form.bedrooms / 2)),
-    });
-    if (form.dining !== 'none') rooms.push({ type: 'dining', style: form.dining, capacity: form.diningCapacity });
-    rooms.push({ type: 'kitchen', kitchen_type: form.kitchenType, features: form.kitchenFeatures });
-    if (form.poojaRoom) rooms.push({ type: 'pooja_room' });
-    if (form.study) rooms.push({ type: 'study' });
-    if (form.storeRoom) rooms.push({ type: 'store_room' });
-    if (form.balconies > 0) rooms.push({ type: 'balcony', quantity: form.balconies });
-    if (form.carParking) rooms.push({ type: 'parking', parking_type: form.parkingType, cars: form.cars });
-    if (form.domesticHelp && form.servantQuarter) rooms.push({ type: 'servant_quarter' });
-
-    return {
-      metadata: {
-        engine: 'Boolok BIM Specification Core',
-        version: '2026.4',
-        standard: 'National Building Code / CMDA Development Regulations',
-      },
-      plot: {
-        width: form.plotWidth,
-        depth: form.plotDepth,
-        unit: form.plotUnit,
-        shape: form.plotShape,
-        ...(form.plotShape === 'irregular' && { shape_description: form.plotShapeDesc }),
-        facing: form.facing,
-        road_access: form.roadAccess,
-        road_width_front: form.roadWidth,
-        calculated_area_sqft: form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639),
-      },
-      family: {
-        adults: form.adults,
-        children: form.children,
-        elders: form.elders,
-        pets: form.pets,
-        domestic_help: form.domesticHelp,
-        frequent_guests: form.guestFreq,
-        vehicles: { cars: form.cars, bikes: form.bikes },
-      },
-      requirements: {
-        stories: form.stories,
-        rooms,
-        terrace_access: form.terraceAccess,
-        ...(form.stories >= 2 && {
-          staircase: {
-            staircase_type: form.stairLoc,
-            width: form.stairWidth,
-            shape: form.stairShape,
-          },
-        }),
-      },
-      vastu: form.vastuEnabled
-        ? { enabled: true, strictness: form.vastuStrictness, specific_requirements: form.vastuReqs }
-        : { enabled: false },
-      style: {
-        type: form.archStyle,
-        finish: form.finish,
-        window_preference: form.windowPref,
-        future_expansion: form.futureExpansion,
-      },
-      site_context: {
-        slope: form.siteSlope,
-        existing_features: form.existingFeatures,
-        neighboring_walls: form.neighborSides,
-      },
-      additional_notes: {
-        special_requirements: form.specialNotes,
-        things_to_avoid: form.avoidNotes,
-      },
-    };
-  };
-
   const [copied, setCopied] = useState(false);
-
-
 
   const copyJsonToClipboard = useCallback(() => {
     const json = buildJson();
