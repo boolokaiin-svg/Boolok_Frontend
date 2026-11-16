@@ -92,7 +92,7 @@ export function resolveImageUrl(path: string | null | undefined): string | null 
   return `${API_BASE_URL}${cleanPath}`;
 }
 
-async function getStoredToken(): Promise<string | null> {
+export async function getStoredToken(): Promise<string | null> {
   try {
     if (Platform.OS === 'web') {
       return localStorage.getItem(TOKEN_KEY);
