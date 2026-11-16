@@ -20,6 +20,7 @@ import * as SecureStore from 'expo-secure-store';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
 import { API_BASE_URL } from '../../lib/api';import { downloadCertificate } from '../../lib/downloadCertificate';
+import { verificationChecks } from '../../lib/verificationChecks';
 
 interface PickedFile {
   name: string;
@@ -54,7 +55,7 @@ export default function LegalVerificationScreen() {
   const [copiedReport, setCopiedReport] = useState(false);
 
   // Service status
-  const [engineStatus, setEngineStatus] = useState<{ online: boolean; message?: string }>({ online: true });
+  const [engineStatus, setEngineStatus] = useState<{ online: boolean; message?: string }>({ online: false });
 
   const getToken = async () =>
     Platform.OS === 'web' ? localStorage.getItem('userToken') : await SecureStore.getItemAsync('userToken');
@@ -71,9 +72,11 @@ export default function LegalVerificationScreen() {
       if (res.ok) {
         const data = await res.json();
         setEngineStatus(data);
+      } else {
+        setEngineStatus({ online: false });
       }
     } catch (_) {
-      // Background check
+      setEngineStatus({ online: false });
     }
   };
 
@@ -213,7 +216,7 @@ export default function LegalVerificationScreen() {
       clearTimeout(stepTimer3);
       setActiveStep(5);
 
-      if (res.ok && (json.success || json.verdict)) {
+      if (res.ok && json.success !== false && json.verdict && json.verdict !== 'ERROR') {
         setAuditResult(json);
         fetchAudits(); // Refresh audit history
       } else {
@@ -247,6 +250,10 @@ export default function LegalVerificationScreen() {
   };
   const getVerdictTheme = (verdict: string) => {
     const v = (verdict || '').toUpperCase();
+    if (v === 'ERROR' || !v || v === 'UNKNOWN') {
+      return { color: '#EF4444', bg: 'rgba(239, 68, 68, 0.12)', border: 'rgba(239, 68, 68, 0.35)',
+        icon: 'error-outline', title: 'VERIFICATION COULD NOT BE COMPLETED' };
+    }
     if (v.includes('PASS')) {
       return {
         color: '#10B981',
@@ -301,6 +308,7 @@ export default function LegalVerificationScreen() {
 
   const normalized = auditResult?.data?.normalized || {};
   const portalCheck = auditResult?.data?.portal_check || {};
+  const checks = verificationChecks(auditResult);
   const verdictTheme = auditResult ? getVerdictTheme(auditResult.verdict || auditResult.data?.verdict) : null;
 
   return (
@@ -325,7 +333,7 @@ export default function LegalVerificationScreen() {
             <View style={[styles.statusPill, { backgroundColor: 'rgba(218, 165, 32, 0.12)', borderColor: goldPrimary, paddingHorizontal: isSmallMobile ? 8 : 10 }]}>
               <View style={[styles.pulseDot, { backgroundColor: goldPrimary }]} />
               <Text style={{ color: goldPrimary, fontSize: isSmallMobile ? 9.5 : 11, fontWeight: '800', letterSpacing: 0.5 }}>
-                {isSmallMobile ? 'PORTAL ACTIVE' : 'TNREGINET PORTAL ACTIVE'}
+                {engineStatus.online ? 'SERVICE ONLINE' : 'SERVICE UNAVAILABLE'}
               </Text>
             </View>
 
@@ -709,7 +717,7 @@ export default function LegalVerificationScreen() {
                 <View style={[styles.metadataItem, { backgroundColor: isDark ? '#0A1220' : '#F8FAFC', borderColor }]}>
                   <Text style={[styles.metaLabel, { color: textMuted }]}>PARENT LINK DEED DETAILS</Text>
                   <Text style={[styles.metaValue, { color: textPrimary }]}>
-                    {normalized.parent_deed_details || normalized.parent_deed_doc_number || 'Mentioned in recitals'}
+                    {normalized.parent_deed_details || normalized.parent_deed_doc_number || 'Not detected'}
                   </Text>
                 </View>
               </View>
@@ -724,7 +732,7 @@ export default function LegalVerificationScreen() {
                     Government registration checks & Encumbrance Certificate retrieval
                   </Text>
                 </View>
-                <MaterialCommunityIcons name="shield-check" size={28} color="#10B981" />
+                <MaterialCommunityIcons name={checks.ec.confirmed ? 'shield-check' : 'shield-outline'} size={28} color={checks.ec.confirmed ? '#10B981' : goldPrimary} />
               </View>
 
               <View style={styles.portalCheckList}>
@@ -737,35 +745,35 @@ export default function LegalVerificationScreen() {
                   <View style={{ flex: 1, flexDirection: isWide ? 'row' : 'column', justifyContent: 'space-between', gap: isWide ? 8 : 2 }}>
                     <Text style={[styles.portalCheckLabel, { color: textPrimary, fontSize: isWide ? 13 : 12 }]}>QR Code Security Check:</Text>
                     <Text style={[styles.portalCheckVal, { color: textSecondary, fontWeight: '700', fontSize: isWide ? 13 : 12 }]}>
-                      {portalCheck.qr_check_status || 'VERIFIED'}
+                      {checks.qr.label}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.portalCheckRow}>
                   <MaterialIcons
-                    name={portalCheck.signature_status === 'VALID' ? 'check-circle' : 'info'}
+                    name={checks.signature.confirmed ? 'check-circle' : 'info'}
                     size={20}
-                    color={portalCheck.signature_status === 'VALID' ? '#10B981' : goldPrimary}
+                    color={checks.signature.confirmed ? '#10B981' : goldPrimary}
                   />
                   <View style={{ flex: 1, flexDirection: isWide ? 'row' : 'column', justifyContent: 'space-between', gap: isWide ? 8 : 2 }}>
                     <Text style={[styles.portalCheckLabel, { color: textPrimary, fontSize: isWide ? 13 : 12 }]}>Digital Signature Integrity:</Text>
                     <Text style={[styles.portalCheckVal, { color: textSecondary, fontWeight: '700', fontSize: isWide ? 13 : 12 }]}>
-                      {portalCheck.signature_status || 'VALID'}
+                      {checks.signature.label}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.portalCheckRow}>
                   <MaterialIcons
-                    name="cloud-done"
+                    name={checks.ec.confirmed ? 'cloud-done' : 'cloud-off'}
                     size={20}
-                    color="#10B981"
+                    color={checks.ec.confirmed ? '#10B981' : goldPrimary}
                   />
                   <View style={{ flex: 1, flexDirection: isWide ? 'row' : 'column', justifyContent: 'space-between', gap: isWide ? 8 : 2 }}>
                     <Text style={[styles.portalCheckLabel, { color: textPrimary, fontSize: isWide ? 13 : 12 }]}>Official EC Retrieval:</Text>
-                    <Text style={[styles.portalCheckVal, { color: '#10B981', fontWeight: '800', fontSize: isWide ? 13 : 12 }]}>
-                      {portalCheck.overall_portal_status || 'GOVERNMENT RECORD VERIFIED'}
+                    <Text style={[styles.portalCheckVal, { color: checks.ec.confirmed ? textSecondary : goldPrimary, fontWeight: '800', fontSize: isWide ? 13 : 12 }]}>
+                      {checks.ec.label}
                     </Text>
                   </View>
                 </View>
