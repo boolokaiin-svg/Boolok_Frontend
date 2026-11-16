@@ -1026,10 +1026,28 @@ export default function BlueprintScreen() {
     setDesignSummary(null);
 
     try {
+      const token = await getStoredToken();
+      if (!token && !keyToUse) {
+        setIsAiGenerating(false);
+        setIsGenerating(false);
+        Alert.alert(
+          'Sign In Required',
+          'Please sign in to your Boolok AI account to generate architectural blueprints, or enter your OpenAI API key in Prompt Settings.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Sign In', onPress: () => router.push('/(auth)/login') },
+          ]
+        );
+        return;
+      }
+
       const json = buildJson();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       if (keyToUse) {
         headers['x-openai-key'] = keyToUse;
       }
