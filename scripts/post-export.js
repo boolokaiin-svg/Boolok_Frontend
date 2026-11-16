@@ -17,10 +17,12 @@ if (fs.existsSync(indexHtmlPath)) {
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
     <link rel="shortcut icon" href="/favicon.ico" />`;
 
-  if (html.includes('<title>boolokgpt</title>')) {
-    html = html.replace('<title>boolokgpt</title>', tagsToInject);
-  } else if (html.includes('</head>')) {
-    html = html.replace('</head>', `${tagsToInject}\n  </head>`);
+  if (!html.includes('google-site-verification')) {
+    if (html.includes('<head>')) {
+      html = html.replace('<head>', `<head>\n${tagsToInject}`);
+    } else if (html.includes('</head>')) {
+      html = html.replace('</head>', `${tagsToInject}\n</head>`);
+    }
   }
 
   fs.writeFileSync(indexHtmlPath, html, 'utf8');
