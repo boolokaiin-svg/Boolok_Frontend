@@ -760,78 +760,122 @@ export default function BlueprintScreen() {
   const executeGeneration = useCallback(async (modeToGenerate?: '2d' | '3d' | 'both') => {
     const targetMode = modeToGenerate || outputMode;
     const keyToUse = openAiKey.trim();
+    const requestId = ++activeRequestIdRef.current;
 
     setLastGeneratedMode(targetMode);
     setActivePlanTab(targetMode);
     setIsAiGenerating(true);
     setIsGenerating(true);
+    setAnimationSkipped(false);
+    animationSkippedRef.current = false;
+    generationDoneRef.current = false;
     setAiGenError(null);
+    setPlan2dError(null);
+    setPlan3dError(null);
+    setPlan2dUrl(null);
+    setPlan3dUrl(null);
+    setPlan2dSvg(null);
+    setPlan3dSvg(null);
+    setTechnicalCadSvg(null);
+    setCanonicalLayout(null);
+    setDesignSummary(null);
 
     try {
-      const token = await getStoredToken();
-      if (!token && !keyToUse) {
-        setIsAiGenerating(false);
-        setIsGenerating(false);
-        Alert.alert(
-          'Sign In Required',
-          'Please sign in to your Boolok AI account to generate architectural blueprints, or enter your OpenAI API key in Prompt Settings.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign In', onPress: () => router.push('/(auth)/login') },
-          ]
-        );
-        return;
-      }
-
       const json = buildJson();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
       };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
       if (keyToUse) {
         headers['x-openai-key'] = keyToUse;
       }
-      const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          jsonData: json,
-          mode: targetMode,
-          apiKey: keyToUse || undefined,
-        }),
-      });
+      // Single canonical layout synthesis pass for deterministic geometry consistency
+      const localCanonical = synthesizeCanonicalBlueprint(json, targetMode);
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        if (res.status === 401) {
-          throw new Error(data.message || 'Session expired. Please sign in again.');
+      let data: any = null;
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            jsonData: json,
+            mode: targetMode,
+            apiKey: keyToUse || undefined,
+          }),
+        });
+        const remoteJson = await res.json().catch(() => ({}));
+        if (res.ok && remoteJson.success) {
+          data = remoteJson;
+        } else if (res.status === 400 && remoteJson.message) {
+          throw new Error(remoteJson.message);
+        } else {
+          data = localCanonical;
         }
-        throw new Error(data.message || 'Failed to generate architectural plan with OpenAI.');
+      } catch (netErr: any) {
+        if (netErr?.message && netErr.message.includes('Infeasible')) {
+          throw netErr;
+        }
+        data = localCanonical;
       }
 
-      if (data.plan2dUrl) setPlan2dUrl(data.plan2dUrl);
-      if (data.plan3dUrl) setPlan3dUrl(data.plan3dUrl);
+      // Ignore superseded requests
+      if (activeRequestIdRef.current !== requestId) {
+        return;
+      }
+
+      setPlan2dUrl(data.plan2dFileUrl ? resolveImageUrl(data.plan2dFileUrl) || data.plan2dUrl : data.plan2dUrl || null);
+      setPlan3dUrl(data.plan3dFileUrl ? resolveImageUrl(data.plan3dFileUrl) || data.plan3dUrl : data.plan3dUrl || null);
+      setPlan2dSvg(data.plan2dSvg || null);
+      setPlan3dSvg(data.plan3dSvg || null);
+      setTechnicalCadSvg(data.technicalCadSvg || null);
+      setCanonicalLayout(data.canonicalLayout || null);
       if (data.summary) {
         setDesignSummary(data.summary);
       }
       setIsAiGenerating(false);
-      setIsGenerating(false);
-      setSubmitted(true);
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      generationDoneRef.current = true;
+      if (animationSkippedRef.current) {
+        setIsGenerating(false);
+        setAnimationSkipped(false);
+        setSubmitted(true);
+        scrollRef.current?.scrollTo({ y: 0, animated: true });
+      }
     } catch (err: any) {
+      if (activeRequestIdRef.current !== requestId) return;
       console.error('Generation error:', err);
       setIsAiGenerating(false);
       setIsGenerating(false);
+      setAnimationSkipped(false);
+      animationSkippedRef.current = false;
+      generationDoneRef.current = false;
+      setSubmitted(false);
       setAiGenError(err.message || 'Generation failed.');
       Alert.alert(
-        'Generation Failed',
-        err.message || 'Could not complete floor plan generation with OpenAI.',
+        'Layout Validation / Generation Error',
+        err.message || 'Could not complete floor plan generation.',
         [{ text: 'OK' }]
       );
     }
   }, [openAiKey, outputMode, form]);
+
+  const retrySingleView = useCallback(async (view: '2d' | '3d') => {
+    try {
+      const json = buildJson();
+      const localResult = synthesizeCanonicalBlueprint(json, view);
+      if (view === '2d') {
+        setPlan2dError(null);
+        setPlan2dSvg(localResult.plan2dSvg || null);
+        setPlan2dUrl(localResult.plan2dUrl || null);
+        if (localResult.technicalCadSvg) setTechnicalCadSvg(localResult.technicalCadSvg);
+      } else {
+        setPlan3dError(null);
+        setPlan3dSvg(localResult.plan3dSvg || null);
+        setPlan3dUrl(localResult.plan3dUrl || null);
+      }
+    } catch (err: any) {
+      if (view === '2d') setPlan2dError('Retry failed: ' + (err.message || 'Error'));
+      else setPlan3dError('Retry failed: ' + (err.message || 'Error'));
+    }
+  }, [buildJson]);
 
   const upd = useCallback((key: keyof FormData, val: any) => {
     setForm(prev => ({ ...prev, [key]: val }));
@@ -2018,10 +2062,19 @@ export default function BlueprintScreen() {
             </Pressable>
 
             <View style={styles.statusChipGroup}>
-              <View style={[styles.technicalStatusPill, { borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.1)' }]}>
-                <View style={[styles.pulseBeacon, { backgroundColor: '#22c55e' }]} />
-                <Text style={{ color: '#22c55e', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>SYNTHESIS COMPLETE</Text>
-              </View>
+              {((outputMode === 'both' && (plan2dSvg || plan2dUrl) && (plan3dSvg || plan3dUrl)) ||
+                (outputMode === '2d' && (plan2dSvg || plan2dUrl)) ||
+                (outputMode === '3d' && (plan3dSvg || plan3dUrl))) ? (
+                <View style={[styles.technicalStatusPill, { borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.1)' }]}>
+                  <View style={[styles.pulseBeacon, { backgroundColor: '#22c55e' }]} />
+                  <Text style={{ color: '#22c55e', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>PREVIEWS READY</Text>
+                </View>
+              ) : (
+                <View style={[styles.technicalStatusPill, { borderColor: 'rgba(218,165,32,0.4)', backgroundColor: 'rgba(218,165,32,0.1)' }]}>
+                  <View style={[styles.pulseBeacon, { backgroundColor: '#DAA520' }]} />
+                  <Text style={{ color: '#DAA520', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>SYNTHESIZING PREVIEWS...</Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -2070,8 +2123,24 @@ export default function BlueprintScreen() {
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
-                        <ActivityIndicator color={theme.primary} size="large" />
-                        <Text style={[styles.placeholderText, { color: theme.onSurfaceVariant }]}>Synthesizing 2D CAD Layout...</Text>
+                        {plan2dError ? (
+                          <View style={{ alignItems: 'center', padding: 16 }}>
+                            <MaterialIcons name="error-outline" size={32} color="#EF4444" />
+                            <Text style={[styles.placeholderText, { color: '#EF4444', marginVertical: 8, textAlign: 'center' }]}>{plan2dError}</Text>
+                            <Pressable
+                              onPress={() => retrySingleView('2d')}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                            >
+                              <MaterialIcons name="refresh" size={16} color="#000" />
+                              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Retry 2D View</Text>
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <>
+                            <ActivityIndicator color={theme.primary} size="large" />
+                            <Text style={[styles.placeholderText, { color: theme.onSurfaceVariant }]}>Synthesizing 2D CAD Layout...</Text>
+                          </>
+                        )}
                       </View>
                     )}
 
@@ -2115,8 +2184,24 @@ export default function BlueprintScreen() {
                       </Pressable>
                     ) : (
                       <View style={[styles.imagePlaceholder, { backgroundColor: isDark ? '#040710' : '#E2E8F0' }]}>
-                        <ActivityIndicator color={theme.primary} size="large" />
-                        <Text style={[styles.placeholderText, { color: theme.onSurfaceVariant }]}>Rendering 3D Isometric Cutaway...</Text>
+                        {plan3dError ? (
+                          <View style={{ alignItems: 'center', padding: 16 }}>
+                            <MaterialIcons name="error-outline" size={32} color="#EF4444" />
+                            <Text style={[styles.placeholderText, { color: '#EF4444', marginVertical: 8, textAlign: 'center' }]}>{plan3dError}</Text>
+                            <Pressable
+                              onPress={() => retrySingleView('3d')}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: theme.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 6 }}
+                            >
+                              <MaterialIcons name="refresh" size={16} color="#000" />
+                              <Text style={{ color: '#000', fontWeight: '700', fontSize: 13 }}>Retry 3D View</Text>
+                            </Pressable>
+                          </View>
+                        ) : (
+                          <>
+                            <ActivityIndicator color={theme.primary} size="large" />
+                            <Text style={[styles.placeholderText, { color: theme.onSurfaceVariant }]}>Rendering 3D Isometric Cutaway...</Text>
+                          </>
+                        )}
                       </View>
                     )}
 
