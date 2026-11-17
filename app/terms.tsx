@@ -449,7 +449,7 @@ export default function TermsAndLegalScreen() {
         <View style={[styles.footer, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }]}>
           <Text style={[typography.bodySm, { color: theme.onSurfaceVariant, textAlign: 'center', lineHeight: 20 }]}>
             © {new Date().getFullYear()} Boolok Technologies Pvt. Ltd. All rights reserved.{'\n'}
-            Chennai, Tamil Nadu, India · Inquiries: legal@boolok.com
+            Chennai, Tamil Nadu, India · Inquiries: boolokai.in@gmail.com
           </Text>
         </View>
       </ScrollView>
