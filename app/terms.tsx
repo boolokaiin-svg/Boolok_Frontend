@@ -87,88 +87,83 @@ function LastUpdated({ date }: { date: string }) {
 function PrivacyPolicy() {
   return (
     <>
-      <LastUpdated date="16 November 2026" />
+      <LastUpdated date="17 November 2026" />
 
-      <Section title="1. Who We Are">
-        <Para>
-          Boolok ("we", "our", "us") is an AI-assisted real-estate intelligence and social networking platform operated by{' '}
-          <Text style={{ fontWeight: '700' }}>Boolok Technologies Pvt. Ltd.</Text>, based in{' '}
-          <Text style={{ fontWeight: '700' }}>Chennai, Tamil Nadu, India</Text>. If you have any
-          questions regarding this policy or data processing, contact us at{' '}
-          <Text style={{ fontWeight: '700' }}>support@boolok.com</Text>.
-        </Para>
+      <Section title="1. About This Policy & Contact">
+        <Para>This Privacy Policy explains how Boolok, also called Boolok AI or boolokgpt, handles information when you use our real estate, property document analysis, architectural design, and community features. In this policy, "we", "our", and "us" refer to the team operating Boolok.</Para>
+        <Para>For privacy questions, access or correction requests, complaints, or account and data deletion requests, contact boolokai.in@gmail.com. Please identify the account concerned, but do not email your password, OTP, API keys, or complete property documents. We may verify account ownership before acting on a request.</Para>
       </Section>
 
-      <Section title="2. Data We Collect">
-        <Bullet>Community safety: reports you submit, their reasons and details, limited snapshots of reported content, moderation decisions, and your block preferences. Reports are accessible to authorized moderators and are not shown to the reported user.</Bullet>
-        <Para>We collect only the minimum data necessary to provide and safeguard our real estate intelligence platform:</Para>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Account credentials:</Text> Full name, username, email address, and cryptographically hashed passwords upon registration.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Professional profile:</Text> Professional headline, bio, licensing jurisdiction, broker/architect role, profile avatar, and verified contact info you choose to disclose.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Platform content:</Text> Property listings, video tours, drone footage, commentary, and property insights you author.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Investment goals:</Text> Sector preferences (buying, institutional advisory, commercial syndication) selected during onboarding.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Authentication session:</Text> Secure JSON Web Tokens (JWT) stored in hardware secure enclaves on mobile devices or browser localStorage on web.
-        </Bullet>
-        <Para>
-          We do NOT collect: credit card numbers directly, device advertising trackers, real-time GPS tracking, or private contacts.
-        </Para>
+      <Section title="2. Information We Collect">
+        <Bullet>Account and identity information: name, username, email address, optional phone number, authentication provider, verification status, and a hashed password for password-based accounts. Google Sign-In supplies identity information such as your Google account identifier, email address, name, and profile image; it does not give us your Google password.</Bullet>
+        <Bullet>Profile information: your photo, cover image, bio, professional role, headline, location, interests, and other details you choose to enter.</Bullet>
+        <Bullet>Community activity: posts, property listings, photos, videos, reels, comments, likes, follows, saved content, and other interactions.</Bullet>
+        <Bullet>Communications: private messages, attachments, conversation participants, timestamps, and support correspondence. Private messages are stored by our service and are not end-to-end encrypted.</Bullet>
+        <Bullet>Property verification information: deeds, Encumbrance Certificates (EC), Patta documents, and other images or PDFs you upload; text extracted from them, including names, signatures, addresses, registration details, survey numbers and ownership information; registry lookup results, downloaded certificates, analysis reports, and audit history. Uploaded documents may contain information about people other than the account holder.</Bullet>
+        <Bullet>Design and AI inputs: prompts, property dimensions, room requirements, preferences, reference material, and the generated plans, images, text, and other results associated with the feature you use.</Bullet>
+        <Bullet>Safety information: reports, reasons, descriptions, limited snapshots of reported content, block preferences, and moderation decisions.</Bullet>
+        <Bullet>Technical and session information: authentication tokens, local preferences, network connection information such as IP addresses, request timestamps, errors, and operational logs processed by our services and hosting providers.</Bullet>
+        <Para>We do not request access to your address book or continuous GPS location. Locations entered in profiles, listings, prompts, or documents are still information we process. We do not use personal information for sale to third parties or targeted advertising.</Para>
       </Section>
 
-      <Section title="3. How We Use Your Data">
-        <Bullet>To maintain your professional advisor account and authenticate sessions.</Bullet>
-        <Bullet>To deliver personalized AI property insights, market match scores, and radar alerts.</Bullet>
-        <Bullet>To send critical transactional notifications, such as one-time passwords (OTP).</Bullet>
-        <Bullet>To protect platform integrity against fraudulent real estate listings and unauthorized access.</Bullet>
-        <Para>
-          We NEVER sell, lease, or monetize your personal information to third-party ad networks.
-        </Para>
+      <Section title="3. How We Use Information">
+        <Bullet>Create and authenticate accounts, verify contact details, recover access, and maintain sessions.</Bullet>
+        <Bullet>Display profiles and community content, deliver messages, and provide the features and preferences you request.</Bullet>
+        <Bullet>Extract and analyse property information, search relevant registry services, produce preliminary verification reports, and generate requested designs and AI outputs.</Bullet>
+        <Bullet>Maintain audit history, media and certificate downloads, and account settings.</Bullet>
+        <Bullet>Send requested OTPs, security notices, and support responses; prevent abuse and fraud; investigate reports; and operate, secure, and troubleshoot the service.</Bullet>
+        <Bullet>Process privacy requests, delete accounts and associated data, and meet applicable legal obligations.</Bullet>
       </Section>
 
-      <Section title="4. Third-Party Infrastructure">
-        <Para>We partner with enterprise cloud infrastructure providers to securely power Boolok:</Para>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Cloud Database Services:</Text> Encrypted MongoDB cloud clusters with AES-256 at-rest encryption.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Google Identity Services:</Text> OAuth 2.0 authentication when you choose Google Sign-In.
-        </Bullet>
-        <Bullet>
-          <Text style={{ fontWeight: '700' }}>Transactional Email Services:</Text> High-delivery transactional SMTP for OTP validation.
-        </Bullet>
+      <Section title="4. AI Processing & Property Registry Lookups">
+        <Para>When you submit a document for verification, its contents, page images or extracted text, and related property details can be sent to external AI services for OCR, analysis, and report generation. The verification service supports OpenRouter and the model providers it routes requests to, including Google Gemini, and direct Google or OpenAI integrations depending on the service configuration. Architectural generation can send your design inputs and reference material to OpenAI.</Para>
+        <Para>Property details needed for a lookup can be submitted to Tamil Nadu government registry services, including TNREGINET. These services and AI providers process the information they receive under their applicable terms, privacy policies, and retention settings. Deleting your Boolok account does not automatically erase independent provider logs or backups.</Para>
+        <Para>Only submit documents and information you are authorised to use and share for this purpose. Avoid unnecessary personal information and redact unrelated identifiers where possible. AI results can be inaccurate and are preliminary assistance; they are not official government certification or a substitute for professional legal or engineering advice. You can choose not to use these optional features.</Para>
       </Section>
 
-      <Section title="5. Data Retention &amp; Erasure">
-        <Para>
-          You can request account deletion in Settings. Deletion covers your profile, posts, reels, private conversations, audit history, community interactions, and associated media that we can identify as yours. Your account is disabled while storage cleanup is pending, and failed cleanup is retried. Shared legacy files without clear ownership may be retained where another account still references them. Copies downloaded by others, third-party processing records, and provider backups are subject to their respective retention policies. Contact support@boolok.com for deletion questions.
-        </Para>
+      <Section title="5. Who Receives Information">
+        <Bullet>Other users: profile information and content you publish are visible through the relevant community features. Message recipients receive the messages and attachments you send. Other people may copy, download, or share content they can access.</Bullet>
+        <Bullet>Hosting and storage providers: Render hosts backend and verification services; MongoDB stores account and application records; Amazon Web Services S3 stores uploaded media where configured. Providers process the data needed to deliver their services.</Bullet>
+        <Bullet>Identity and communications providers: Google supports Google Sign-In, and configured email or phone delivery services process contact details and messages needed for verification, account recovery, or support.</Bullet>
+        <Bullet>AI and registry services: the providers described above receive information necessary for the analysis, generation, or lookup you request.</Bullet>
+        <Bullet>Authorised operators: personnel handling support, security, and moderation may access relevant records for those purposes. Reports are not published to the reported user, although actions taken in response may be visible.</Bullet>
+        <Para>We may disclose information when required by applicable law or a valid legal request, or when necessary to investigate abuse and protect users, the service, or legal rights. We do not sell personal information.</Para>
       </Section>
 
-      <Section title="6. Your Rights">
-        <Para>Under the DPDP Act 2023 (India) and GDPR regulations, you have the right to:</Para>
-        <Bullet>Request a summary of personal data held about you.</Bullet>
-        <Bullet>Correct or update inaccurate account information directly in your profile.</Bullet>
-        <Bullet>Revoke consent for optional data processing.</Bullet>
-        <Bullet>Request permanent data erasure ("Right to be Forgotten").</Bullet>
+      <Section title="6. Device Permissions & Local Storage">
+        <Para>File and photo selection features access the documents or media you choose. Where a feature requests a device permission, your operating system controls that permission; you can refuse it or change it in device settings. A feature may not work without the access needed for it.</Para>
+        <Para>We use device storage for sessions, preferences, and cached application data. Mobile authentication uses platform secure storage; the web version uses browser storage. Signing out removes the active local session, but does not itself delete your account or all server records. A storage notice is not permission for unrelated collection or advertising.</Para>
       </Section>
 
-      <Section title="7. Security Standards">
-        <Para>
-          Passwords are protected using adaptive bcrypt hashing with individual cryptographic salts. All API communications require TLS/HTTPS transport security. Tokens are secured within platform-native secure storage mechanisms.
-        </Para>
+      <Section title="7. Retention & Account Deletion">
+        <Para>Account records, community content, messages, verification history, and associated stored media are generally retained while the account exists or the content remains available, unless removed through a supported feature. Verification request work files are cleaned up after processing by the adapter; generated certificates can be retained for downloads. Copies in operational logs or provider systems follow their applicable retention arrangements. Certificate availability can also be affected by hosting storage limits and restarts.</Para>
+        <Para>To request deletion in the app, open Settings and choose Delete Account. If you cannot use the app, email boolokai.in@gmail.com with the subject "Account deletion" from your registered email address, identifying your Boolok username. We may request additional verification to prevent someone else deleting your account. You do not need to reinstall the app to email a request.</Para>
+        <Para>The deletion process removes your profile, posts, reels, private conversations, verification audit history, community interactions, and associated uploaded media and certificates that can be identified as yours. Your account is disabled while cleanup is pending; failed storage cleanup is retried. Completion can take longer when a storage or verification provider is unavailable.</Para>
+        <Para>Shared legacy files that another account still references may remain where ownership cannot be safely separated. Copies other users downloaded, independently retained third-party records, and provider backups may not be removed by account deletion. Backup copies follow the provider's backup lifecycle rather than immediate removal from active storage. Information required for a legal obligation or dispute may need to be retained for that purpose. Contact us for the status of a deletion request or details about a specific retained record.</Para>
+      </Section>
+
+      <Section title="8. Security & International Processing">
+        <Para>We use safeguards including hashed passwords, authenticated access, ownership checks, and HTTPS service endpoints. No system or transmission method can guarantee absolute security. Do not share credentials or upload information you do not want processed by the services described in this policy.</Para>
+        <Para>Our cloud and AI providers may process or store information outside your state or country. The locations depend on the providers and service configuration; data protection rules can differ between jurisdictions.</Para>
+      </Section>
+
+      <Section title="9. Your Choices & Privacy Requests">
+        <Para>You can edit supported profile fields, control information you publish, decline optional uploads, manage device permissions, block users, report content, and request account deletion. Depending on applicable law, you may also request access, correction, erasure, or withdrawal of consent for processing that relies on consent. Contact boolokai.in@gmail.com to exercise these rights or raise a complaint. We may verify your identity, and legal or technical limitations may affect a request. Withdrawing permission may prevent us providing the related feature.</Para>
+      </Section>
+
+      <Section title="10. Adults Only">
+        <Para>Boolok is intended for people aged 18 and over. We do not knowingly offer accounts to children. If you believe a child has provided personal information or encounter child exploitation content, report it using the available in-app reporting tools or contact boolokai.in@gmail.com so we can investigate and take appropriate action.</Para>
+      </Section>
+
+      <Section title="11. Changes to This Policy">
+        <Para>We will update this page and its last-updated date when our practices change. Material changes will be communicated through the app or another appropriate channel, and we will seek consent where required. This policy describes Boolok; external websites and services have their own privacy notices.</Para>
       </Section>
     </>
   );
 }
 
-// ─── Terms & Conditions ───────────────────────────────────────────────────────
+// Terms & Conditions
+
 function TermsAndConditions() {
   return (
     <>
