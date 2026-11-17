@@ -90,7 +90,7 @@ function PrivacyPolicy() {
       <LastUpdated date="17 November 2026" />
 
       <Section title="1. About This Policy & Contact">
-        <Para>This Privacy Policy explains how Boolok, also called Boolok AI or boolokgpt, handles information when you use our real estate, property document analysis, architectural design, and community features. In this policy, "we", "our", and "us" refer to the team operating Boolok.</Para>
+        <Para>This Privacy Policy explains how Boolok, also called Boolok AI or boolokgpt, handles information when you use our real estate, property document analysis, architectural design, and community features. Boolok is operated by BOOLOK REALTY PRIVATE LIMITED. In this policy, "we", "our", and "us" refer to BOOLOK REALTY PRIVATE LIMITED.</Para>
         <Para>For privacy questions, access or correction requests, complaints, or account and data deletion requests, contact boolokai.in@gmail.com. Please identify the account concerned, but do not email your password, OTP, API keys, or complete property documents. We may verify account ownership before acting on a request.</Para>
       </Section>
 
@@ -213,7 +213,7 @@ function TermsAndConditions() {
 
       <Section title="6. Intellectual Property">
         <Para>
-          You retain full ownership of property videos, imagery, and text that you upload. By publishing content on Boolok, you grant us a worldwide, royalty-free license to render and display that content on the platform. The Boolok trademark, brand assets, UI architecture, and algorithmic models are the exclusive property of Boolok Technologies.
+          You retain full ownership of property videos, imagery, and text that you upload. By publishing content on Boolok, you grant us a worldwide, royalty-free license to render and display that content on the platform. The Boolok trademark, brand assets, UI architecture, and algorithmic models are the exclusive property of BOOLOK REALTY PRIVATE LIMITED.
         </Para>
       </Section>
 
@@ -448,7 +448,7 @@ export default function TermsAndLegalScreen() {
         {/* Footer */}
         <View style={[styles.footer, { borderTopColor: isDark ? 'rgba(255,255,255,0.08)' : '#E2E8F0' }]}>
           <Text style={[typography.bodySm, { color: theme.onSurfaceVariant, textAlign: 'center', lineHeight: 20 }]}>
-            © {new Date().getFullYear()} Boolok Technologies Pvt. Ltd. All rights reserved.{'\n'}
+            © {new Date().getFullYear()} BOOLOK REALTY PRIVATE LIMITED. All rights reserved.{'\n'}
             Chennai, Tamil Nadu, India · Inquiries: boolokai.in@gmail.com
           </Text>
         </View>
