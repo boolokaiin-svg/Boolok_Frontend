@@ -90,7 +90,7 @@ function PrivacyPolicy() {
       <LastUpdated date="17 November 2026" />
 
       <Section title="1. About This Policy & Contact">
-        <Para>This Privacy Policy explains how Boolok, also called Boolok AI or boolokgpt, handles information when you use our real estate, property document analysis, architectural design, and community features. Boolok is operated by BOOLOK REALTY PRIVATE LIMITED. In this policy, "we", "our", and "us" refer to BOOLOK REALTY PRIVATE LIMITED.</Para>
+        <Para>This Privacy Policy explains how BoolokOne handles information when you use our real estate, property document analysis, architectural design, and community features. BoolokOne is operated by BOOLOK REALTY PRIVATE LIMITED. In this policy, "we", "our", and "us" refer to BOOLOK REALTY PRIVATE LIMITED.</Para>
         <Para>For privacy questions, access or correction requests, complaints, or account and data deletion requests, contact boolokai.in@gmail.com. Please identify the account concerned, but do not email your password, OTP, API keys, or complete property documents. We may verify account ownership before acting on a request.</Para>
       </Section>
 
@@ -117,7 +117,7 @@ function PrivacyPolicy() {
 
       <Section title="4. AI Processing & Property Registry Lookups">
         <Para>When you submit a document for verification, its contents, page images or extracted text, and related property details can be sent to external AI services for OCR, analysis, and report generation. The verification service supports OpenRouter and the model providers it routes requests to, including Google Gemini, and direct Google or OpenAI integrations depending on the service configuration. Architectural generation can send your design inputs and reference material to OpenAI.</Para>
-        <Para>Property details needed for a lookup can be submitted to Tamil Nadu government registry services, including TNREGINET. These services and AI providers process the information they receive under their applicable terms, privacy policies, and retention settings. Deleting your Boolok account does not automatically erase independent provider logs or backups.</Para>
+        <Para>Property details needed for a lookup can be submitted to Tamil Nadu government registry services, including TNREGINET. These services and AI providers process the information they receive under their applicable terms, privacy policies, and retention settings. Deleting your BoolokOne account does not automatically erase independent provider logs or backups.</Para>
         <Para>Only submit documents and information you are authorised to use and share for this purpose. Avoid unnecessary personal information and redact unrelated identifiers where possible. AI results can be inaccurate and are preliminary assistance; they are not official government certification or a substitute for professional legal or engineering advice. You can choose not to use these optional features.</Para>
       </Section>
 
@@ -137,7 +137,7 @@ function PrivacyPolicy() {
 
       <Section title="7. Retention & Account Deletion">
         <Para>Account records, community content, messages, verification history, and associated stored media are generally retained while the account exists or the content remains available, unless removed through a supported feature. Verification request work files are cleaned up after processing by the adapter; generated certificates can be retained for downloads. Copies in operational logs or provider systems follow their applicable retention arrangements. Certificate availability can also be affected by hosting storage limits and restarts.</Para>
-        <Para>To request deletion in the app, open Settings and choose Delete Account. If you cannot use the app, email boolokai.in@gmail.com with the subject "Account deletion" from your registered email address, identifying your Boolok username. We may request additional verification to prevent someone else deleting your account. You do not need to reinstall the app to email a request.</Para>
+        <Para>To request deletion in the app, open Settings and choose Delete Account. If you cannot use the app, email boolokai.in@gmail.com with the subject "Account deletion" from your registered email address, identifying your BoolokOne username. We may request additional verification to prevent someone else deleting your account. You do not need to reinstall the app to email a request.</Para>
         <Para>The deletion process removes your profile, posts, reels, private conversations, verification audit history, community interactions, and associated uploaded media and certificates that can be identified as yours. Your account is disabled while cleanup is pending; failed storage cleanup is retried. Completion can take longer when a storage or verification provider is unavailable.</Para>
         <Para>Shared legacy files that another account still references may remain where ownership cannot be safely separated. Copies other users downloaded, independently retained third-party records, and provider backups may not be removed by account deletion. Backup copies follow the provider's backup lifecycle rather than immediate removal from active storage. Information required for a legal obligation or dispute may need to be retained for that purpose. Contact us for the status of a deletion request or details about a specific retained record.</Para>
       </Section>
@@ -152,11 +152,11 @@ function PrivacyPolicy() {
       </Section>
 
       <Section title="10. Adults Only">
-        <Para>Boolok is intended for people aged 18 and over. We do not knowingly offer accounts to children. If you believe a child has provided personal information or encounter child exploitation content, report it using the available in-app reporting tools or contact boolokai.in@gmail.com so we can investigate and take appropriate action.</Para>
+        <Para>BoolokOne is intended for people aged 18 and over. We do not knowingly offer accounts to children. If you believe a child has provided personal information or encounter child exploitation content, report it using the available in-app reporting tools or contact boolokai.in@gmail.com so we can investigate and take appropriate action.</Para>
       </Section>
 
       <Section title="11. Changes to This Policy">
-        <Para>We will update this page and its last-updated date when our practices change. Material changes will be communicated through the app or another appropriate channel, and we will seek consent where required. This policy describes Boolok; external websites and services have their own privacy notices.</Para>
+        <Para>We will update this page and its last-updated date when our practices change. Material changes will be communicated through the app or another appropriate channel, and we will seek consent where required. This policy describes BoolokOne; external websites and services have their own privacy notices.</Para>
       </Section>
     </>
   );
@@ -171,12 +171,12 @@ function TermsAndConditions() {
 
       <Section title="1. Acceptance of Agreement">
         <Para>
-          By creating an account, browsing property radar feeds, or accessing Boolok, you acknowledge and agree to be bound by these Terms and Conditions. This agreement is governed by the laws of India, including the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023.
+          By creating an account, browsing property radar feeds, or accessing BoolokOne, you acknowledge and agree to be bound by these Terms and Conditions. This agreement is governed by the laws of India, including the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023.
         </Para>
       </Section>
 
       <Section title="2. Professional Eligibility">
-        <Bullet>You must be at least 18 years of age to access Boolok.</Bullet>
+        <Bullet>You must be at least 18 years of age to access BoolokOne.</Bullet>
         <Bullet>You agree to represent your professional identity, firm, and credentials accurately.</Bullet>
         <Bullet>You are solely responsible for maintaining the confidentiality of your credentials.</Bullet>
         <Bullet>Impersonation of licensed real estate professionals or entities is strictly prohibited.</Bullet>
@@ -184,7 +184,7 @@ function TermsAndConditions() {
 
       <Section title="3. Nature of the Platform">
         <Para>
-          Boolok is an intelligence network connecting commercial brokers, architects, investors, and advisors. Features include:
+          BoolokOne is an intelligence network connecting commercial brokers, architects, investors, and advisors. Features include:
         </Para>
         <Bullet>Video property tours, architectural showcases, and market radar reels.</Bullet>
         <Bullet>AI-generated market match scores, yield benchmarks, and zoning insights.</Bullet>
@@ -193,7 +193,7 @@ function TermsAndConditions() {
 
       <Section title="4. ⚠️ AI Information &amp; Real Estate Advice Disclaimer">
         <Para>
-          All AI-assisted indicators on Boolok — including AI Match Percentages, projected appreciation rates, zoning summaries, and market forecasts — are generated for{' '}
+          All AI-assisted indicators on BoolokOne — including AI Match Percentages, projected appreciation rates, zoning summaries, and market forecasts — are generated for{' '}
           <Text style={{ fontWeight: '700' }}>informational and discovery purposes only</Text>.
         </Para>
         <Para>
@@ -213,7 +213,7 @@ function TermsAndConditions() {
 
       <Section title="6. Intellectual Property">
         <Para>
-          You retain full ownership of property videos, imagery, and text that you upload. By publishing content on Boolok, you grant us a worldwide, royalty-free license to render and display that content on the platform. The Boolok trademark, brand assets, UI architecture, and algorithmic models are the exclusive property of BOOLOK REALTY PRIVATE LIMITED.
+          You retain full ownership of property videos, imagery, and text that you upload. By publishing content on BoolokOne, you grant us a worldwide, royalty-free license to render and display that content on the platform. The BoolokOne trademark, brand assets, UI architecture, and algorithmic models are the exclusive property of BOOLOK REALTY PRIVATE LIMITED.
         </Para>
       </Section>
 
@@ -234,7 +234,7 @@ function CookiePolicy() {
 
       <Section title="1. Local Storage Usage">
         <Para>
-          Boolok does not utilize invasive third-party tracking cookies or advertising pixels. We utilize strictly necessary local device storage to ensure reliable application functionality:
+          BoolokOne does not utilize invasive third-party tracking cookies or advertising pixels. We utilize strictly necessary local device storage to ensure reliable application functionality:
         </Para>
 
         <View style={styles.tableContainer}>
@@ -278,7 +278,7 @@ function RefundPolicy() {
 
       <Section title="1. Free Access Platform">
         <Para>
-          Boolok's core discovery, social feed, and property insights are currently provided complimentary to registered real estate professionals and property investors.
+          BoolokOne's core discovery, social feed, and property insights are currently provided complimentary to registered real estate professionals and property investors.
         </Para>
       </Section>
 
@@ -344,7 +344,7 @@ export default function TermsAndLegalScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <BoolokLogo size={22} color={theme.primary} />
             <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary, letterSpacing: 1, marginLeft: 6 }}>
-              BOOLOK
+              BoolokOne
             </Text>
             <View style={[styles.tagBadge, { backgroundColor: 'rgba(218, 165, 32, 0.15)', borderColor: theme.primary }]}>
               <Text style={{ color: theme.primary, fontSize: 10, fontWeight: '800' }}>LEGAL HUB</Text>
@@ -435,7 +435,7 @@ export default function TermsAndLegalScreen() {
               {TABS.find((t) => t.key === activeTab)?.label}
             </Text>
             <Text style={[typography.bodySm, { color: theme.onSurfaceVariant, marginTop: 3 }]}>
-              Official legal policies, terms of service, and regulatory disclosures for Boolok.
+              Official legal policies, terms of service, and regulatory disclosures for BoolokOne.
             </Text>
           </View>
         </View>

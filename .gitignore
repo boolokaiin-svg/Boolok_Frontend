@@ -1,4 +1,4 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+    # Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
 # dependencies
 node_modules/
@@ -13,6 +13,8 @@ expo-env.d.ts
 # Mobile App Binaries & Large Build Archives
 *.tar.gz
 *.apk
+*.aab
+/artifacts/
 debug/
 release/
 

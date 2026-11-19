@@ -91,7 +91,7 @@ export function parseReelMessage(text?: string): ReelShareData | null {
       return {
         reelId,
         title: titleMatch ? titleMatch[1] : 'Property Reel',
-        authorName: authorMatch ? authorMatch[1].trim() : 'Boolok Creator',
+        authorName: authorMatch ? authorMatch[1].trim() : 'BoolokOne Creator',
         authorAvatar: null,
         thumbnail: fallbackThumbnail,
         location: 'Verified Property',
@@ -220,7 +220,7 @@ const ReelMessageCard: React.FC<ReelMessageCardProps> = ({
       <View style={styles.reelCardFooter}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
           <MaterialIcons name="play-circle-fill" size={14} color="#daa520" />
-          <Text style={styles.reelCardFooterText}>Watch on Boolok Reels</Text>
+          <Text style={styles.reelCardFooterText}>Watch on BoolokOne Reels</Text>
         </View>
         <MaterialIcons name="arrow-forward" size={14} color="#daa520" />
       </View>
@@ -736,12 +736,12 @@ export default function MessagesScreen() {
             <View style={styles.titleWrapper}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <BoolokLogo size={18} color={goldPrimary} />
-                <Text style={[styles.headerTitle, { color: textPrimary }]}>Boolok Real Estate Messages</Text>
+                <Text style={[styles.headerTitle, { color: textPrimary }]}>BoolokOne Real Estate Messages</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <View style={[styles.onlineDot, { backgroundColor: isConnected ? '#22c55e' : '#eab308' }]} />
                 <Text style={[styles.headerSubtitle, { color: textMuted }]}>
-                  {isConnected ? 'Real-Time Connected · Encrypted' : 'Connecting to Boolok Live Gateway...'}
+                  {isConnected ? 'Real-Time Connected · Encrypted' : 'Connecting to BoolokOne Live Gateway...'}
                 </Text>
               </View>
             </View>
@@ -781,7 +781,7 @@ export default function MessagesScreen() {
             {COMMUNITY_MEMBERS_DIRECTORY.length > 0 && (
               <View style={{ paddingHorizontal: 14, marginBottom: 10 }}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-                  Connect With Boolok Brokers
+                  Connect With BoolokOne Brokers
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                   {COMMUNITY_MEMBERS_DIRECTORY.slice(0, 6).map((b) => (
@@ -866,7 +866,7 @@ export default function MessagesScreen() {
                   No messages yet
                 </Text>
                 <Text style={{ color: textMuted, fontSize: 12.5, textAlign: 'center', marginTop: 4 }}>
-                  Connect with Boolok real estate brokers above to negotiate acquisitions and review property portfolios.
+                  Connect with BoolokOne real estate brokers above to negotiate acquisitions and review property portfolios.
                 </Text>
               </View>
             ) : (
@@ -921,7 +921,7 @@ export default function MessagesScreen() {
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Text style={[styles.convName, { color: textPrimary }]} numberOfLines={1}>
-                            {other.fullName || other.username || 'Boolok Broker'}
+                            {other.fullName || other.username || 'BoolokOne Broker'}
                           </Text>
                           <Text style={[styles.convTime, { color: item.unreadCount > 0 ? goldPrimary : textMuted, fontWeight: item.unreadCount > 0 ? '700' : '500' }]}>
                             {formatConversationTime(item.updatedAt || item.lastMessage?.createdAt)}
@@ -1321,7 +1321,7 @@ export default function MessagesScreen() {
                   <MaterialIcons name="forum" size={48} color={goldPrimary} />
                 </View>
                 <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '800', marginTop: 16 }}>
-                  Boolok AI Brokerage Desk
+                  BoolokOne Brokerage Desk
                 </Text>
                 <Text style={{ color: textMuted, fontSize: 13, textAlign: 'center', marginTop: 6, maxWidth: 400, lineHeight: 18 }}>
                   Select a broker or advisor from the left panel to begin live discussions, asset underwriting, or commercial acquisition negotiations.

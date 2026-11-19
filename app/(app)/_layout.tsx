@@ -25,7 +25,6 @@ const NAV_ITEMS = [
   { id: 'messages', icon: 'chat', label: 'Messages', route: '/(app)/messages' },
   { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search' },
   { id: 'insights', icon: 'dynamic-feed', label: 'Insights Feed', route: '/(app)/insights' },
-  { id: 'predictions', icon: 'trending-up', label: 'Price Predictions', route: '/(app)/predictions' },
   { id: 'legal', icon: 'verified-user', label: 'Title & Legal AI', route: '/(app)/legal' },
   { id: 'blueprint', icon: 'home-work', label: 'House Plan', route: '/(app)/blueprint' },
 ];
@@ -185,7 +184,7 @@ function AppLayoutContent() {
             <BoolokLogo size={32} color={theme.primary} />
           </View>
           <Animated.View style={[{ width: 160 }, animatedExpandStyle]}>
-            <Text style={[typography.headlineSm, { color: theme.primary, lineHeight: 28 }]} numberOfLines={1}>BOOLOK</Text>
+            <Text style={[typography.headlineSm, { color: theme.primary, lineHeight: 28 }]} numberOfLines={1}>BoolokOne</Text>
             <Text style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: 2, color: theme.outline, marginTop: -4 }} numberOfLines={1}>Intelligent Precision</Text>
           </Animated.View>
         </View>
@@ -453,7 +452,6 @@ function AppLayoutContent() {
     { id: 'messages', icon: 'chat', label: 'Direct Messages', route: '/(app)/messages', category: 'Main', badge: unreadTotal },
     { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search', category: 'Main' },
     { id: 'insights', icon: 'dynamic-feed', label: 'Video Reels & Insights', route: '/(app)/insights', category: 'Main' },
-    { id: 'predictions', icon: 'trending-up', label: 'Price Predictions', route: '/(app)/predictions', category: 'AI Intelligence', tag: 'AI' },
     { id: 'legal', icon: 'verified-user', label: 'Title & Legal Verification', route: '/(app)/legal', category: 'AI Intelligence', tag: 'AI' },
     { id: 'blueprint', icon: 'home-work', label: 'House Plan & Blueprint', route: '/(app)/blueprint', category: 'AI Intelligence', tag: 'PRO' },
     { id: 'profile', icon: 'person', label: 'My Portfolio', route: '/(app)/profile', category: 'Account' },
@@ -508,7 +506,7 @@ function AppLayoutContent() {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <BoolokLogo size={28} color={theme.primary} />
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary, letterSpacing: 1 }}>BOOLOK</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: theme.primary, letterSpacing: 1 }}>BoolokOne</Text>
                   <Text style={{ fontSize: 8.5, textTransform: 'uppercase', letterSpacing: 1.5, color: theme.onSurfaceVariant, marginTop: -2 }}>
                     Intelligent Precision
                   </Text>
@@ -713,6 +711,7 @@ function AppLayoutContent() {
           backgroundColor: isDark ? 'rgba(10, 15, 35, 0.85)' : '#FFFFFF',
           paddingTop: insets.top,
           height: (isWide ? 80 : 64) + insets.top,
+          ...(!isWide && !isMobileSearchActive ? { flexWrap: 'wrap' as const, alignContent: 'center' as const, rowGap: 6 } : {}),
           zIndex: 100,
           ...(!isDark ? shadows.xs : {}),
         }]}>
@@ -725,31 +724,30 @@ function AppLayoutContent() {
               <Text style={{ fontSize: 12, color: theme.onSurfaceVariant, fontWeight: '500' }}>Real Estate Intelligence</Text>
             </View>
           ) : !isMobileSearchActive ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, marginRight: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, gap: 6, marginRight: 6, minHeight: 48 }}>
               <Pressable
                 onPress={openMobileDrawer}
                 style={({ pressed }: any) => [
-                  { padding: 6, marginRight: 4, borderRadius: 8 },
+                  { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12, backgroundColor: theme.surfaceContainerLowest },
                   pressed && { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }
                 ]}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Open menu"
               >
                 <MaterialIcons name="menu" size={24} color={theme.onSurface} />
               </Pressable>
-              <Pressable onPress={() => router.push('/(app)/dashboard')} style={{ flexDirection: 'row', alignItems: 'center', marginRight: 8 }}>
+              <Pressable accessibilityRole="button" accessibilityLabel="BoolokOne dashboard" onPress={() => router.push('/(app)/dashboard')} style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 5 }}>
                 <BoolokLogo size={24} color={theme.primary} />
-                <Text style={{ fontSize: 15, fontWeight: '900', color: theme.primary, letterSpacing: 1, marginLeft: 5 }}>
-                  BOOLOK
+                <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: theme.primary, letterSpacing: -0.3 }}>
+                  BoolokOne
                 </Text>
+                <Text style={{ fontSize: 11, color: theme.onSurfaceVariant, marginTop: 2 }}>
+                  Your real estate workspace
+                </Text>
+                </View>
               </Pressable>
-              <View style={{ flexShrink: 1 }}>
-                <Text style={{ fontSize: 13, fontWeight: '800', color: theme.onSurface }} numberOfLines={1}>
-                  Hi, {user?.fullName?.split(' ')[0] || 'Sai'}
-                </Text>
-                <Text style={{ fontSize: 9.5, color: theme.onSurfaceVariant, fontWeight: '500' }} numberOfLines={1}>
-                  Elite Advisor
-                </Text>
-              </View>
             </View>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 6, position: 'relative', zIndex: 999 }}>
@@ -933,17 +931,10 @@ function AppLayoutContent() {
           )}
 
           {(!isMobileSearchActive || isWide) && (
-            <View style={styles.headerActions}>
-              {/* Quick search on mobile */}
-              {!isWide && (
-                <Pressable onPress={() => setIsMobileSearchActive(true)} style={styles.iconBtn}>
-                  <MaterialIcons name="search" size={22} color={theme.onSurfaceVariant} />
-                </Pressable>
-              )}
-
+            <View style={[styles.headerActions, !isWide && { flexShrink: 0, gap: 4 }]}>
             {/* Direct Messages Icon Button */}
             <View style={{ position: 'relative' }}>
-              <Pressable onPress={() => router.push('/(app)/messages')} style={styles.iconBtn}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Messages" onPress={() => router.push('/(app)/messages')} style={styles.iconBtn}>
                 <MaterialIcons name="chat" size={22} color={pathname?.includes('messages') ? theme.primary : theme.onSurfaceVariant} />
                 {unreadTotal > 0 && (
                   <View style={[styles.notificationDot, { backgroundColor: '#daa520', borderColor: theme.surface, width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }]}>
@@ -954,7 +945,7 @@ function AppLayoutContent() {
             </View>
 
             <View style={{ position: 'relative' }}>
-              <Pressable onPress={handleToggleNotifications} style={styles.iconBtn}>
+              <Pressable accessibilityRole="button" accessibilityLabel="Notifications" onPress={handleToggleNotifications} style={styles.iconBtn}>
                 <MaterialIcons name="notifications" size={22} color={showNotifications ? theme.primary : theme.onSurfaceVariant} />
                 {unreadCount > 0 && (
                   <View style={[styles.notificationDot, { backgroundColor: '#ef4444', borderColor: theme.surface, width: 16, height: 16, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }]}>
@@ -968,8 +959,8 @@ function AppLayoutContent() {
                 <View style={{
                   position: 'absolute',
                   top: 44,
-                  right: isWide ? 0 : -60,
-                  width: Math.min(width - 24, 320),
+                  right: isWide ? 0 : -48,
+                  width: isWide ? 320 : width - 24,
                   maxHeight: 400,
                   backgroundColor: isDark ? '#0c1626' : '#ffffff',
                   borderRadius: 12,
@@ -1032,11 +1023,11 @@ function AppLayoutContent() {
               )}
             </View>
 
-            <Pressable onPress={toggleTheme} style={styles.iconBtn}>
+            {isWide && (<Pressable accessibilityRole="button" accessibilityLabel={isDark ? 'Switch to light theme' : 'Switch to dark theme'} onPress={toggleTheme} style={styles.iconBtn}>
               <Animated.View style={animatedIconStyle}>
                 <MaterialIcons name={isDark ? "dark-mode" : "light-mode"} size={22} color={theme.onSurfaceVariant} />
               </Animated.View>
-            </Pressable>
+            </Pressable>)}
 
             {isWide && (
               <Pressable
@@ -1050,10 +1041,12 @@ function AppLayoutContent() {
             )}
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open your profile"
               onPress={() => router.push('/(app)/profile')}
               style={({ pressed, hovered }: any) => [
                 styles.profileSection,
-                isWide ? { borderLeftColor: theme.outlineVariant } : { borderLeftWidth: 0, paddingLeft: 4 },
+                isWide ? { borderLeftColor: theme.outlineVariant } : { borderLeftWidth: 0, paddingLeft: 0, width: 44, height: 44, justifyContent: 'center' },
                 (pressed || hovered) && { backgroundColor: theme.surfaceContainerLowest }
               ]}
             >
@@ -1303,8 +1296,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconBtn: {
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
     padding: 8,
-    marginRight: 4,
+    marginRight: 0,
     borderRadius: 20,
   },
   notificationDot: {

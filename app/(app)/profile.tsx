@@ -167,9 +167,9 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     fullName: cleanName,
     username: targetId.toLowerCase(),
     email: `${targetId.toLowerCase()}@boolok.ai`,
-    headline: 'Certified Real Estate Advisor @ Boolok Network',
+    headline: 'Certified Real Estate Advisor @ BoolokOne Network',
     location: 'Chennai, Tamil Nadu · Prime Assets',
-    bio: 'Real estate professional and certified portfolio advisor on the Boolok AI network.',
+    bio: 'Real estate professional and certified portfolio advisor on the BoolokOne network.',
     profilePicture: null,
     coverImage: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
     closedDeals: '0',
@@ -816,9 +816,9 @@ export default function ProfessionalUserProfileScreen() {
     _id: viewer?.id || viewer?._id || 'self',
     fullName: viewer?.fullName || 'Real Estate Professional',
     username: viewer?.username || 'member',
-    headline: viewer?.headline || 'Real Estate Professional & Boolok Member',
+    headline: viewer?.headline || 'Real Estate Professional & BoolokOne Member',
     location: viewer?.location || 'Global Real Estate Network',
-    bio: viewer?.bio || 'Real estate professional and advisor on the Boolok AI network.',
+    bio: viewer?.bio || 'Real estate professional and advisor on the BoolokOne network.',
     profilePicture: viewer?.profilePicture || null,
     coverImage: viewer?.coverImage || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
     closedDeals: viewer?.closedDeals || '0',
@@ -2034,7 +2034,7 @@ export default function ProfessionalUserProfileScreen() {
     if (Platform.OS === 'web') {
       window.alert(msg);
     } else {
-      Alert.alert('Boolok Real Estate', msg);
+      Alert.alert('BoolokOne Real Estate', msg);
     }
   };
 
@@ -2103,7 +2103,7 @@ export default function ProfessionalUserProfileScreen() {
 
   const defaultHeadline =
     profileUser?.headline ||
-    (isSelf ? 'Principal Real Estate Broker & Portfolio Advisor' : 'Certified Real Estate Advisor @ Boolok Network');
+    (isSelf ? 'Principal Real Estate Broker & Portfolio Advisor' : 'Certified Real Estate Advisor @ BoolokOne Network');
   const defaultLocation = profileUser?.location || (isSelf ? 'Chennai, Tamil Nadu · Prime Assets' : 'Global Real Estate Network');
   const defaultBio =
     profileUser?.bio ||
@@ -2112,8 +2112,8 @@ export default function ProfessionalUserProfileScreen() {
   const mutualsText = (rawMutuals && !rawMutuals.includes('Logeshwaran A, Logeshwaran A'))
     ? rawMutuals
     : (followerCount > 0
-      ? `${followerCount} ${followerCount === 1 ? 'follower' : 'followers'} in Boolok Network`
-      : '0 followers in Boolok Network');
+      ? `${followerCount} ${followerCount === 1 ? 'follower' : 'followers'} in BoolokOne Network`
+      : '0 followers in BoolokOne Network');
 
   if (profileUnavailable) return <View style={{ padding: 24, flex: 1, backgroundColor: bgDark }}>
     <Text style={{ color: textPrimary, fontSize: 20, marginBottom: 16 }}>This profile is unavailable.</Text>
@@ -2177,7 +2177,7 @@ export default function ProfessionalUserProfileScreen() {
             />
             <View style={[styles.coverBrandBadge, isSmallMobile && { paddingHorizontal: 6, paddingVertical: 3 }]}>
               <BoolokLogo size={isSmallMobile ? 14 : 16} color="#ffffff" />
-              <Text style={styles.coverBrandText}>{isSmallMobile ? 'BOOLOK ELITE' : 'BOOLOK GPT ELITE BROKERAGE'}</Text>
+              <Text style={styles.coverBrandText}>{isSmallMobile ? 'BoolokOne ELITE' : 'BoolokOne ELITE BROKERAGE'}</Text>
             </View>
           </View>
 
@@ -2281,7 +2281,7 @@ export default function ProfessionalUserProfileScreen() {
                       isSmallMobile && { fontSize: 11 },
                     ]}
                   >
-                    Boolok Real Estate Group
+                    BoolokOne Real Estate Group
                   </Text>
                   {!isSmallMobile && (
                     <Text style={[styles.affiliationSubtitle, { color: textMuted }]}>
@@ -2461,7 +2461,7 @@ export default function ProfessionalUserProfileScreen() {
                     </Pressable>
 
                     <Pressable
-                      onPress={() => alertMsg('Consultation scheduled on Boolok GPT VIP calendar.')}
+                      onPress={() => alertMsg('Consultation scheduled on BoolokOne VIP calendar.')}
                       style={[
                         styles.secondaryCtaBtn,
                         isMobile && { flex: 1, minWidth: 140, paddingHorizontal: 10, justifyContent: 'center' },
@@ -2703,7 +2703,7 @@ export default function ProfessionalUserProfileScreen() {
                       onPress={() => handleOpenPostDetailsModal(post)}
                       style={({ pressed, hovered }: any) => [
                         styles.instagramGridTile,
-                        { width: gridTileWidth, aspectRatio: 4 / 5 },
+                        { width: gridTileWidth, height: gridTileWidth * 5 / 4 },
                         (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                       ]}
                     >
@@ -2829,7 +2829,7 @@ export default function ProfessionalUserProfileScreen() {
                       onPress={() => setSelectedReelForModal(reel)}
                       style={({ pressed, hovered }: any) => [
                         styles.instagramGridTile,
-                        { width: gridTileWidth, aspectRatio: 9 / 16 },
+                        { width: gridTileWidth, height: gridTileWidth * 16 / 9 },
                         (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                       ]}
                     >
@@ -2837,7 +2837,7 @@ export default function ProfessionalUserProfileScreen() {
                         <>
                           <Image
                             source={{
-                              uri: reel.thumbnail || reel.poster || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
+                              uri: resolveImageUrl(reel.thumbnail || reel.poster) || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
                             }}
                             style={StyleSheet.absoluteFill}
                             resizeMode="cover"
@@ -3001,7 +3001,7 @@ export default function ProfessionalUserProfileScreen() {
                           onPress={() => handleOpenPostDetailsModal(post)}
                           style={({ pressed, hovered }: any) => [
                             styles.instagramGridTile,
-                            { width: gridTileWidth, aspectRatio: 4 / 5 },
+                            { width: gridTileWidth, height: gridTileWidth * 5 / 4 },
                             (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                           ]}
                         >
@@ -3065,7 +3065,7 @@ export default function ProfessionalUserProfileScreen() {
                           onPress={() => setSelectedReelForModal(reel)}
                           style={({ pressed, hovered }: any) => [
                             styles.instagramGridTile,
-                            { width: gridTileWidth, aspectRatio: 9 / 16 },
+                            { width: gridTileWidth, height: gridTileWidth * 16 / 9 },
                             (pressed || hovered) && { transform: [{ scale: 0.99 }] },
                           ]}
                         >
@@ -3073,7 +3073,7 @@ export default function ProfessionalUserProfileScreen() {
                             <>
                               <Image
                                 source={{
-                                  uri: reel.thumbnail || reel.poster || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
+                                  uri: resolveImageUrl(reel.thumbnail || reel.poster) || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=600',
                                 }}
                                 style={StyleSheet.absoluteFill}
                                 resizeMode="cover"
@@ -3341,7 +3341,7 @@ export default function ProfessionalUserProfileScreen() {
                     </Text>
                     <Text style={{ color: textMuted, fontSize: 12.5, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
                       {isSelf
-                        ? 'When members in the Boolok Network connect with you, they will appear here in real-time.'
+                        ? 'When members in the BoolokOne Network connect with you, they will appear here in real-time.'
                         : `Be the first person in the network to follow ${profileUser.fullName}!`}
                     </Text>
                   </View>
@@ -3431,7 +3431,7 @@ export default function ProfessionalUserProfileScreen() {
                     </Text>
                     <Text style={{ color: textMuted, fontSize: 12.5, textAlign: 'center', marginTop: 6, paddingHorizontal: 20 }}>
                       {isSelf
-                        ? 'When you follow brokers, investors, or advisors in the Boolok Network, they will appear here.'
+                        ? 'When you follow brokers, investors, or advisors in the BoolokOne Network, they will appear here.'
                         : `${profileUser.fullName} is not currently following any members.`}
                     </Text>
                   </View>
@@ -4082,7 +4082,7 @@ export default function ProfessionalUserProfileScreen() {
 
               {/* Title & Description */}
               <Text style={[styles.signOutModalTitle, { color: textPrimary }]}>
-                Sign Out of Boolok AI
+                Sign Out of BoolokOne
               </Text>
               <Text style={[styles.signOutModalDesc, { color: textSecondary }]}>
                 Are you sure you want to sign out? You will need your credentials to sign back in and access your portfolio and dashboard.
@@ -4187,13 +4187,13 @@ export default function ProfessionalUserProfileScreen() {
               </View>
 
               <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 420 }}>
-                {/* Boolok Profile Link */}
+                {/* BoolokOne Profile Link */}
                 <View style={styles.contactItemRow}>
                   <View style={[styles.contactItemIconBox, { backgroundColor: isDark ? '#162235' : '#F1F5F9' }]}>
                     <MaterialIcons name="link" size={20} color={goldPrimary} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 14 }}>
-                    <Text style={[styles.contactItemLabel, { color: textMuted }]}>BOOLOK PROFILE</Text>
+                    <Text style={[styles.contactItemLabel, { color: textMuted }]}>BoolokOne PROFILE</Text>
                     <Text style={[styles.contactItemValue, { color: '#0077b5', textDecorationLine: 'underline' }]}>
                       boolok.ai/in/{profileUser.username || 'member'}
                     </Text>
@@ -4245,7 +4245,7 @@ export default function ProfessionalUserProfileScreen() {
                     <MaterialIcons name="alternate-email" size={20} color="#a855f7" />
                   </View>
                   <View style={{ flex: 1, marginLeft: 14 }}>
-                    <Text style={[styles.contactItemLabel, { color: textMuted }]}>BOOLOK USERNAME</Text>
+                    <Text style={[styles.contactItemLabel, { color: textMuted }]}>BoolokOne USERNAME</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
                       @{profileUser.username || 'member'}
                     </Text>
@@ -4260,7 +4260,7 @@ export default function ProfessionalUserProfileScreen() {
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={[styles.contactItemLabel, { color: textMuted }]}>NETWORK & AFFILIATION</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
-                      Boolok Global Real Estate Network
+                      BoolokOne Global Real Estate Network
                     </Text>
                     <Text style={{ color: textSecondary, fontSize: 12, marginTop: 2 }}>
                       Institutional Commercial Real Estate & High-Value Assets
@@ -5075,6 +5075,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   instagramGridTile: {
+    flexShrink: 0,
     borderRadius: 8,
     overflow: 'hidden',
     position: 'relative',

@@ -1,7 +1,7 @@
 /**
  * HouseDesignLoader / HousePlanLoadingAnimation
  * ---------------------------------------------------------------------------
- * React Native recreation of the 12-second "BOOLOK · AI Architect" progress
+ * React Native recreation of the 12-second "BoolokOne · AI Architect" progress
  * animation (brief → plot → floor plan → details → 3D cube → ready card).
  *
  * Supports:
@@ -599,7 +599,7 @@ function Chrome({ clk }: { clk: Clock }) {
       {/* brand */}
       <Path d="M40 40 L42 45 L47 47 L42 49 L40 54 L38 49 L33 47 L38 45 Z" fill={C.amber} />
       <SvgText x={55} y={52} fontSize={15} fontWeight="800" letterSpacing={0.5} fill={C.ink}>
-        BOOLOK
+        BoolokOne
       </SvgText>
       <SvgText x={55} y={65} fontSize={7.5} letterSpacing={0.5} fill={C.sub}>
         AI ARCHITECT
@@ -619,7 +619,7 @@ function Chrome({ clk }: { clk: Clock }) {
       </SvgText>
       <PercentLabel clk={clk} />
       <SvgText x={31} y={803} fontSize={7.5} letterSpacing={0.8} fill={C.sub}>
-        BOOLOK  ·  AI HOUSE PLAN
+        BoolokOne  ·  AI HOUSE PLAN
       </SvgText>
     </G>
   );

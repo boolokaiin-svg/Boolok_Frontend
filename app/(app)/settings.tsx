@@ -285,7 +285,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="gavel"
             label="Terms & Conditions"
-            sublabel="Rules for using Boolok GPT"
+            sublabel="Rules for using BoolokOne"
             onPress={() => router.push({ pathname: '/terms', params: { tab: 'terms' } } as any)}
             accessibilityLabel="View Terms and Conditions"
           />
@@ -324,13 +324,13 @@ export default function SettingsScreen() {
             icon="email"
             label="Contact Us"
             sublabel="boolokai.in@gmail.com"
-            onPress={() => Linking.openURL('mailto:boolokai.in@gmail.com?subject=Boolok GPT Support')}
+            onPress={() => Linking.openURL('mailto:boolokai.in@gmail.com?subject=BoolokOne Support')}
             accessibilityLabel="Send us an email"
           />
           <SettingsRow
             icon="info-outline"
             label="App Version"
-            sublabel="1.0.0  •  © 2025 Boolok GPT"
+            sublabel="1.0.0  •  © 2025 BoolokOne"
             accessibilityLabel="App version information"
           />
         </View>

@@ -1,4 +1,12 @@
 node_modules/
+.git/
+.env
+.env.*
+!.env.example
+credentials.json
+*.keystore
+*.aab
+artifacts/
 .expo/
 dist/
 web-build/

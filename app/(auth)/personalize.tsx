@@ -149,7 +149,7 @@ export default function PersonalizeScreen() {
                 >
                   <BoolokLogo size={48} color="#fff" />
                   <Text style={[typography.headlineMd, { color: '#fff', marginLeft: spacing.base, fontFamily: 'Poppins_700Bold' }]}>
-                    BOOLOK <Text style={{ color: colors.primary }}>AI</Text>
+                    Boolok<Text style={{ color: colors.primary }}>One</Text>
                   </Text>
                 </Pressable>
 
@@ -196,7 +196,7 @@ export default function PersonalizeScreen() {
               Personalize Your AI Experience
             </Text>
             <Text style={[typography.bodyLg, { color: colors.onSurfaceVariant, marginBottom: spacing.xl }]}>
-              Tell us your primary goal so Boolok AI can better assist you.
+              Tell us your primary goal so BoolokOne can better assist you.
             </Text>
 
             {/* Profile Picture Setup Section */}

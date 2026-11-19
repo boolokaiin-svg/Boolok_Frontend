@@ -9,16 +9,16 @@ if (fs.existsSync(indexHtmlPath)) {
 
   // Replace default title and insert SEO & Google verification tags
   const tagsToInject = `
-    <title>Boolok AI - AI Agent For Real Estate Services</title>
-    <meta name="description" content="Boolok AI - Next-generation AI agent for real estate services, 3D architectural blueprints, deed verification, and social real estate network." />
+    <title>BoolokOne - AI Agent For Real Estate Services</title>
+    <meta name="description" content="BoolokOne - Next-generation AI agent for real estate services, 3D architectural blueprints, deed verification, and social real estate network." />
     <meta name="google-site-verification" content="1EGLvEwSBWIt9oM3P3XbSWZ8hgGFrF-Jr4rnAlWv28E" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon.png" />
     <link rel="apple-touch-icon" sizes="512x512" href="/icon-512.png" />
     <link rel="shortcut icon" href="/favicon.ico" />`;
 
-  if (html.includes('<title>boolokgpt</title>')) {
-    html = html.replace('<title>boolokgpt</title>', tagsToInject);
+  if (/<title>[^<]*<\/title>/i.test(html)) {
+    html = html.replace(/<title>[^<]*<\/title>/i, tagsToInject);
   } else if (html.includes('</head>')) {
     html = html.replace('</head>', `${tagsToInject}\n  </head>`);
   }

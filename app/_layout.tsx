@@ -24,8 +24,8 @@ function RootLayoutNav() {
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
       document.body.style.backgroundColor = isDark ? '#060b13' : '#ffffff';
-      if (!document.title || document.title === 'boolokgpt') {
-        document.title = 'Boolok AI - AI Agent For Real Estate Services';
+      if (!document.title || document.title === 'boolokgpt' || document.title === 'BoolokOne') {
+        document.title = 'BoolokOne - AI Agent For Real Estate Services';
       }
       if (!document.querySelector('meta[name="google-site-verification"]')) {
         const meta = document.createElement('meta');

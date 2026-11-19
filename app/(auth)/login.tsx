@@ -157,7 +157,7 @@ export default function LoginScreen() {
                 <Pressable style={styles.brandLogoRow} onPress={() => router.push('/brand-vision')}>
                   <BoolokLogo size={56} color="#fff" />
                   <Text style={[typography.headlineMd, { color: '#fff', marginLeft: spacing.base, fontFamily: 'Poppins_700Bold' }]}>
-                    BOOLOK <Text style={{ color: colors.primary }}>AI</Text>
+                    Boolok<Text style={{ color: colors.primary }}>One</Text>
                   </Text>
                 </Pressable>
 
@@ -200,7 +200,7 @@ export default function LoginScreen() {
                     Welcome Back
                   </Text>
                   <Text style={[typography.bodyMd, { color: colors.onSurfaceVariant }]}>
-                    Sign in to your Boolok AI account
+                    Sign in to your BoolokOne account
                   </Text>
                 </View>
 

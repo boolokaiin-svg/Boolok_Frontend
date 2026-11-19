@@ -15,10 +15,10 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <title>Boolok AI - AI Agent For Real Estate Services</title>
+        <title>BoolokOne - AI Agent For Real Estate Services</title>
         <meta
           name="description"
-          content="Boolok AI - Next-generation AI agent for real estate services, 3D architectural blueprints, deed verification, and social real estate network."
+          content="BoolokOne - Next-generation AI agent for real estate services, 3D architectural blueprints, deed verification, and social real estate network."
         />
 
         {/* Google Search Console Site Verification */}

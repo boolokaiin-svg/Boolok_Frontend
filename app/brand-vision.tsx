@@ -224,7 +224,7 @@ export default function BrandVisionScreen() {
         <View style={styles.navBrand}>
           <BoolokLogo size={32} color={theme.onSurface} />
           <Text style={styles.navBrandText}>
-            BOOLOK <Text style={styles.navBrandGold}>AI</Text>
+            Boolok<Text style={styles.navBrandGold}>One</Text>
           </Text>
         </View>
 
@@ -277,7 +277,7 @@ export default function BrandVisionScreen() {
 
         <FadeIn delay={400}>
           <Text style={styles.heroSubtitle}>
-            At the heart of BOOLOK AI lies the{' '}
+            At the heart of BoolokOne lies the{' '}
             <Text style={styles.heroHighlight}>Neural Node</Text>—a 9-dot
             architecture representing the convergence of local data, global trends,
             and human intent, unified by the central spark of Artificial Intelligence.
@@ -334,7 +334,7 @@ export default function BrandVisionScreen() {
             <PillarCard
               icon="globe"
               title="Global Reach"
-              description="Our network bridges the gap between international capital and local opportunities. From the streets of Tokyo to the skylines of New York, BOOLOK AI standardizes property data across 45 countries."
+              description="Our network bridges the gap between international capital and local opportunities. From the streets of Tokyo to the skylines of New York, BoolokOne standardizes property data across 45 countries."
               theme={theme}
               styles={styles}
             />
@@ -384,10 +384,10 @@ export default function BrandVisionScreen() {
           <View style={styles.footerBrand}>
             <BoolokLogo size={20} color={theme.onSurface} />
             <Text style={styles.footerBrandText}>
-              BOOLOK <Text style={styles.navBrandGold}>AI</Text>
+              Boolok<Text style={styles.navBrandGold}>One</Text>
             </Text>
           </View>
-          <Text style={styles.footerCopy}>© 2024 BOOLOK AI. All rights reserved.</Text>
+          <Text style={styles.footerCopy}>© 2024 BoolokOne. All rights reserved.</Text>
         </View>
         <View style={styles.footerLinks}>
           {['Privacy Policy', 'Terms of Service', 'Cookie Policy', 'Contact Support'].map(

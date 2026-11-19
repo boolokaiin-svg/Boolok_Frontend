@@ -122,7 +122,7 @@ export default function StorageConsentBanner() {
           { color: theme.onSurfaceVariant, lineHeight: 20, marginBottom: spacing.md },
         ]}
       >
-        Boolok GPT uses{' '}
+        BoolokOne uses{' '}
         <Text style={{ fontWeight: '700' }}>secure local storage only</Text> to keep you
         logged in. We use{' '}
         <Text style={{ fontWeight: '700' }}>no advertising cookies</Text> and no cross-site
@@ -142,7 +142,7 @@ export default function StorageConsentBanner() {
         <Pressable
           onPress={dismiss}
           accessibilityRole="button"
-          accessibilityLabel="Accept and continue using Boolok GPT"
+          accessibilityLabel="Accept and continue using BoolokOne"
           style={[styles.fillBtn, { backgroundColor: theme.primary }]}
         >
           <Text style={[typography.labelMd, { color: '#fff' }]}>Accept &amp; Continue</Text>

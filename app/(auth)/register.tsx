@@ -454,7 +454,7 @@ export default function RegisterScreen() {
               >
                 <BoolokLogo size={48} color="#fff" />
                 <Text style={[typography.headlineMd, { color: '#fff', marginLeft: spacing.base }]}>
-                  BOOLOK <Text style={{ color: colors.primary }}>AI</Text>
+                  Boolok<Text style={{ color: colors.primary }}>One</Text>
                 </Text>
               </Pressable>
 
@@ -484,7 +484,7 @@ export default function RegisterScreen() {
               </View>
 
               <Text style={[typography.labelMd, styles.copyright]}>
-                © {new Date().getFullYear()} BOOLOK AI. INTELLIGENT PRECISION.
+                © {new Date().getFullYear()} BoolokOne. INTELLIGENT PRECISION.
               </Text>
             </Animated.View>
           )}
@@ -503,7 +503,7 @@ export default function RegisterScreen() {
                 >
                   <BoolokLogo size={56} />
                   <Text style={[typography.headlineMd, { color: colors.onBackground, marginTop: spacing.base }]}>
-                    BOOLOK AI
+                    BoolokOne
                   </Text>
                 </Pressable>
               )}

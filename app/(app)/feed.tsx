@@ -56,20 +56,20 @@ const DEFAULT_REAL_ESTATE_NEWS = [
       'Exclusive institutional showcase reveals high-cap-rate tech parks, corporate headquarters, and mixed-use towers currently listed for acquisition across global financial hubs.',
     content:
       'A curated catalog of premier commercial developments has arrived on the market this quarter, headlined by Outer Ring Road Tech Campus, Margaret River Estate, and Bishopsgate Corporate Tower.',
-    sourceName: 'Boolok Institutional Asset Index & RERA Commercial',
+    sourceName: 'BoolokOne Institutional Asset Index & RERA Commercial',
     sourceUrl: 'https://www.cbre.com/insights',
   },
   {
     id: 'news-3',
-    title: 'Boolok AI Property Valuation Index Hits Record High',
+    title: 'BoolokOne Property Valuation Index Hits Record High',
     time: '57m ago',
     readers: '8,709 readers',
     category: 'AI Market Intelligence',
     summary:
-      'Boolok’s proprietary neural real estate appraisal algorithm recorded an all-time high valuation confidence score across 45,000 multi-family and commercial properties.',
+      'BoolokOne’s proprietary neural real estate appraisal algorithm recorded an all-time high valuation confidence score across 45,000 multi-family and commercial properties.',
     content:
-      'By synthesizing spatial computer vision, municipal tax records, and live footfall telemetry, the Boolok AI Valuation Index delivers 4x faster institutional underwriting with 99% accuracy on cap rate trends.',
-    sourceName: 'Boolok AI Research & MIT Center for Real Estate',
+      'By synthesizing spatial computer vision, municipal tax records, and live footfall telemetry, the BoolokOne Valuation Index delivers 4x faster institutional underwriting with 99% accuracy on cap rate trends.',
+    sourceName: 'BoolokOne Research & MIT Center for Real Estate',
     sourceUrl: 'https://cre.mit.edu',
   },
   {
@@ -461,7 +461,7 @@ export default function ProfessionalSocialFeedScreen() {
             fullName: info?.fullName || String(likerId),
             username: String(likerId),
             profilePicture: null,
-            headline: info?.headline || 'Boolok Real Estate Member',
+            headline: info?.headline || 'BoolokOne Real Estate Member',
             reactionType: 'like',
           });
         });
@@ -1002,7 +1002,7 @@ export default function ProfessionalSocialFeedScreen() {
       setNewPostText('');
       setNewPostImage(null);
       setIsCreateModalOpen(false);
-      alertMsg('Property post published successfully to Boolok Real Estate Network!');
+      alertMsg('Property post published successfully to BoolokOne Real Estate Network!');
     } catch (error: any) {
       console.error('Create post error:', error);
       alertMsg(error?.response?.data?.message || 'Failed to publish post.');
@@ -1015,7 +1015,7 @@ export default function ProfessionalSocialFeedScreen() {
     if (Platform.OS === 'web') {
       window.alert(msg);
     } else {
-      Alert.alert('Boolok Real Estate', msg);
+      Alert.alert('BoolokOne Real Estate', msg);
     }
   };
 
@@ -1057,7 +1057,7 @@ export default function ProfessionalSocialFeedScreen() {
               >
                 <View style={styles.bannerBadge}>
                   <BoolokLogo size={18} color="#ffffff" />
-                  <Text style={styles.bannerBadgeText}>BOOLOK ELITE</Text>
+                  <Text style={styles.bannerBadgeText}>BoolokOne ELITE</Text>
                 </View>
               </LinearGradient>
 
@@ -1078,7 +1078,7 @@ export default function ProfessionalSocialFeedScreen() {
                   style={styles.profileNameText}
                   onPress={() => router.push('/(app)/profile')}
                 >
-                  {user?.fullName || user?.username || 'Boolok Member'}
+                  {user?.fullName || user?.username || 'BoolokOne Member'}
                 </Text>
                 <Text style={styles.profileRoleText}>
                   {user?.headline || 'Elite Real Estate Broker & Commercial Portfolio Lead'}
@@ -1090,7 +1090,7 @@ export default function ProfessionalSocialFeedScreen() {
                 {/* Company Tag */}
                 <View style={styles.companyTag}>
                   <BoolokLogo size={14} color="#ffffff" />
-                  <Text style={styles.companyTagText}>BOOLOK GPT REAL ESTATE</Text>
+                  <Text style={styles.companyTagText}>BoolokOne REAL ESTATE</Text>
                 </View>
               </View>
 
@@ -1273,12 +1273,12 @@ export default function ProfessionalSocialFeedScreen() {
           ) : (
             posts.map((post) => {
               const author = post.author || {};
-              const authorName = author.fullName || author.username || 'Boolok Member';
+              const authorName = author.fullName || author.username || 'BoolokOne Member';
               const authorUsername = author.username || author._id || author.id || '';
               const authorTitle =
                 author.headline ||
                 author.title ||
-                'Commercial Property & Real Estate Advisor @ Boolok Network';
+                'Commercial Property & Real Estate Advisor @ BoolokOne Network';
               const isSelfPost = Boolean(
                 user &&
                   (author._id === user.id ||
@@ -1540,7 +1540,7 @@ export default function ProfessionalSocialFeedScreen() {
                       {commentsList.length > 0 ? (
                         commentsList.map((c: any, cIdx: number) => {
                           const cAuthor = c.author || c.user || {};
-                          const cName = cAuthor.fullName || cAuthor.username || 'Boolok Member';
+                          const cName = cAuthor.fullName || cAuthor.username || 'BoolokOne Member';
                           const commentBody = c.text || '';
                           const commentTime = formatSmartDateTime(c.createdAt || c.time);
                           const authorId = cAuthor._id || cAuthor.id || cAuthor.username;
@@ -1640,17 +1640,17 @@ export default function ProfessionalSocialFeedScreen() {
         </View>
 
         {/* ═══════════════════════════════════════════════════════════════════════
-            RIGHT COLUMN: Boolok GPT News & Suggested Elite Real Estate Advisors
+            RIGHT COLUMN: BoolokOne News & Suggested Elite Real Estate Advisors
         ════════════════════════════════════════════════════════════════════════ */}
         {(isDesktop || isTablet) && (
           <View style={styles.rightColumn}>
-            {/* ── CARD 1: Boolok GPT News (Replaces LinkedIn News) ─────────── */}
+            {/* ── CARD 1: BoolokOne News (Replaces LinkedIn News) ─────────── */}
             <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-              {/* Header with Boolok GPT Mark */}
+              {/* Header with BoolokOne Mark */}
               <View style={styles.newsHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <BoolokLogo size={20} color="#ffffff" />
-                  <Text style={styles.newsHeaderTitle}>Boolok GPT News</Text>
+                  <Text style={styles.newsHeaderTitle}>BoolokOne News</Text>
                 </View>
                 <MaterialIcons name="info-outline" size={16} color="#8b9bb4" />
               </View>
@@ -1765,7 +1765,7 @@ export default function ProfessionalSocialFeedScreen() {
                 About · Help · Press · API · Jobs · Privacy · Terms · Real Estate Insights
               </Text>
               <Text style={styles.footerCopyright}>
-                © 2026 BOOLOK GPT REAL ESTATE NETWORK
+                © 2026 BoolokOne REAL ESTATE NETWORK
               </Text>
             </View>
           </View>
@@ -1786,7 +1786,7 @@ export default function ProfessionalSocialFeedScreen() {
                 <UserAvatar user={user} size={40} style={styles.modalHeaderAvatar} />
                 <View style={{ marginLeft: 10 }}>
                   <Text style={styles.modalAuthorName}>
-                    {user?.fullName || user?.username || 'Boolok Member'}
+                    {user?.fullName || user?.username || 'BoolokOne Member'}
                   </Text>
                   <Text style={styles.modalAuthorPrivacy}>🌐 Post to Anyone</Text>
                 </View>
@@ -2926,7 +2926,7 @@ export default function ProfessionalSocialFeedScreen() {
                   specs: '92,000 sq ft · 8.4% Cap Rate · Triple Net Lease',
                   date: 'September 12, 2026 · 10:00 AM IST',
                   location: 'Outer Ring Road Tech Corridor, Bangalore',
-                  organizer: 'Listed by Shreekutti (Boolok Advisors)',
+                  organizer: 'Listed by Shreekutti (BoolokOne Advisors)',
                 },
                 {
                   id: 'auc-2',
@@ -3004,7 +3004,7 @@ export default function ProfessionalSocialFeedScreen() {
         </View>
       </Modal>
 
-      {/* ── 5. BOOLOK GPT NEWS STORY & OFFICIAL REFERENCE MODAL ── */}
+      {/* ── 5. BoolokOne NEWS STORY & OFFICIAL REFERENCE MODAL ── */}
       <Modal
         visible={Boolean(selectedNewsStory)}
         transparent
@@ -3020,7 +3020,7 @@ export default function ProfessionalSocialFeedScreen() {
                     <BoolokLogo size={22} color="#ffffff" />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 15, fontWeight: '800', color: isDark ? '#ffffff' : '#0f172a' }}>
-                        Boolok GPT News · {selectedNewsStory.category || 'Real Estate Intelligence'}
+                        BoolokOne News · {selectedNewsStory.category || 'Real Estate Intelligence'}
                       </Text>
                       <Text style={{ fontSize: 11, color: isDark ? '#8b9bb4' : '#64748b' }}>
                         Updated daily · {selectedNewsStory.time || 'Today'} · {selectedNewsStory.readers || 'Thousands reading'}

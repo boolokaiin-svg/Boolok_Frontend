@@ -251,7 +251,7 @@ export default function CreatePostScreen() {
                         {image ? 'Uploading image & publishing post...' : 'Publishing your post...'}
                     </Text>
                     <Text style={{ color: theme.onSurfaceVariant, fontSize: 12, textAlign: 'center' }}>
-                        Synchronizing with Boolok Real Estate Network
+                        Synchronizing with BoolokOne Real Estate Network
                     </Text>
                 </View>
             )}

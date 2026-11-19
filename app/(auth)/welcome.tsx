@@ -55,7 +55,7 @@ export default function WelcomeScreen() {
                 >
                   <BoolokLogo size={48} color="#fff" />
                   <Text style={[typography.headlineMd, { color: '#fff', marginLeft: spacing.base, fontFamily: 'Poppins_700Bold' }]}>
-                    BOOLOK <Text style={{ color: colors.primary }}>AI</Text>
+                    Boolok<Text style={{ color: colors.primary }}>One</Text>
                   </Text>
                 </Pressable>
 
@@ -137,7 +137,7 @@ export default function WelcomeScreen() {
           {/* Footer just for looks on desktop */}
           {isWide && (
             <View style={styles.desktopFooter}>
-              <Text style={[typography.bodySm, { color: colors.onSurfaceVariant }]}>© 2024 BOOLOK AI.</Text>
+              <Text style={[typography.bodySm, { color: colors.onSurfaceVariant }]}>© 2024 BoolokOne.</Text>
               <View style={{ flexDirection: 'row', gap: spacing.md }}>
                 <Text style={[typography.bodySm, { color: colors.onSurfaceVariant }]}>Privacy</Text>
                 <Text style={[typography.bodySm, { color: colors.onSurfaceVariant }]}>Terms</Text>

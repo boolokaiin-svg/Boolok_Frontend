@@ -800,7 +800,7 @@ export default function BlueprintScreen() {
 
     return {
       metadata: {
-        engine: 'Boolok BIM Specification Core',
+        engine: 'BoolokOne BIM Specification Core',
         version: '2026.4',
         standard: 'National Building Code / CMDA Development Regulations',
       },
@@ -887,7 +887,7 @@ export default function BlueprintScreen() {
         setIsGenerating(false);
         Alert.alert(
           'Sign In Required',
-          'Please sign in to your Boolok AI account to generate architectural blueprints, or enter your OpenAI API key in Prompt Settings.',
+          'Please sign in to your BoolokOne account to generate architectural blueprints, or enter your OpenAI API key in Prompt Settings.',
           [
             { text: 'Cancel', style: 'cancel' },
             { text: 'Sign In', onPress: () => router.push('/(auth)/login') },
@@ -1001,7 +1001,7 @@ export default function BlueprintScreen() {
   }, []);
 
   const allSteps = [
-    { id: 0, phase: 'Site Analysis', label: 'Plot Geometry', iconName: 'ruler-square', badge: 'Required' },
+    { id: 0, phase: 'Site Analysis', label: 'Your plot', iconName: 'ruler-square', badge: 'Required' },
     { id: 1, phase: 'Demographics', label: 'Occupancy', iconName: 'account-group-outline', badge: 'Required' },
     { id: 2, phase: 'Program', label: 'Spatial Schedule', iconName: 'floor-plan', badge: 'Required' },
     { id: 3, phase: 'Services', label: 'Kitchen & Dining', iconName: 'countertop-outline', badge: 'Program' },
@@ -1061,8 +1061,8 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 01"
             stepNum={1}
-            title="Site & Plot Geometry"
-            sub="Set boundary dimensions, orientation bearing, and road frontage parameters."
+            title="Tell us about your plot"
+            sub="Add your plot dimensions, facing direction, and road access."
             iconName="ruler-square"
             theme={theme}
           />
@@ -1257,8 +1257,8 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 02"
             stepNum={2}
-            title="Occupancy & Lifestyle Program"
-            sub="Determine family matrix, accessibility standards, and support accommodation."
+            title="Who will call this home?"
+            sub="Help us plan comfortable spaces for your household and guests."
             iconName="account-group-outline"
             theme={theme}
           />
@@ -1343,7 +1343,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 03"
             stepNum={3}
-            title="Spatial Schedule & Verticality"
+            title="Rooms & floors"
             sub="Determine floor count, bedroom allotment, ensuite ratios, and circulation."
             iconName="floor-plan"
             theme={theme}
@@ -1513,7 +1513,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 04"
             stepNum={4}
-            title="Culinary & Wet Services Program"
+            title="Your kitchen & dining space"
             sub="Determine kitchen zoning, appliance integration, and dining capacity."
             iconName="countertop-outline"
             theme={theme}
@@ -1583,7 +1583,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 05"
             stepNum={5}
-            title="Vehicular Logistics & Parking Bay"
+            title="Parking preferences"
             sub="Structural garage specifications based on vehicle clearances and frontage ingress."
             iconName="garage-variant"
             theme={theme}
@@ -1642,7 +1642,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 06"
             stepNum={6}
-            title="Vastu Mandala Alignment"
+            title="Vastu preferences"
             sub="Climatic orientation, cardinal elemental zones (Pancha Bhootas), and quadrant audits."
             iconName="compass-rose"
             theme={theme}
@@ -1721,7 +1721,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 07"
             stepNum={7}
-            title="Architectural Envelope & Typology"
+            title="Choose your home style"
             sub="Select design language, fenestration ratios, and finish specifications."
             iconName="home-modern"
             theme={theme}
@@ -1806,7 +1806,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 08"
             stepNum={8}
-            title="Site Context & Topographical Constraints"
+            title="Your plot surroundings"
             sub="Register existing on-site infrastructure, adjoining shared party walls, and site slope."
             iconName="map-marker-radius-outline"
             theme={theme}
@@ -1930,7 +1930,7 @@ export default function BlueprintScreen() {
           <SectionHead
             phase="Phase 09"
             stepNum={9}
-            title="Design Directives &amp; Structural Remarks"
+            title="The finishing details"
             sub="Submit final brief directives, specialized acoustical requests, or architectural exclusions."
             iconName="clipboard-text-outline"
             theme={theme}
@@ -1991,7 +1991,7 @@ export default function BlueprintScreen() {
               </Text>
               {/* Synthesis Output Selector */}
               <Text style={[styles.fieldLabel, { color: theme.onSurface, marginTop: 16, marginBottom: 8 }]}>
-                SELECT SYNTHESIS OUTPUT FORMAT
+                CHOOSE YOUR PLAN FORMAT
               </Text>
               <View style={{ gap: 8, marginBottom: 14 }}>
                 <RadioCard
@@ -2071,13 +2071,13 @@ export default function BlueprintScreen() {
     const grossArea = form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639);
 
     return (
-      <View style={[styles.root, { backgroundColor: theme.surface }]}>
+      <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[
             styles.scrollContent,
             { paddingHorizontal: isSmallMobile ? 10 : isWide ? 24 : 14, paddingBottom: 60 },
-            isWide && { maxWidth: 960, alignSelf: 'center', width: '100%' },
+            isWide && { maxWidth: 1080, alignSelf: 'center', width: '100%' },
           ]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
@@ -2102,7 +2102,7 @@ export default function BlueprintScreen() {
               ) : (
                 <View style={[styles.technicalStatusPill, { borderColor: 'rgba(218,165,32,0.4)', backgroundColor: 'rgba(218,165,32,0.1)' }]}>
                   <View style={[styles.pulseBeacon, { backgroundColor: '#DAA520' }]} />
-                  <Text style={{ color: '#DAA520', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>SYNTHESIZING PREVIEWS...</Text>
+                  <Text style={{ color: '#DAA520', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>CREATING YOUR PLANS</Text>
                 </View>
               )}
             </View>
@@ -2115,11 +2115,11 @@ export default function BlueprintScreen() {
                 <View style={{ flex: 1 }}>
                   <View style={[styles.galleryBadge, { backgroundColor: 'rgba(218,165,32,0.1)', borderColor: theme.primary }]}>
                     <MaterialCommunityIcons name="floor-plan" size={13} color={theme.primary} />
-                    <Text style={[styles.galleryBadgeText, { color: theme.primary }]}>AI ARCHITECTURAL SYNTHESIS</Text>
+                    <Text style={[styles.galleryBadgeText, { color: theme.primary }]}>YOUR DESIGN</Text>
                   </View>
-                  <Text style={[styles.galleryMainTitle, { color: theme.onSurface }]}>2D & 3D Floor Plan Visualization</Text>
+                  <Text style={[styles.galleryMainTitle, { color: theme.onSurface }]}>Your home, brought to life</Text>
                   <Text style={[styles.gallerySubTitle, { color: theme.onSurfaceVariant }]}>
-                    Separate orthographic CAD drawing & matching isometric cutaway (Interior layout only)
+                    Explore your floor plans and interior views. Tap a preview to see it in full screen.
                   </Text>
                 </View>
 
@@ -2136,7 +2136,7 @@ export default function BlueprintScreen() {
                     <View style={styles.cardHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <MaterialCommunityIcons name="ruler-square-compass" size={16} color={theme.primary} />
-                        <Text style={[styles.cardTitle, { color: theme.onSurface }]}>PHASE 3: 2D ARCHITECTURAL FLOOR PLAN</Text>
+                        <Text style={[styles.cardTitle, { color: theme.onSurface }]}>2D floor plan</Text>
                       </View>
                       <View style={[styles.cadTag, { borderColor: 'rgba(34,197,94,0.4)', backgroundColor: 'rgba(34,197,94,0.1)' }]}>
                         <Text style={{ fontSize: 9.5, fontWeight: '700', color: '#22c55e' }}>TOP-DOWN ORTHOGRAPHIC</Text>
@@ -2198,7 +2198,7 @@ export default function BlueprintScreen() {
                     <View style={styles.cardHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <MaterialCommunityIcons name="cube-outline" size={16} color={theme.primary} />
-                        <Text style={[styles.cardTitle, { color: theme.onSurface }]}>PHASE 4: 3D CUTAWAY VISUALIZATION</Text>
+                        <Text style={[styles.cardTitle, { color: theme.onSurface }]}>3D interior view</Text>
                       </View>
                       <View style={[styles.cadTag, { borderColor: 'rgba(218,165,32,0.4)', backgroundColor: 'rgba(218,165,32,0.1)' }]}>
                         <Text style={{ fontSize: 9.5, fontWeight: '700', color: theme.primary }}>ISOMETRIC CUTAWAY</Text>
@@ -2272,7 +2272,7 @@ export default function BlueprintScreen() {
           <View style={[styles.titleBlockContainer, { borderColor: isDark ? 'rgba(218,165,32,0.3)' : theme.outlineVariant, backgroundColor: isDark ? '#0A1220' : '#FFFFFF' }]}>
             <View style={styles.titleBlockHeader}>
               <View style={styles.titleBlockIdentity}>
-                <Text style={[styles.firmSub, { color: theme.primary }]}>BOOLOK ARCHITECTURAL STUDIO</Text>
+                <Text style={[styles.firmSub, { color: theme.primary }]}>BoolokOne House plan studio</Text>
                 <Text style={[styles.sheetTitle, { color: theme.onSurface }]}>PROJECT DESIGN BRIEF</Text>
               </View>
               <View style={[styles.refBox, { borderColor: theme.outlineVariant }]}>
@@ -2361,14 +2361,14 @@ export default function BlueprintScreen() {
 
   // ─── Main Architectural Studio Workspace ──
   return (
-    <View style={[styles.root, { backgroundColor: theme.surface }]}>
+    <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
         contentContainerStyle={[
           styles.scrollContent,
           { paddingHorizontal: isSmallMobile ? 10 : isWide ? 24 : 14 },
-          isWide && { maxWidth: 960, alignSelf: 'center', width: '100%' },
+          isWide && { maxWidth: 1080, alignSelf: 'center', width: '100%' },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
@@ -2397,7 +2397,7 @@ export default function BlueprintScreen() {
 
             {isWide && (
               <View style={[styles.technicalStatusPill, { borderColor: theme.outlineVariant, backgroundColor: isDark ? '#0C1626' : '#F1F5F9' }]}>
-                <Text style={{ color: theme.onSurfaceVariant, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>NBC 2024 / CMDA</Text>
+                <Text style={{ color: theme.onSurfaceVariant, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>2D plans + 3D views</Text>
               </View>
             )}
           </View>
@@ -2408,18 +2408,37 @@ export default function BlueprintScreen() {
           <View style={styles.studioHeroBadgeRow}>
             <View style={[styles.studioTag, { borderColor: theme.primary }]}>
               <MaterialCommunityIcons name="drawing-box" size={13} color={theme.primary} />
-              <Text style={[styles.studioTagText, { color: theme.primary }]}>SPATIAL PROGRAMMING SUITE</Text>
+              <Text style={[styles.studioTagText, { color: theme.primary }]}>BOOLOKONE / HOUSE PLAN</Text>
             </View>
           </View>
 
           <Text style={[styles.studioTitle, { color: theme.onSurface }]}>
-            House Plan &amp; Floor Layout Designer
+            A home designed around you.
           </Text>
 
           <Text style={[styles.studioSubtitle, { color: theme.onSurfaceVariant }]}>
-            Parametric residential programming. Define dimensions, room adjacencies, orientation bearings, and structural specifications.
+            Start with your plot. Add the spaces you need, then bring your home to life with 2D and 3D plans.
           </Text>
         </Animated.View>
+
+        <View style={[styles.planSummary, { backgroundColor: isDark ? '#101B2C' : '#FFFFFF', borderColor: theme.outlineVariant }]}>
+          {[
+            { icon: 'straighten', label: 'Plot size', value: `${form.plotWidth} × ${form.plotDepth} ${form.plotUnit === 'feet' ? 'ft' : 'm'}` },
+            { icon: 'bed', label: 'Bedrooms', value: `${form.bedrooms} bedrooms` },
+            { icon: 'layers', label: 'Floors', value: `${form.stories} ${form.stories === 1 ? 'floor' : 'floors'}` },
+            { icon: 'explore', label: 'Facing', value: form.facing.charAt(0).toUpperCase() + form.facing.slice(1) },
+          ].map(item => (
+            <View key={item.label} style={[styles.summaryItem, { width: isWide ? '24%' : '48%' }]}>
+              <View style={[styles.summaryIcon, { backgroundColor: isDark ? '#202A37' : '#F8F3E8' }]}>
+                <MaterialIcons name={item.icon as any} size={20} color={theme.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.summaryLabel, { color: theme.onSurfaceVariant }]}>{item.label}</Text>
+                <Text style={[styles.summaryValue, { color: theme.onSurface }]}>{item.value}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
 
         {/* Main Drafting Canvas Card */}
         <Animated.View
@@ -2429,7 +2448,7 @@ export default function BlueprintScreen() {
             {
               backgroundColor: isDark ? '#0A1220' : '#FFFFFF',
               borderColor: isDark ? 'rgba(218,165,32,0.25)' : theme.outlineVariant,
-              padding: isWide ? 20 : isSmallMobile ? 12 : 14,
+              padding: isWide ? 32 : isSmallMobile ? 16 : 22,
             },
           ]}
         >
@@ -2461,7 +2480,11 @@ export default function BlueprintScreen() {
                   return (
                     <Pressable
                       key={s.id}
-                      onPress={() => idx <= step && setStep(idx)}
+                      onPress={() => { if (idx <= step) { setStep(idx); scrollRef.current?.scrollTo({ y: 0, animated: true }); } }}
+                      disabled={idx > step}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Step ${idx + 1}: ${s.label}`}
+                      accessibilityState={{ selected: active, disabled: idx > step }}
                       style={[
                         styles.phaseTab,
                         {
@@ -2528,25 +2551,25 @@ export default function BlueprintScreen() {
             >
               <MaterialIcons name="arrow-back" size={16} color={theme.onSurface} />
               <Text style={[styles.navBtnSecondaryText, { color: theme.onSurface }]}>
-                {isWide ? 'Previous Phase' : 'Back'}
+                Back
               </Text>
             </Pressable>
 
-            <View style={styles.footerCenterBadge}>
+            <View style={[styles.footerCenterBadge, !isWide && { display: 'none' }]}>
               <Text style={[styles.footerBadgeText, { color: theme.onSurfaceVariant }]}>
-                {allSteps[step]?.badge.toUpperCase()}
+                Step {step + 1} of {totalSteps}
               </Text>
             </View>
 
             <Pressable
               onPress={goNext}
-              style={({ pressed }) => [styles.navBtnPrimary, { opacity: pressed ? 0.85 : 1 }]}
+              style={({ pressed }) => [styles.navBtnPrimary, !isWide && { flex: 1 }, { opacity: pressed ? 0.85 : 1 }]}
             >
               <LinearGradient colors={['#DAA520', '#B8860B']} style={styles.navBtnPrimaryGrad}>
                 <Text style={styles.navBtnPrimaryText}>
                   {step === totalSteps - 1
-                    ? (outputMode === '2d' ? 'Synthesize 2D Plan' : outputMode === '3d' ? 'Synthesize 3D Plan' : 'Synthesize House Plans')
-                    : (isWide ? 'Proceed to Next Phase' : 'Next Phase')}
+                    ? (outputMode === '2d' ? 'Generate 2D plan' : outputMode === '3d' ? 'Generate 3D plan' : 'Generate plans')
+                    : 'Continue'}
                 </Text>
                 <MaterialIcons name="arrow-forward" size={16} color="#0A0F23" />
               </LinearGradient>
@@ -2554,64 +2577,15 @@ export default function BlueprintScreen() {
           </View>
         </Animated.View>
 
-        {/* Architectural Design Standards & Guidelines (Bottom Section) */}
-        <Animated.View entering={FadeInDown.delay(200).duration(300)} style={styles.standardsSection}>
-          <View style={styles.standardsHeader}>
-            <MaterialCommunityIcons name="book-open-page-variant-outline" size={18} color={theme.primary} />
-            <Text style={[styles.standardsHeading, { color: theme.onSurface }]}>
-              BIM Spatial Planning &amp; Engineering Standards
+        <View style={[styles.planningNote, { borderColor: theme.outlineVariant }]}>
+          <MaterialCommunityIcons name="lightbulb-outline" size={22} color={theme.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.planningNoteTitle, { color: theme.onSurface }]}>A little detail makes a better plan</Text>
+            <Text style={[styles.planningNoteText, { color: theme.onSurfaceVariant }]}>
+              Add your household needs, preferred rooms, and any special requirements. You can return to earlier steps to make changes.
             </Text>
           </View>
-
-          <View style={styles.standardsGrid}>
-            {[
-              {
-                code: 'NBC 2024 / PART 3',
-                title: 'Setback & Open Space Ratios',
-                desc: 'Computes mandatory peripheral fire-clearances, front road setbacks, and maximum permissible ground coverage (FSI).',
-                icon: 'ruler-square-compass',
-              },
-              {
-                code: 'CLIMATIC MANDALA',
-                title: 'Bioclimatic Solar Optimization',
-                desc: 'Aligns principal fenestrations along north-south axes to mitigate harsh western solar heat gain and promote stack ventilation.',
-                icon: 'weather-sunny-alert',
-              },
-              {
-                code: 'IS 456 / STRUCTURAL',
-                title: 'Column Grid Alignment',
-                desc: 'Maintains cohesive structural columns across multiple floors to eliminate eccentric beam loads and reduce slab deflection.',
-                icon: 'pillar',
-              },
-              {
-                code: 'IS 1172 / MEP SERVICES',
-                title: 'Plumbing Core Vertical Stacking',
-                desc: 'Consolidates bathrooms and wet service risers into unified vertical plumbing ducts, eliminating lateral under-slab piping.',
-                icon: 'pipe-wrench',
-              },
-            ].map((std, i) => (
-              <View
-                key={i}
-                style={[
-                  styles.standardCard,
-                  isWide && { width: '48.5%' },
-                  {
-                    backgroundColor: isDark ? '#0A1220' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255,255,255,0.06)' : theme.outlineVariant,
-                  },
-                ]}
-              >
-                <View style={styles.standardCardTop}>
-                  <Text style={[styles.standardCode, { color: theme.primary }]}>{std.code}</Text>
-                  <MaterialCommunityIcons name={std.icon as any} size={16} color={theme.primary} />
-                </View>
-                <Text style={[styles.standardTitle, { color: theme.onSurface }]}>{std.title}</Text>
-                <Text style={[styles.standardDesc, { color: theme.onSurfaceVariant }]}>{std.desc}</Text>
-              </View>
-            ))}
-          </View>
-        </Animated.View>
-
+        </View>
 
         {/* ─── Modal: Fullscreen Image Preview ─── */}
         <Modal
@@ -2641,6 +2615,14 @@ export default function BlueprintScreen() {
 // ─── Stylesheet ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  planSummary: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, padding: 16, borderWidth: 1, borderRadius: 18, marginBottom: 24 },
+  summaryItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
+  summaryIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  summaryLabel: { fontSize: 11, marginBottom: 4 },
+  summaryValue: { fontSize: 13, fontWeight: '600' },
+  planningNote: { flexDirection: 'row', gap: 12, padding: 18, borderWidth: 1, borderRadius: 16, marginBottom: 28 },
+  planningNoteTitle: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  planningNoteText: { fontSize: 13, lineHeight: 21 },
   scrollContent: {
     paddingBottom: 40,
   },
@@ -2679,7 +2661,8 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   studioHero: {
-    marginBottom: 16,
+    marginBottom: 24,
+    paddingTop: 12,
   },
   studioHeroBadgeRow: {
     flexDirection: 'row',
@@ -2689,49 +2672,50 @@ const styles = StyleSheet.create({
   studioTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    gap: 8,
+    paddingHorizontal: 0,
+    paddingVertical: 6,
     borderRadius: 4,
-    borderWidth: 1,
+    borderWidth: 0,
   },
   studioTagText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    letterSpacing: 0.8,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.6,
   },
   studioTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    letterSpacing: -0.3,
-    marginBottom: 6,
+    fontSize: 34,
+    fontWeight: '700',
+    letterSpacing: -1,
+    marginBottom: 12,
+    lineHeight: 42,
   },
   studioSubtitle: {
-    fontSize: 12.5,
-    lineHeight: 18,
-    maxWidth: 680,
+    fontSize: 15,
+    lineHeight: 24,
+    maxWidth: 620,
   },
   draftingCard: {
-    borderRadius: 10,
+    borderRadius: 24,
     borderWidth: 1,
     marginBottom: 20,
   },
   stageTimelineHeader: {
-    marginBottom: 4,
+    marginBottom: 12,
   },
   stageProgressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 14,
   },
   stageStepCounter: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   stagePhaseLabel: {
-    fontSize: 12.5,
+    fontSize: 15,
     fontWeight: '600',
   },
   stagePercentage: {
@@ -2739,25 +2723,26 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   hairlineTrack: {
-    height: 3,
-    borderRadius: 1.5,
+    height: 5,
+    borderRadius: 4,
     overflow: 'hidden',
   },
   hairlineFill: {
     height: '100%',
-    borderRadius: 1.5,
+    borderRadius: 4,
   },
   phaseTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 6,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 1,
+    minHeight: 44,
   },
   phaseTabLabel: {
-    fontSize: 10.5,
+    fontSize: 12,
     letterSpacing: 0.2,
   },
   hairline: {
@@ -2766,13 +2751,13 @@ const styles = StyleSheet.create({
     opacity: 0.25,
   },
   sectionHeaderWrap: {
-    marginBottom: 14,
+    marginBottom: 24,
   },
   sectionMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 12,
   },
   phasePill: {
     paddingHorizontal: 5,
@@ -2796,56 +2781,57 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sectionIconRing: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 2,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 21,
     fontWeight: '700',
     letterSpacing: -0.2,
+    lineHeight: 28,
   },
   sectionSub: {
-    fontSize: 11.5,
-    marginTop: 2,
-    lineHeight: 16,
+    fontSize: 13,
+    marginTop: 6,
+    lineHeight: 21,
   },
   fieldLabel: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.1,
   },
   fieldHelp: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 2,
-    lineHeight: 15,
+    lineHeight: 19,
   },
   dimRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 14,
   },
   dimInputBox: {
     flex: 1,
   },
   dimLabel: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.8,
-    marginBottom: 3,
+    marginBottom: 8,
   },
   dimInput: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 12,
     paddingHorizontal: 8,
     paddingVertical: 8,
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '700',
-    height: 44,
+    height: 54,
     textAlign: 'center',
   },
   dimSeparator: {
@@ -2874,27 +2860,27 @@ const styles = StyleSheet.create({
   grid2: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 8,
   },
   chipCard: {
     width: '48.5%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 10,
     gap: 6,
-    minHeight: 48,
+    minHeight: 58,
   },
   chipLabel: {
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 13,
+    lineHeight: 19,
   },
   chipSub: {
-    fontSize: 9.5,
+    fontSize: 11,
     marginTop: 1,
   },
   chipCheckbox: {
@@ -2995,25 +2981,25 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   stepperLabel: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '600',
   },
   stepperSub: {
-    fontSize: 10.5,
+    fontSize: 12,
     marginTop: 1,
-    lineHeight: 14,
+    lineHeight: 18,
   },
   stepperControls: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 10,
     borderWidth: 1,
     overflow: 'hidden',
-    height: 36,
+    height: 44,
   },
   stepBtn: {
-    width: 36,
-    height: 36,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3050,13 +3036,13 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   toggleLabel: {
-    fontSize: 12.5,
+    fontSize: 14,
     fontWeight: '600',
   },
   toggleSub: {
-    fontSize: 11,
+    fontSize: 12,
     marginTop: 1,
-    lineHeight: 15,
+    lineHeight: 18,
   },
   switchTrack: {
     width: 38,
@@ -3192,18 +3178,18 @@ const styles = StyleSheet.create({
   draftingFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    gap: 8,
+    marginTop: 8,
+    gap: 12,
   },
   navBtnSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
-    minHeight: 42,
+    minHeight: 48,
   },
   navBtnSecondaryText: {
     fontSize: 12,
@@ -3219,20 +3205,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   navBtnPrimary: {
-    borderRadius: 8,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   navBtnPrimaryGrad: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    minHeight: 42,
+    minHeight: 48,
+    justifyContent: 'center',
   },
   navBtnPrimaryText: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#0A0F23',
     letterSpacing: 0.2,
   },
@@ -3495,9 +3482,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#DAA520',
   },
   galleryContainer: {
-    borderRadius: 12,
+    borderRadius: 24,
     borderWidth: 1,
-    padding: 16,
+    padding: 20,
     marginBottom: 16,
   },
   galleryHeaderRow: {
@@ -3556,7 +3543,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   planCard: {
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     overflow: 'hidden',
   },
@@ -3568,6 +3555,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.08)',
+    flexWrap: 'wrap',
+    gap: 10,
   },
   cardTitle: {
     fontSize: 11,

@@ -33,7 +33,7 @@ interface PickedFile {
 
 export default function LegalVerificationScreen() {
   const { theme, isDark } = useTheme();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const isWide = width >= 768;
   const isSmallMobile = width < 400;
 
@@ -326,34 +326,38 @@ export default function LegalVerificationScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          isWide && { maxWidth: 1040, alignSelf: 'center', width: '100%' },
+          { padding: isWide ? 28 : 16, maxWidth: 1040, alignSelf: 'center', width: '100%' },
         ]}
         showsVerticalScrollIndicator={false}
       >
         {/* ── Top Header Navigation ── */}
         <View style={styles.topNavRow}>
           <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
             onPress={() => router.back()}
             style={[styles.backBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : '#FFFFFF', borderColor }]}
           >
             <MaterialIcons name="arrow-back" size={18} color={textPrimary} />
           </Pressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: isWide ? 10 : 6, flexWrap: 'nowrap' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: isWide ? 10 : 6, flexWrap: 'wrap', justifyContent: 'flex-end', flex: 1 }}>
             <View style={[styles.statusPill, { backgroundColor: 'rgba(218, 165, 32, 0.12)', borderColor: goldPrimary, paddingHorizontal: isSmallMobile ? 8 : 10 }]}>
               <View style={[styles.pulseDot, { backgroundColor: goldPrimary }]} />
               <Text style={{ color: goldPrimary, fontSize: isSmallMobile ? 9.5 : 11, fontWeight: '800', letterSpacing: 0.5 }}>
-                {engineStatus.online ? 'SERVICE ONLINE' : 'SERVICE UNAVAILABLE'}
+                {engineStatus.online ? 'Service online' : 'Service unavailable'}
               </Text>
             </View>
 
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open audit history"
               onPress={() => setIsHistoryModalOpen(true)}
               style={[styles.historyBtn, { backgroundColor: isDark ? '#162235' : '#F1F5F9', borderColor, paddingHorizontal: isSmallMobile ? 8 : 12 }]}
             >
               <MaterialCommunityIcons name="history" size={15} color={textPrimary} />
               <Text style={[styles.historyBtnText, { color: textPrimary, fontSize: isSmallMobile ? 11 : 12 }]}>
-                {isSmallMobile ? `Audits (${historyAudits.length})` : `Audit History (${historyAudits.length})`}
+                History ({historyAudits.length})
               </Text>
             </Pressable>
           </View>
@@ -364,12 +368,12 @@ export default function LegalVerificationScreen() {
           <View style={[styles.heroIconCircle, { backgroundColor: isDark ? 'rgba(218, 165, 32, 0.12)' : '#FEF3C7', borderColor: goldPrimary }]}>
             <MaterialIcons name="verified-user" size={isWide ? 32 : 28} color={goldPrimary} />
           </View>
-          <Text style={[styles.heroBadge, { color: goldPrimary, fontSize: isWide ? 11 : 10 }]}>AUTONOMOUS LEGAL DUE DILIGENCE</Text>
-          <Text style={[styles.heroTitle, { color: textPrimary, fontSize: isWide ? 26 : (isSmallMobile ? 20 : 22), lineHeight: isWide ? 34 : (isSmallMobile ? 26 : 28) }]}>
-            Title Deed & Encumbrance Verification
+          <Text style={[styles.heroBadge, { color: goldPrimary, fontSize: isWide ? 11 : 10 }]}>BOOLOKONE / LEGAL AI</Text>
+          <Text style={[styles.heroTitle, { color: textPrimary, fontSize: isWide ? 36 : (isSmallMobile ? 27 : 30), lineHeight: isWide ? 44 : 36 }]}>
+            Clarity for your next property.
           </Text>
-          <Text style={[styles.heroSubtitle, { color: textSecondary, fontSize: isWide ? 14 : 12.5, lineHeight: isWide ? 22 : 19 }]}>
-            Bilingual OCR (Tamil & English), live TNREGINET registry checks, automatic Encumbrance Certificate (EC) download, and title audit.
+          <Text style={[styles.heroSubtitle, { color: textSecondary, fontSize: 14, lineHeight: 23 }]}>
+            Review your sale deed, check available registry records, and understand potential title risks in one place.
           </Text>
         </View>
 
@@ -377,9 +381,9 @@ export default function LegalVerificationScreen() {
         <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
           <View style={styles.cardHeaderRow}>
             <View>
-              <Text style={[styles.sectionTitle, { color: textPrimary }]}>Upload Land Documents</Text>
+              <Text style={[styles.sectionTitle, { color: textPrimary }]}>Start with your sale deed</Text>
               <Text style={[styles.sectionSubtitle, { color: textMuted }]}>
-                Supported formats: PDF, Scanned Images (JPG, PNG) up to 30MB
+                PDF, JPG or PNG ? Up to 30 MB ? Tamil & English
               </Text>
             </View>
           </View>
@@ -387,9 +391,11 @@ export default function LegalVerificationScreen() {
           {/* Primary Upload Slot: Sale Deed (Required) */}
           <View style={styles.uploadSlotContainer}>
             <Text style={[styles.slotLabel, { color: textPrimary }]}>
-              1. Sale Deed Document <Text style={{ color: '#EF4444' }}>*Required</Text>
+              Sale deed <Text style={{ color: goldPrimary, fontSize: 11 }}> / Required</Text>
             </Text>
             <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={saleDeedFile ? 'Change sale deed document' : 'Choose sale deed document'}
               onPress={() => handlePickDocument('deed')}
               style={({ pressed, hovered }: any) => [
                 styles.dropzone,
@@ -427,10 +433,10 @@ export default function LegalVerificationScreen() {
                 <View style={styles.emptyDropzoneContent}>
                   <MaterialIcons name="cloud-upload" size={40} color={goldPrimary} />
                   <Text style={[styles.dropzoneTitle, { color: textPrimary }]}>
-                    Click or Drag to Upload Sale Deed (கிரைய பத்திரம்)
+                    Tap to choose your sale deed
                   </Text>
                   <Text style={[styles.dropzoneHint, { color: textMuted }]}>
-                    Accepts registered deeds, parent link deeds, or builder agreements
+                    Choose a document or a clear scan from your device
                   </Text>
                 </View>
               )}
@@ -441,6 +447,8 @@ export default function LegalVerificationScreen() {
           <Pressable
             onPress={() => setShowOptionalUploads(!showOptionalUploads)}
             style={styles.optionalToggleRow}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showOptionalUploads }}
           >
             <MaterialIcons
               name={showOptionalUploads ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
@@ -448,7 +456,7 @@ export default function LegalVerificationScreen() {
               color={goldPrimary}
             />
             <Text style={[styles.optionalToggleText, { color: goldPrimary }]}>
-              {showOptionalUploads ? 'Hide Supplementary Documents' : '+ Add Manual EC or Patta (Optional)'}
+              {showOptionalUploads ? 'Hide supporting documents' : 'Add EC or Patta (optional)'}
             </Text>
           </Pressable>
 
@@ -457,7 +465,7 @@ export default function LegalVerificationScreen() {
               {/* Optional Slot: EC */}
               <View style={[styles.uploadSlotContainer, { marginTop: 8 }]}>
                 <Text style={[styles.slotLabel, { color: textSecondary }]}>
-                  2. Encumbrance Certificate (வில்லங்க சான்றிதழ்) — Optional
+                  Encumbrance Certificate / Optional
                 </Text>
                 <Pressable
                   onPress={() => handlePickDocument('ec')}
@@ -484,7 +492,7 @@ export default function LegalVerificationScreen() {
               {/* Optional Slot: Patta */}
               <View style={[styles.uploadSlotContainer, { marginTop: 12 }]}>
                 <Text style={[styles.slotLabel, { color: textSecondary }]}>
-                  3. Patta / Chitta Document (பட்டா) — Optional
+                  Patta / Chitta / Optional
                 </Text>
                 <Pressable
                   onPress={() => handlePickDocument('patta')}
@@ -512,7 +520,7 @@ export default function LegalVerificationScreen() {
 
           {/* Error Banner */}
           {errorMsg && (
-            <View style={styles.errorBanner}>
+            <View style={styles.errorBanner} accessibilityRole="alert" accessibilityLiveRegion="polite">
               <MaterialIcons name="error-outline" size={20} color="#EF4444" />
               <Text style={styles.errorText}>{errorMsg}</Text>
             </View>
@@ -522,24 +530,26 @@ export default function LegalVerificationScreen() {
           <Pressable
             onPress={handleStartVerification}
             disabled={isVerifying || !saleDeedFile}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isVerifying || !saleDeedFile, busy: isVerifying }}
             style={({ pressed, hovered }: any) => [
               styles.verifyActionBtn,
               { backgroundColor: isVerifying || !saleDeedFile ? (isDark ? '#162235' : '#CBD5E1') : goldPrimary },
-              (pressed || hovered) && !isVerifying && saleDeedFile && { opacity: 0.9, transform: [{ scale: 1.01 }] },
+              (pressed || hovered) && !isVerifying && saleDeedFile && { opacity: 0.88 },
             ]}
           >
             {isVerifying ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <ActivityIndicator size="small" color="#000000" />
                 <Text style={[styles.verifyActionBtnText, { color: '#000000' }]}>
-                  Executing Autonomous Title Audit...
+                  Reviewing your documents?
                 </Text>
               </View>
             ) : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <MaterialIcons name="search" size={20} color="#000000" />
                 <Text style={[styles.verifyActionBtnText, { color: '#000000' }]}>
-                  Start Title & Encumbrance Verification →
+                  Start verification
                 </Text>
               </View>
             )}
@@ -550,7 +560,7 @@ export default function LegalVerificationScreen() {
         {isVerifying && (
           <View style={[styles.card, { backgroundColor: cardBg, borderColor, marginTop: 16 }]}>
             <Text style={[styles.sectionTitle, { color: textPrimary, marginBottom: 16 }]}>
-              Verification Pipeline in Progress
+              Your document review is in progress
             </Text>
             <View style={styles.stepperContainer}>
               {[
@@ -613,13 +623,13 @@ export default function LegalVerificationScreen() {
               ]}
             >
               <View style={[styles.verdictHeaderRow, !isWide && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: isWide ? 1 : undefined, width: isWide ? undefined : '100%' }}>
                   <MaterialIcons name={verdictTheme.icon as any} size={isWide ? 36 : 28} color={verdictTheme.color} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.verdictStatusPill, { color: verdictTheme.color }]}>
                       VERIFICATION STATUS
                     </Text>
-                    <Text style={[styles.verdictTitle, { color: textPrimary, fontSize: isWide ? 20 : 17 }]} numberOfLines={2}>
+                    <Text style={[styles.verdictTitle, { color: textPrimary, fontSize: isWide ? 20 : 17 }]}>
                       {verdictTheme.title}
                     </Text>
                   </View>
@@ -891,28 +901,28 @@ export default function LegalVerificationScreen() {
 
         {/* ── Capabilities Highlights Section (when no result is shown) ── */}
         {!auditResult && !isVerifying && (
-          <View style={[styles.capabilitiesGrid, { marginTop: 24 }]}>
-            <View style={[styles.capCard, { backgroundColor: cardBg, borderColor }]}>
+          <View style={[styles.capabilitiesGrid, { marginTop: 24, flexDirection: isWide ? 'row' : 'column', flexWrap: isWide ? 'wrap' : 'nowrap' }]}>
+            <View style={[styles.capCard, isWide ? { flex: 1 } : { width: '100%' }, { backgroundColor: cardBg, borderColor }]}>
               <MaterialCommunityIcons name="translate" size={28} color={goldPrimary} />
-              <Text style={[styles.capTitle, { color: textPrimary }]}>Bilingual OCR Engine</Text>
+              <Text style={[styles.capTitle, { color: textPrimary }]}>Tamil & English documents</Text>
               <Text style={[styles.capDesc, { color: textMuted }]}>
-                Natively deciphers Tamil land deeds (பத்திரம்), handwritten survey entries, and colonial registration stamps.
+                Reads property details from your uploaded deeds and scanned documents.
               </Text>
             </View>
 
-            <View style={[styles.capCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={[styles.capCard, isWide ? { flex: 1 } : { width: '100%' }, { backgroundColor: cardBg, borderColor }]}>
               <MaterialCommunityIcons name="robot" size={28} color={goldPrimary} />
-              <Text style={[styles.capTitle, { color: textPrimary }]}>Autonomous TNREGINET Bot</Text>
+              <Text style={[styles.capTitle, { color: textPrimary }]}>Registry cross-checks</Text>
               <Text style={[styles.capDesc, { color: textMuted }]}>
-                Headless browser logs into citizen portals, solves vision CAPTCHAs, and downloads 30-year official ECs.
+                Checks available TNREGINET records and shows the status of EC retrieval.
               </Text>
             </View>
 
-            <View style={[styles.capCard, { backgroundColor: cardBg, borderColor }]}>
+            <View style={[styles.capCard, isWide ? { flex: 1 } : { width: '100%' }, { backgroundColor: cardBg, borderColor }]}>
               <MaterialCommunityIcons name="shield-lock-outline" size={28} color={goldPrimary} />
-              <Text style={[styles.capTitle, { color: textPrimary }]}>Deterministic Title Guard</Text>
+              <Text style={[styles.capTitle, { color: textPrimary }]}>Understand potential risks</Text>
               <Text style={[styles.capDesc, { color: textMuted }]}>
-                Strict rule algorithms audit encumbrances, bank mortgages, partition suits, and unregistered link deeds.
+                Review flagged encumbrances, mortgages, and gaps in the title history.
               </Text>
             </View>
           </View>
@@ -934,10 +944,10 @@ export default function LegalVerificationScreen() {
         onRequestClose={() => setIsHistoryModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalBox, { backgroundColor: cardBg, borderColor }]}>
+          <View style={[styles.modalBox, { backgroundColor: cardBg, borderColor, maxHeight: height * 0.85, padding: isSmallMobile ? 16 : 24 }]}>
             <View style={styles.modalHeaderRow}>
               <Text style={[styles.modalTitle, { color: textPrimary }]}>Past Title Deed Audits</Text>
-              <Pressable onPress={() => setIsHistoryModalOpen(false)}>
+              <Pressable onPress={() => setIsHistoryModalOpen(false)} accessibilityRole="button" accessibilityLabel="Close audit history" style={styles.iconButton}>
                 <MaterialIcons name="close" size={22} color={textMuted} />
               </Pressable>
             </View>
@@ -945,7 +955,7 @@ export default function LegalVerificationScreen() {
             {isLoadingHistory ? (
               <ActivityIndicator size="large" color={goldPrimary} style={{ marginVertical: 30 }} />
             ) : historyAudits.length > 0 ? (
-              <ScrollView style={{ maxHeight: 420 }}>
+              <ScrollView style={{ maxHeight: height * 0.62 }} showsVerticalScrollIndicator={false}>
                 {historyAudits.map((item) => {
                   const itemTheme = getVerdictTheme(item.verdict);
                   return (
@@ -970,7 +980,7 @@ export default function LegalVerificationScreen() {
                         });
                         setIsHistoryModalOpen(false);
                       }}
-                      style={[styles.historyCardItem, { backgroundColor: isDark ? '#0A1220' : '#F8FAFC', borderColor }]}
+                      style={[styles.historyCardItem, !isWide && { flexDirection: 'column', alignItems: 'stretch' }, { backgroundColor: isDark ? '#0A1220' : '#F8FAFC', borderColor }]}
                     >
                       <View style={{ flex: 1 }}>
                         <Text style={[styles.historyItemName, { color: textPrimary }]} numberOfLines={1}>
@@ -1011,6 +1021,7 @@ export default function LegalVerificationScreen() {
 }
 
 const styles = StyleSheet.create({
+  iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   root: {
     flex: 1,
   },
@@ -1021,13 +1032,14 @@ const styles = StyleSheet.create({
   topNavRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+    alignItems: 'flex-start',
+    marginBottom: 28,
+    gap: 10,
   },
   backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1037,9 +1049,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
+    borderRadius: 10,
+    borderWidth: 0,
     gap: 6,
+    minHeight: 36,
   },
   pulseDot: {
     width: 7,
@@ -1051,72 +1064,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 12,
     borderWidth: 1,
     gap: 6,
+    minHeight: 44,
   },
   historyBtnText: {
     fontSize: 12,
     fontWeight: '700',
   },
   heroSection: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     textAlign: 'center',
-    marginBottom: 24,
-    paddingHorizontal: 10,
+    marginBottom: 28,
+    paddingHorizontal: 0,
   },
   heroIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 1.5,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    borderWidth: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   heroBadge: {
     fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 1.2,
-    marginBottom: 6,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+    marginBottom: 10,
   },
   heroTitle: {
     fontSize: 26,
-    fontWeight: '900',
-    textAlign: 'center',
-    letterSpacing: -0.3,
-    marginBottom: 8,
+    fontWeight: '700',
+    textAlign: 'left',
+    letterSpacing: -0.9,
+    marginBottom: 12,
   },
   heroSubtitle: {
     fontSize: 14,
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: 22,
-    maxWidth: 680,
+    maxWidth: 620,
   },
   card: {
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    padding: 14,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 3,
+    shadowOpacity: 0.03,
+    shadowRadius: 14,
+    elevation: 1,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 24,
+    flexWrap: 'wrap',
+    gap: 12,
   },
   sectionTitle: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     letterSpacing: 0.2,
+    flexShrink: 1,
   },
   sectionSubtitle: {
-    fontSize: 13,
-    marginTop: 3,
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 20,
   },
   uploadSlotContainer: {
     marginBottom: 14,
@@ -1125,14 +1143,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     marginBottom: 8,
+    lineHeight: 21,
   },
   dropzone: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 174,
   },
   emptyDropzoneContent: {
     alignItems: 'center',
@@ -1141,13 +1161,16 @@ const styles = StyleSheet.create({
   dropzoneTitle: {
     fontSize: 15,
     fontWeight: '700',
-    marginTop: 8,
+    marginTop: 14,
     textAlign: 'center',
+    lineHeight: 23,
   },
   dropzoneHint: {
     fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 320,
   },
   selectedFileRow: {
     flexDirection: 'row',
@@ -1174,22 +1197,29 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 16,
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   optionalToggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 10,
-    gap: 4,
+    marginVertical: 4,
+    gap: 8,
+    minHeight: 48,
   },
   optionalToggleText: {
     fontSize: 13,
     fontWeight: '700',
+    flex: 1,
+    lineHeight: 21,
   },
   supplementaryContainer: {
     marginBottom: 10,
   },
   dropzoneSmall: {
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderStyle: 'dashed',
     paddingHorizontal: 14,
@@ -1197,6 +1227,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    minHeight: 60,
   },
   smallDropzoneText: {
     fontSize: 13,
@@ -1204,12 +1235,12 @@ const styles = StyleSheet.create({
   },
   errorBanner: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     backgroundColor: 'rgba(239, 68, 68, 0.12)',
     borderColor: 'rgba(239, 68, 68, 0.35)',
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 12,
+    padding: 14,
     marginTop: 10,
     gap: 8,
   },
@@ -1218,18 +1249,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     flex: 1,
+    lineHeight: 21,
   },
   verifyActionBtn: {
     paddingVertical: 14,
-    borderRadius: 10,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 16,
+    minHeight: 54,
+    paddingHorizontal: 12,
   },
   verifyActionBtnText: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     letterSpacing: 0.3,
+    flexShrink: 1,
+    textAlign: 'center',
   },
   stepperContainer: {
     gap: 16,
@@ -1249,11 +1285,13 @@ const styles = StyleSheet.create({
   },
   stepTitle: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
+    lineHeight: 21,
   },
   stepDesc: {
     fontSize: 12,
     marginTop: 2,
+    lineHeight: 19,
   },
   verdictHeaderRow: {
     flexDirection: 'row',
@@ -1270,8 +1308,9 @@ const styles = StyleSheet.create({
   },
   verdictTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '700',
     marginTop: 2,
+    lineHeight: 26,
   },
   scoresRow: {
     flexDirection: 'row',
@@ -1288,6 +1327,7 @@ const styles = StyleSheet.create({
   scoreValue: {
     fontSize: 16,
     fontWeight: '900',
+    flexShrink: 1,
   },
   scoreLabel: {
     fontSize: 10,
@@ -1320,6 +1360,7 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 23,
   },
   portalCheckList: {
     gap: 10,
@@ -1346,10 +1387,14 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     marginTop: 14,
     gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 12,
   },
   downloadEcText: {
     fontSize: 14,
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   issueItemRow: {
     flexDirection: 'row',
@@ -1377,9 +1422,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 6,
+    minHeight: 44,
   },
   copyBtnText: {
     fontSize: 12,
@@ -1393,8 +1439,8 @@ const styles = StyleSheet.create({
   },
   rawReportText: {
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 21,
   },
   resetBtn: {
     flexDirection: 'row',
@@ -1405,10 +1451,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginTop: 18,
     gap: 8,
+    minHeight: 48,
+    paddingHorizontal: 12,
   },
   resetBtnText: {
     fontSize: 14,
     fontWeight: '700',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   capabilitiesGrid: {
     flexDirection: 'row',
@@ -1416,21 +1466,21 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   capCard: {
-    flex: 1,
-    minWidth: 240,
-    borderRadius: 14,
+    flexShrink: 0,
+    minWidth: 0,
+    borderRadius: 18,
     borderWidth: 1,
-    padding: 14,
+    padding: 20,
   },
   capTitle: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     marginTop: 10,
     marginBottom: 6,
   },
   capDesc: {
-    fontSize: 12,
-    lineHeight: 18,
+    fontSize: 13,
+    lineHeight: 21,
   },
   footerDisclaimer: {
     marginTop: 32,
@@ -1451,9 +1501,10 @@ const styles = StyleSheet.create({
   modalBox: {
     width: '100%',
     maxWidth: 550,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
     padding: 20,
+    flexShrink: 1,
   },
   modalHeaderRow: {
     flexDirection: 'row',
@@ -1463,7 +1514,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
+    flex: 1,
   },
   historyCardItem: {
     flexDirection: 'row',
@@ -1482,6 +1534,7 @@ const styles = StyleSheet.create({
   historyItemDate: {
     fontSize: 11,
     marginTop: 2,
+    lineHeight: 18,
   },
   historyVerdictPill: {
     paddingHorizontal: 10,
@@ -1492,6 +1545,7 @@ const styles = StyleSheet.create({
   historyVerdictText: {
     fontSize: 11,
     fontWeight: '800',
+    lineHeight: 18,
   },
   emptyHistoryBox: {
     alignItems: 'center',

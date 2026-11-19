@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import React, { createContext, useContext, useState } from 'react';
 import { lightColors, darkColors, ColorTheme } from '../constants/theme';
 
 type ThemeContextType = {
@@ -15,13 +14,7 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const systemColorScheme = useColorScheme();
-  const [isDark, setIsDark] = useState(systemColorScheme === 'dark');
-
-  // When system theme changes, optionally auto-update (if you want system sync)
-  useEffect(() => {
-    setIsDark(systemColorScheme === 'dark');
-  }, [systemColorScheme]);
+  const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => setIsDark(prev => !prev);
   const theme = isDark ? darkColors : lightColors;

@@ -542,7 +542,7 @@ export default function ForgotPasswordScreen() {
                 onPress={() => router.replace('/(auth)/login')}
               >
                 <Text style={[typography.labelMd, { color: '#000000', fontWeight: '800' }]}>
-                  Sign In to Boolok
+                  Sign In to BoolokOne
                 </Text>
               </Pressable>
             </Animated.View>

@@ -1124,7 +1124,7 @@ const VideoItem = ({
               contactList.push({
                 _id: uId,
                 id: uId,
-                name: u.fullName || u.username || 'Boolok Member',
+                name: u.fullName || u.username || 'BoolokOne Member',
                 role: u.headline || u.title || u.location || (u.username ? `@${u.username}` : 'Community Member'),
                 avatar: u.avatar || u.profilePicture,
                 isRecent: false,
@@ -1210,13 +1210,13 @@ const VideoItem = ({
 
   const handleSystemShare = async () => {
     const url = getReelShareUrl();
-    const shareMessage = `Check out this luxury property reel on Boolok: "${item.title || 'Property Reel'}" by ${authorName}!\n\n${url}`;
+    const shareMessage = `Check out this luxury property reel on BoolokOne: "${item.title || 'Property Reel'}" by ${authorName}!\n\n${url}`;
 
     setShowShareModal(false);
     if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).share) {
       try {
         await (navigator as any).share({
-          title: item.title || 'Boolok Property Reel',
+          title: item.title || 'BoolokOne Property Reel',
           text: shareMessage,
           url,
         });
@@ -1228,7 +1228,7 @@ const VideoItem = ({
 
     try {
       await Share.share({
-        title: item.title || 'Boolok Property Reel',
+        title: item.title || 'BoolokOne Property Reel',
         message: shareMessage,
         url,
       });
@@ -1239,7 +1239,7 @@ const VideoItem = ({
 
   const handleWhatsAppShare = () => {
     const url = getReelShareUrl();
-    const text = encodeURIComponent(`Check out this luxury property reel on Boolok: "${item.title}" by ${authorName}\n\n${url}`);
+    const text = encodeURIComponent(`Check out this luxury property reel on BoolokOne: "${item.title}" by ${authorName}\n\n${url}`);
     const whatsappUrl = `https://api.whatsapp.com/send?text=${text}`;
     setShowShareModal(false);
     Linking.openURL(whatsappUrl).catch(() => {
@@ -1249,7 +1249,7 @@ const VideoItem = ({
 
   const handleDirectChatShare = () => {
     setShowShareModal(false);
-    showToastMsg('Opening Boolok Messages... 💬');
+    showToastMsg('Opening BoolokOne Messages... 💬');
     router.push('/(app)/messages' as any);
   };
 
@@ -1562,7 +1562,7 @@ const VideoItem = ({
         pointerEvents="box-none"
       >
         {/* Left: AI Match micro badge */}
-        <View style={[styles.topLeftContainer, isMobile && { marginLeft: 48 }]}> 
+        <View style={[styles.topLeftContainer, isMobile && { marginLeft: 48 }]}>
           <View style={styles.aiMatchBadge}>
             <View style={[styles.pulseDot, { backgroundColor: theme.primary }]} />
             <Text style={[styles.aiMatchText, { color: theme.primary }]}>
@@ -1800,7 +1800,7 @@ const VideoItem = ({
             style={{ marginRight: 4 }}
           />
           <Text style={styles.musicText} numberOfLines={1}>
-            {item.music || 'Boolok AI · Original Audio'}
+            {item.music || 'BoolokOne · Original Audio'}
           </Text>
         </View>
       </LinearGradient>
@@ -2340,7 +2340,7 @@ export function UploadModal({ visible, onClose, onUploaded, theme, isDark, user 
         }
       }
 
-      const effectiveAuthor = authorName.trim() || user?.fullName || 'Boolok Creator';
+      const effectiveAuthor = authorName.trim() || user?.fullName || 'BoolokOne Creator';
       formData.append('title', title.trim());
       formData.append('authorName', effectiveAuthor);
       formData.append('location', location.trim());
@@ -2530,7 +2530,7 @@ export function UploadModal({ visible, onClose, onUploaded, theme, isDark, user 
                       {title.trim() || 'Property Reel Preview'}
                     </Text>
                     <Text style={uploadStyles.coverPreviewSubtitle} numberOfLines={1}>
-                      {location.trim() || 'Location'} · {authorName.trim() || user?.fullName || 'Boolok Member'}
+                      {location.trim() || 'Location'} · {authorName.trim() || user?.fullName || 'BoolokOne Member'}
                     </Text>
                   </View>
                 </View>
@@ -2874,7 +2874,7 @@ export default function InsightsScreen() {
           commentsCount: Array.isArray(r.comments) ? r.comments.length : 0,
           author: {
             _id: r.author?._id || null,
-            fullName: r.authorName || r.author?.fullName || 'Boolok Member',
+            fullName: r.authorName || r.author?.fullName || 'BoolokOne Member',
             username: r.author?.username || 'member',
             profilePicture: r.author?.profilePicture || null,
             isVerified: true,
@@ -2882,7 +2882,7 @@ export default function InsightsScreen() {
           poster: r.poster || r.thumbnail || resolveCoverUrl(r),
           thumbnail: r.thumbnail || r.poster || resolveCoverUrl(r),
           videoUrl: r.videoUrl,
-          music: 'Boolok AI · Market Verification Audio',
+          music: 'BoolokOne · Market Verification Audio',
           createdAt: r.createdAt,
         }));
 
@@ -2963,7 +2963,7 @@ export default function InsightsScreen() {
       poster: chosenPoster,
       thumbnail: chosenPoster,
       videoUrl: newReel.videoUrl,
-      music: 'Boolok AI · User Uploaded Property Radar',
+      music: 'BoolokOne · User Uploaded Property Radar',
       createdAt: newReel.createdAt || new Date().toISOString(),
     };
 
