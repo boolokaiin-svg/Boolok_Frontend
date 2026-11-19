@@ -11,6 +11,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing } from '../../constants/theme';
 import HousePlanLoadingAnimation from '../../components/HousePlanLoadingAnimation';
+import BlueprintHistoryModal from '../../components/BlueprintHistoryModal';
+import { useAuth } from '../../context/AuthContext';
+import { BlueprintSnapshot, SavedBlueprint, blueprintHistoryRequest } from '../../lib/blueprintHistory';
 import { API_BASE_URL, resolveImageUrl, getStoredToken } from '../../lib/api';
 import { synthesizeCanonicalBlueprint } from '../../lib/canonicalBlueprintEngine';
 import * as SecureStore from 'expo-secure-store';
@@ -695,6 +698,7 @@ For every valid residential architectural JSON input, automatically interpret th
 // ─── Main Architectural Studio Component ──────────────────────────────────────
 export default function BlueprintScreen() {
   const { theme, isDark } = useTheme();
+  const { token: authToken } = useAuth();
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
   const isSmallMobile = width < 380;
@@ -728,6 +732,74 @@ export default function BlueprintScreen() {
   const activeRequestIdRef = useRef<number>(0);
   const animationSkippedRef = useRef<boolean>(false);
   const generationDoneRef = useRef<boolean>(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  const [historySaveStatus, setHistorySaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error' | 'guest'>('idle');
+  const [historySaveError, setHistorySaveError] = useState('');
+  const pendingHistoryRef = useRef<{ token: string; snapshot: BlueprintSnapshot } | null>(null);
+  const historySaveVersion = useRef(0);
+
+  useEffect(() => {
+    setHistoryVisible(false);
+    setHistorySaveStatus('idle');
+    pendingHistoryRef.current = null;
+    historySaveVersion.current++;
+  }, [authToken]);
+
+  const saveBlueprint = useCallback(async (token: string, snapshot: BlueprintSnapshot) => {
+    const version = ++historySaveVersion.current;
+    pendingHistoryRef.current = { token, snapshot };
+    setHistorySaveStatus('saving');
+    setHistorySaveError('');
+    try {
+      await blueprintHistoryRequest(token, '', snapshot);
+      if (version !== historySaveVersion.current) return;
+      pendingHistoryRef.current = null;
+      setHistorySaveStatus('saved');
+    } catch (err: any) {
+      if (version !== historySaveVersion.current) return;
+      setHistorySaveStatus('error');
+      setHistorySaveError(err.message || 'History could not be saved. Your plan is still available.');
+    }
+  }, []);
+
+  const restoreBlueprint = (plan: SavedBlueprint) => {
+    activeRequestIdRef.current++;
+    historySaveVersion.current++;
+    pendingHistoryRef.current = null;
+    setForm({ ...DEFAULTS, ...plan.form });
+    setOutputMode(plan.mode);
+    setLastGeneratedMode(plan.mode);
+    setActivePlanTab(plan.mode);
+    setPlan2dUrl(plan.plan2dUrl);
+    setPlan3dUrl(plan.plan3dUrl);
+    setPlan2dSvg(plan.plan2dSvg);
+    setPlan3dSvg(plan.plan3dSvg);
+    setTechnicalCadSvg(plan.technicalCadSvg);
+    setCanonicalLayout(null);
+    setDesignSummary(plan.summary);
+    setPlan2dError(null);
+    setPlan3dError(null);
+    setAiGenError(null);
+    setFullscreenImage(null);
+    setShowJson(false);
+    setIsGenerating(false);
+    setIsAiGenerating(false);
+    setHistorySaveStatus('saved');
+    setSubmitted(true);
+    setStep(0);
+    generationDoneRef.current = true;
+    animationSkippedRef.current = false;
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  };
+
+  const historyModal = <BlueprintHistoryModal visible={historyVisible} token={authToken} onClose={() => setHistoryVisible(false)} onSelect={restoreBlueprint} />;
+  const historyButton = (
+    <Pressable accessibilityRole="button" accessibilityLabel="Open blueprint history" onPress={() => setHistoryVisible(true)}
+      style={[styles.technicalStatusPill, { minHeight: 44, paddingHorizontal: 12, borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }]}>
+      <MaterialIcons name="history" size={19} color={theme.onSurface} />
+      <Text style={{ color: theme.onSurface, fontSize: 12, fontWeight: '600' }}>History</Text>
+    </Pressable>
+  );
 
   // Load saved OpenAI Key if available
   useEffect(() => {
@@ -863,6 +935,9 @@ export default function BlueprintScreen() {
     const requestId = ++activeRequestIdRef.current;
 
     setLastGeneratedMode(targetMode);
+    historySaveVersion.current++;
+    pendingHistoryRef.current = null;
+    setHistorySaveStatus('idle');
     setActivePlanTab(targetMode);
     setIsAiGenerating(true);
     setIsGenerating(true);
@@ -952,6 +1027,22 @@ export default function BlueprintScreen() {
       }
       setIsAiGenerating(false);
       generationDoneRef.current = true;
+      if (token) {
+        // History is independent: saving errors must never fail generation.
+        void saveBlueprint(token, {
+          generationId: `${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`,
+          mode: targetMode,
+          form: { ...form },
+          plan2dUrl: data.plan2dFileUrl ? resolveImageUrl(data.plan2dFileUrl) || data.plan2dUrl : data.plan2dUrl || null,
+          plan3dUrl: data.plan3dFileUrl ? resolveImageUrl(data.plan3dFileUrl) || data.plan3dUrl : data.plan3dUrl || null,
+          plan2dSvg: data.plan2dSvg || null,
+          plan3dSvg: data.plan3dSvg || null,
+          technicalCadSvg: data.technicalCadSvg || null,
+          summary: data.summary || null,
+        });
+      } else {
+        setHistorySaveStatus('guest');
+      }
       if (animationSkippedRef.current) {
         setIsGenerating(false);
         setAnimationSkipped(false);
@@ -974,7 +1065,7 @@ export default function BlueprintScreen() {
         [{ text: 'OK' }]
       );
     }
-  }, [openAiKey, outputMode, form]);
+  }, [openAiKey, outputMode, form, buildJson, saveBlueprint]);
 
   const retrySingleView = useCallback(async (view: '2d' | '3d') => {
     try {
@@ -2071,7 +2162,7 @@ export default function BlueprintScreen() {
     const grossArea = form.plotUnit === 'feet' ? form.plotWidth * form.plotDepth : Math.round(form.plotWidth * form.plotDepth * 10.7639);
 
     return (
-      <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>
+      <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>{historyModal}
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={[
@@ -2092,6 +2183,7 @@ export default function BlueprintScreen() {
             </Pressable>
 
             <View style={styles.statusChipGroup}>
+              {historyButton}
               {((outputMode === 'both' && (plan2dSvg || plan2dUrl) && (plan3dSvg || plan3dUrl)) ||
                 (outputMode === '2d' && (plan2dSvg || plan2dUrl)) ||
                 (outputMode === '3d' && (plan3dSvg || plan3dUrl))) ? (
@@ -2109,6 +2201,21 @@ export default function BlueprintScreen() {
           </View>
 
           {/* ─── AI Synthesized 2D & 3D Floor Plan Visual Gallery ─── */}
+          {historySaveStatus !== 'idle' && (
+            <View style={[styles.historySaveNotice, { borderColor: theme.outlineVariant, backgroundColor: theme.surfaceContainerLowest }]}>
+              {historySaveStatus === 'saving' ? <ActivityIndicator size="small" color={theme.primary} /> : <MaterialIcons name={historySaveStatus === 'saved' ? 'check-circle-outline' : 'info-outline'} size={19} color={theme.primary} />}
+              <Text accessibilityLiveRegion="polite" style={{ flex: 1, color: theme.onSurfaceVariant, fontSize: 12, lineHeight: 20 }}>
+                {historySaveStatus === 'saving' ? 'Saving your plan to history...' : historySaveStatus === 'saved' ? 'Saved to your plan history' : historySaveStatus === 'guest' ? 'Sign in to save future plans to your history.' : historySaveError}
+              </Text>
+              {historySaveStatus === 'error' && <Pressable accessibilityRole="button" onPress={() => {
+                const pending = pendingHistoryRef.current;
+                if (pending) void saveBlueprint(pending.token, pending.snapshot);
+              }} style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 }}>
+                <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '700' }}>Retry save</Text>
+              </Pressable>}
+            </View>
+          )}
+
           {(plan2dUrl || plan3dUrl || isAiGenerating) && (
             <View style={[styles.galleryContainer, { borderColor: isDark ? 'rgba(218,165,32,0.3)' : theme.outlineVariant, backgroundColor: isDark ? '#0A1220' : '#FFFFFF' }]}>
               <View style={styles.galleryHeaderRow}>
@@ -2361,7 +2468,7 @@ export default function BlueprintScreen() {
 
   // ─── Main Architectural Studio Workspace ──
   return (
-    <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>
+    <View style={[styles.root, { backgroundColor: isDark ? '#080F1A' : '#F6F7F9' }]}>{historyModal}
       <ScrollView
         ref={scrollRef}
         style={{ flex: 1 }}
@@ -2388,19 +2495,7 @@ export default function BlueprintScreen() {
             <MaterialIcons name="arrow-back" size={18} color={theme.onSurface} />
           </Pressable>
 
-          <View style={styles.statusChipGroup}>
-            <View style={[styles.technicalStatusPill, { borderColor: 'rgba(218,165,32,0.3)', backgroundColor: 'rgba(218,165,32,0.08)' }]}>
-              <View style={[styles.pulseBeacon, { backgroundColor: theme.primary }]} />
-              <Text style={{ color: theme.primary, fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>ARCHITECTURAL STUDIO</Text>
-            </View>
-
-
-            {isWide && (
-              <View style={[styles.technicalStatusPill, { borderColor: theme.outlineVariant, backgroundColor: isDark ? '#0C1626' : '#F1F5F9' }]}>
-                <Text style={{ color: theme.onSurfaceVariant, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>2D plans + 3D views</Text>
-              </View>
-            )}
-          </View>
+          {historyButton}
         </View>
 
         {/* Studio Drafting Header */}
@@ -2615,6 +2710,7 @@ export default function BlueprintScreen() {
 // ─── Stylesheet ───────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   root: { flex: 1 },
+  historySaveNotice: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 14, padding: 12, marginBottom: 16 },
   planSummary: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, padding: 16, borderWidth: 1, borderRadius: 18, marginBottom: 24 },
   summaryItem: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   summaryIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },

@@ -22,6 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
 import { API_BASE_URL } from '../../lib/api';import { downloadCertificate } from '../../lib/downloadCertificate';
 import { verificationChecks } from '../../lib/verificationChecks';
+import { legalVerificationError } from '../../lib/legalVerificationError';
 
 interface PickedFile {
   name: string;
@@ -221,15 +222,17 @@ export default function LegalVerificationScreen() {
         setAuditResult(json);
         fetchAudits(); // Refresh audit history
       } else {
-        setErrorMsg(json.message || json.error || 'Verification encountered an error.');
+        setErrorMsg(legalVerificationError(res.status, json));
       }
     } catch (err: any) {
       console.error('Verification error:', err);
       setErrorMsg(
-        err.message ||
-        'Could not complete title verification. Please ensure the Python engine is running.'
+        'Could not connect to verification. Check your internet connection and try again.'
       );
     } finally {
+      clearTimeout(stepTimer1);
+      clearTimeout(stepTimer2);
+      clearTimeout(stepTimer3);
       setIsVerifying(false);
     }
   };
