@@ -38,6 +38,7 @@ import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 import SafetyActions from '../../components/SafetyActions';
 import { useSafetyRefresh } from '../../lib/safetyEvents';
+import ProfessionalSocialFeedScreen from './feed';
 
 // No hardcoded seeded videos: reels are loaded live from the user and backend
 const DUMMY_VIDEOS: any[] = [];
@@ -2771,6 +2772,19 @@ export function UploadModal({ visible, onClose, onUploaded, theme, isDark, user 
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 export default function InsightsScreen() {
+  const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const { isDark } = useTheme();
+  if (!postId) return <ReelsInsightsScreen />;
+  return <View style={{ flex: 1, backgroundColor: isDark ? '#050a14' : '#f1f5f9' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 10, gap: 12 }}>
+      <Text style={{ color: isDark ? '#fff' : '#0f172a', fontSize: 18, fontWeight: '800' }}>Insights · Posts</Text>
+      <Pressable accessibilityRole="button" onPress={() => router.replace('/(app)/insights')} style={({ pressed }) => ({ backgroundColor: '#daa520', paddingHorizontal: 18, paddingVertical: 12, borderRadius: 20, opacity: pressed ? 0.8 : 1 })}><Text style={{ color: '#111827', fontWeight: '700' }}>Watch reels</Text></Pressable>
+    </View>
+    <ProfessionalSocialFeedScreen focusedPostId={postId} />
+  </View>;
+}
+
+function ReelsInsightsScreen() {
   const { theme, isDark } = useTheme();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();

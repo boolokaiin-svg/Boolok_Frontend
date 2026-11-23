@@ -18,6 +18,8 @@ import {
   LayoutAnimation,
   UIManager,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -38,6 +40,8 @@ import { useSocket } from '../../context/SocketContext';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime, formatConversationTime, formatLastSeen, getMessageDateSeparator, isSameCalendarDay } from '../../lib/dateTime';
 import BoolokLogo from '../../components/BoolokLogo';
+import { parsePostShare } from '../../lib/postShare';
+import SharedPostImage from '../../components/SharedPostImage';
 
 const COMMUNITY_MEMBERS_DIRECTORY: any[] = [];
 
@@ -106,6 +110,8 @@ export function parseReelMessage(text?: string): ReelShareData | null {
 
 export function formatMessageSnippet(rawText?: string): string {
   if (!rawText) return 'Started a conversation';
+  const post = parsePostShare(rawText);
+  if (post) return `Post by ${post.authorName}: ${post.content || 'Shared a post'}`;
   const reel = parseReelMessage(rawText);
   if (reel) {
     return `📹 Reel: "${reel.title}"`;
@@ -276,6 +282,7 @@ export default function MessagesScreen() {
   const [sendError, setSendError] = useState('');
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const deleteDialogAnimation = useRef(new Animated.Value(0)).current;
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
@@ -802,18 +809,25 @@ export default function MessagesScreen() {
           {viewingImage && <Image source={{ uri: viewingImage }} resizeMode="contain" style={{ flex: 1, width: '100%' }} accessibilityLabel="Full message image" />}
         </View>
       </Modal>
-      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => { if (!isDeleting) setDeleteTarget(null); }}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 16, width: '100%', maxWidth: 360, gap: 16 }}>
+      <Modal visible={Boolean(deleteTarget)} transparent animationType="none" onShow={() => {
+        deleteDialogAnimation.setValue(0);
+        Animated.timing(deleteDialogAnimation, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: Platform.OS !== 'web' }).start();
+      }} onDismiss={() => deleteDialogAnimation.setValue(0)} onRequestClose={() => { if (!isDeleting) setDeleteTarget(null); }}>
+        <Animated.View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24, opacity: deleteDialogAnimation }}>
+          <Animated.View accessibilityViewIsModal style={{ backgroundColor: cardBg, padding: 24, borderRadius: 20, width: '100%', maxWidth: 360, gap: 16, transform: [{ translateY: deleteDialogAnimation.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }, { scale: deleteDialogAnimation.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) }] }}>
+            <View style={{ width: 44, height: 44, borderRadius: 14, backgroundColor: isDark ? '#3b1822' : '#fee2e2', alignItems: 'center', justifyContent: 'center' }}><MaterialIcons name="delete-outline" size={25} color={isDark ? '#fca5a5' : '#dc2626'} /></View>
             <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '700' }}>Delete message?</Text>
             <Text style={{ color: textMuted }}>This removes the message for everyone in this chat.</Text>
             {Boolean(deleteError) && <Text accessibilityRole="alert" style={{ color: '#ef4444' }}>{deleteError}</Text>}
-            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 24 }}>
-              <Pressable disabled={isDeleting} onPress={() => setDeleteTarget(null)} style={{ padding: 10 }}><Text style={{ color: textPrimary }}>Cancel</Text></Pressable>
-              <Pressable disabled={isDeleting} onPress={deleteMessage} style={{ padding: 10 }}><Text style={{ color: '#ef4444' }}>{isDeleting ? 'Deleting...' : 'Delete'}</Text></Pressable>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 4 }}>
+              <Pressable accessibilityRole="button" disabled={isDeleting} onPress={() => setDeleteTarget(null)} style={({ pressed }) => ({ flex: 1, minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: innerCardBg, borderWidth: 1, borderColor, opacity: isDeleting ? 0.5 : pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}><Text style={{ color: textPrimary, fontWeight: '700' }}>Cancel</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel={isDeleting ? 'Deleting message' : 'Delete message for everyone'} disabled={isDeleting} onPress={deleteMessage} style={({ pressed }) => ({ flex: 1, minHeight: 48, borderRadius: 12, flexDirection: 'row', gap: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: '#dc2626', opacity: isDeleting ? 0.7 : pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}>
+                {isDeleting ? <ActivityIndicator size="small" color="#fff" /> : <MaterialIcons name="delete-outline" size={18} color="#fff" />}
+                <Text style={{ color: '#fff', fontWeight: '700' }}>{isDeleting ? 'Deleting...' : 'Delete'}</Text>
+              </Pressable>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
       {/* ── TOP EXECUTIVE BANNER HEADER (Hidden on mobile when inside an active conversation) ── */}
       {(!activeConversation || isWide) && (
@@ -1253,6 +1267,20 @@ export default function MessagesScreen() {
 
                               {(() => {
                                 if (item.deletedAt) return <View style={[styles.messageBubble, { backgroundColor: cardBg }]}><Text style={{ color: textMuted, fontStyle: 'italic' }}>Message deleted</Text></View>;
+                                const sharedPost = parsePostShare(item.text);
+                                if (sharedPost) return (
+                                  <Pressable accessibilityRole="button" accessibilityLabel="Open shared post" onPress={() => router.push({ pathname: '/(app)/insights', params: { postId: sharedPost.postId } } as any)} style={({ pressed }) => ({ backgroundColor: cardBg, borderWidth: 1, borderColor: isMe ? goldPrimary : borderColor, width: Math.min(280, width * 0.64), borderRadius: 16, overflow: 'hidden', opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] })}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 }}>
+                                      <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#fef3c7', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#946900', fontWeight: '800' }}>{sharedPost.authorName[0]?.toUpperCase() || 'B'}</Text></View>
+                                      <Text numberOfLines={1} style={{ color: textPrimary, fontWeight: '700', flex: 1 }}>{sharedPost.authorName}</Text>
+                                      <MaterialIcons name="article" size={18} color={goldPrimary} />
+                                    </View>
+                                    <SharedPostImage postId={sharedPost.postId} image={sharedPost.image} isDark={isDark} />
+                                    <Text numberOfLines={3} style={{ color: textPrimary, padding: 12, lineHeight: 20 }}>{sharedPost.content || 'Photo post'}</Text>
+                                    <View style={{ marginHorizontal: 12, borderRadius: 10, backgroundColor: goldPrimary, minHeight: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}><MaterialIcons name="article" size={18} color="#111827" /><Text style={{ color: '#111827', fontWeight: '700' }}>Open post</Text><MaterialIcons name="arrow-forward" size={18} color="#111827" /></View>
+                                    <View style={{ padding: 10, flexDirection: 'row', justifyContent: 'flex-end', gap: 4 }}><Text style={{ color: textMuted, fontSize: 10 }}>{smartTimeStr || timeStr}</Text>{isMe && <MaterialIcons name={item.read ? 'done-all' : 'done'} size={13} color={goldPrimary} />}</View>
+                                  </Pressable>
+                                );
                                 const reelData = parseReelMessage(item.text);
                                 if (reelData) {
                                   return (

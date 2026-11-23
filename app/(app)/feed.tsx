@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import BoolokLogo from '../../components/BoolokLogo';
+import PostShareModal from '../../components/PostShareModal';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 import SafetyActions from '../../components/SafetyActions';
@@ -259,7 +260,26 @@ const REACTION_TYPES = [
   { key: 'celebrate', label: 'Celebrate', icon: 'sign-language', color: '#10b981', bg: '#059669' },
 ];
 
-export default function ProfessionalSocialFeedScreen() {
+export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focusedPostId?: string } = {}) {
+  const feedScrollRef = useRef<ScrollView>(null);
+  const focusedPostRef = useRef<View>(null);
+  const scrolledPostRef = useRef<string | null>(null);
+  const scrollToSharedPost = () => {
+    if (!focusedPostId || scrolledPostRef.current === focusedPostId || !focusedPostRef.current) return;
+    const target = focusedPostRef.current as any;
+    if (Platform.OS === 'web' && target.scrollIntoView) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      scrolledPostRef.current = focusedPostId;
+    } else {
+      const inner = (feedScrollRef.current as any)?.getInnerViewRef?.();
+      if (inner) target.measureLayout(inner, (_x: number, y: number) => {
+        feedScrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+        scrolledPostRef.current = focusedPostId;
+      }, () => {});
+    }
+  };
+  const [sharedPostError, setSharedPostError] = useState('');
+  const [sharingPost, setSharingPost] = useState<any>(null);
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const { width } = useWindowDimensions();
@@ -537,13 +557,24 @@ export default function ProfessionalSocialFeedScreen() {
         token ? axios.get(`${API_BASE_URL}/api/users/self/following`, { headers }) : Promise.reject('No token'),
       ]);
 
+      let focusedPost: any = null;
+      if (focusedPostId) {
+        try {
+          const detail = await axios.get(`${API_BASE_URL}/api/feed/${encodeURIComponent(focusedPostId)}/details`, { headers });
+          focusedPost = detail.data.post;
+          setSharedPostError('');
+        } catch {
+          setSharedPostError('This shared post is unavailable. You can continue browsing the feed.');
+        }
+      }
+
       if (feedRes.status === 'fulfilled') {
         const raw = feedRes.value.data;
         const postsList = Array.isArray(raw) ? raw : (Array.isArray(raw?.posts) ? raw.posts : []);
         // Apply cached like counts so counts survive page reload
-        setPosts(_applyLikeCache(postsList));
+        setPosts(_applyLikeCache(focusedPost ? [focusedPost, ...postsList.filter((p: any) => String(p._id) !== String(focusedPost._id))] : postsList.filter((p: any) => String(p._id) !== focusedPostId)));
       } else {
-        setPosts([]);
+        setPosts(focusedPost ? _applyLikeCache([focusedPost]) : []);
       }
 
       if (newsRes.status === 'fulfilled' && Array.isArray(newsRes.value.data?.news)) {
@@ -597,7 +628,7 @@ export default function ProfessionalSocialFeedScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [focusedPostId]);
 
   useSafetyRefresh(() => { setPosts([]); setSuggestedUsers([]); fetchPostsAndNews(); });
   const hiddenUsers = useHiddenUsers();
@@ -1030,6 +1061,8 @@ export default function ProfessionalSocialFeedScreen() {
 
   return (
     <ScrollView
+      ref={feedScrollRef}
+      onContentSizeChange={scrollToSharedPost}
       style={[styles.root, { backgroundColor: bgDark }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -1042,6 +1075,8 @@ export default function ProfessionalSocialFeedScreen() {
         />
       }
     >
+      <PostShareModal post={sharingPost} onClose={() => setSharingPost(null)} />
+      {Boolean(sharedPostError) && <Text accessibilityRole="alert" style={{ color: isDark ? '#ffffff' : '#0f172a', padding: 16 }}>{sharedPostError}</Text>}
       <View style={styles.mainLayoutContainer}>
         {/* ═══════════════════════════════════════════════════════════════════════
             LEFT COLUMN: User Real Estate Profile Card & Quick Links
@@ -1316,7 +1351,9 @@ export default function ProfessionalSocialFeedScreen() {
               return (
                 <View
                   key={post._id}
-                  style={[styles.card, styles.postCard, { backgroundColor: cardBg, borderColor }]}
+                  ref={post._id === focusedPostId ? focusedPostRef : undefined}
+                  onLayout={post._id === focusedPostId ? scrollToSharedPost : undefined}
+                  style={[styles.card, styles.postCard, { backgroundColor: cardBg, borderColor: post._id === focusedPostId ? goldPrimary : borderColor, borderWidth: post._id === focusedPostId ? 2 : 1 }]}
                 >
                   {/* Post Author Header */}
                   <View style={styles.postHeaderRow}>
@@ -1504,11 +1541,11 @@ export default function ProfessionalSocialFeedScreen() {
                     </Pressable>
 
                     <Pressable
-                      onPress={() => alertMsg('Property details link copied to clipboard!')}
+                      onPress={() => setSharingPost(post)}
                       style={styles.postActionItem}
                     >
                       <MaterialCommunityIcons name="send-outline" size={18} color="#8b9bb4" />
-                      <Text style={styles.postActionItemText}>Send</Text>
+                      <Text style={styles.postActionItemText}>Share</Text>
                     </Pressable>
                   </View>
 
