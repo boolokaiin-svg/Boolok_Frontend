@@ -27,6 +27,7 @@ import LoadingScreen from '../../components/LoadingScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import BoolokLogo from '../../components/BoolokLogo';
 import ProfileBannerEditor from '../../components/ProfileBannerEditor';
+import ProfileNotice, { ProfileNoticeData } from '../../components/ProfileNotice';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
@@ -167,7 +168,7 @@ function resolveMemberProfile(targetId: string, viewer: any) {
     _id: targetId,
     fullName: cleanName,
     username: targetId.toLowerCase(),
-    email: `${targetId.toLowerCase()}@boolok.ai`,
+    email: null,
     headline: 'Certified Real Estate Advisor @ BoolokOne Network',
     location: 'Chennai, Tamil Nadu · Prime Assets',
     bio: 'Real estate professional and certified portfolio advisor on the BoolokOne network.',
@@ -838,6 +839,12 @@ export default function ProfessionalUserProfileScreen() {
 
   // Google-style "Add Profile Picture" Modal state
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [profileNotice, setProfileNotice] = useState<ProfileNoticeData | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    setProfileNotice(null);
+    return () => { if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current); };
+  }, [viewer?.id, viewer?._id]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isBannerEditorOpen, setIsBannerEditorOpen] = useState(false);
   const [showAllIllustrations, setShowAllIllustrations] = useState(false);
@@ -1438,7 +1445,7 @@ export default function ProfessionalUserProfileScreen() {
         setData((prev: any) => ({ ...prev, user: resData.user }));
         await updateUser(resData.user);
         setIsAvatarModalOpen(false);
-        alertMsg('Profile photo permanently saved in the database!');
+        alertMsg('Profile photo updated.', 'success');
       } else if (resData?.profilePicture) {
         setData((prev: any) => ({
           ...prev,
@@ -1446,7 +1453,7 @@ export default function ProfessionalUserProfileScreen() {
         }));
         await updateUser({ profilePicture: resData.profilePicture });
         setIsAvatarModalOpen(false);
-        alertMsg('Profile photo permanently saved in the database!');
+        alertMsg('Profile photo updated.', 'success');
       }
     } catch (err: any) {
       console.error('Avatar upload failed:', err);
@@ -1463,14 +1470,14 @@ export default function ProfessionalUserProfileScreen() {
             setData((prev: any) => ({ ...prev, user: fallbackRes.data.user }));
             await updateUser(fallbackRes.data.user);
             setIsAvatarModalOpen(false);
-            alertMsg('Profile photo permanently saved in the database!');
+            alertMsg('Profile photo updated.', 'success');
             return;
           }
         } catch (fbErr: any) {
           console.error('Fallback base64 save failed:', fbErr);
         }
       }
-      alertMsg(err.message || 'Failed to upload and save profile photo.');
+      alertMsg(err.message || 'Could not update your profile photo. Please try again.', 'error');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -1489,11 +1496,11 @@ export default function ProfessionalUserProfileScreen() {
         setData((prev: any) => ({ ...prev, user: res.data.user }));
         await updateUser(res.data.user);
         setIsAvatarModalOpen(false);
-        alertMsg('Profile picture removed permanently from database.');
+        alertMsg('Profile photo removed.', 'success');
       }
     } catch (err: any) {
       console.error('Avatar remove failed:', err);
-      alertMsg(err.response?.data?.message || 'Failed to remove profile picture.');
+      alertMsg(err.response?.data?.message || 'Could not remove your profile photo.', 'error');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -1515,11 +1522,11 @@ export default function ProfessionalUserProfileScreen() {
         setData((prev: any) => ({ ...prev, user: res.data.user }));
         await updateUser(res.data.user);
         setIsAvatarModalOpen(false);
-        alertMsg('Profile picture updated successfully in database!');
+        alertMsg('Profile photo updated.', 'success');
       }
     } catch (err: any) {
       console.error('Avatar update failed:', err);
-      alertMsg(err.response?.data?.message || 'Failed to update profile picture.');
+      alertMsg(err.response?.data?.message || 'Could not update your profile photo.', 'error');
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -1540,7 +1547,7 @@ export default function ProfessionalUserProfileScreen() {
       }
     } catch (e) {
       console.error('Pick error:', e);
-      alertMsg('Could not open file picker.');
+      alertMsg('Could not open file picker.', 'error');
     }
   };
 
@@ -1559,7 +1566,7 @@ export default function ProfessionalUserProfileScreen() {
       }
     } catch (e) {
       console.error('Camera error:', e);
-      alertMsg('Could not open camera.');
+      alertMsg('Could not open camera.', 'error');
     }
   };
 
@@ -2032,12 +2039,10 @@ export default function ProfessionalUserProfileScreen() {
     }
   };
 
-  const alertMsg = (msg: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(msg);
-    } else {
-      Alert.alert('BoolokOne Real Estate', msg);
-    }
+  const alertMsg = (message: string, tone: ProfileNoticeData['tone'] = 'info') => {
+    if (noticeTimerRef.current) clearTimeout(noticeTimerRef.current);
+    setProfileNotice({ message, tone });
+    noticeTimerRef.current = setTimeout(() => setProfileNotice(null), tone === 'error' ? 7000 : 4500);
   };
 
   if (loading) return <LoadingScreen />;
@@ -2059,6 +2064,9 @@ export default function ProfessionalUserProfileScreen() {
     ...baseProfileUser,
     closedDeals: calculatedClosedDeals,
   };
+  // Other members' account emails are private; never manufacture a contact address.
+  const ownEmail = isSelf ? (profileUser.email || viewer?.email) : null;
+  const contactEmail = typeof ownEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownEmail.trim()) ? ownEmail.trim() : null;
 
   const serverReels = Array.isArray(data?.reels) ? data.reels : [];
   const mergedSelfReels = (() => {
@@ -2122,6 +2130,7 @@ export default function ProfessionalUserProfileScreen() {
     <Pressable onPress={() => router.replace('/(app)/feed')}><Text style={{ color: goldPrimary }}>Back to feed</Text></Pressable>
   </View>;
   return (
+    <View style={{ flex: 1, backgroundColor: bgDark }}>
     <ScrollView
       style={[styles.root, { backgroundColor: bgDark }]}
       contentContainerStyle={[styles.scrollContent, isMobile && { paddingVertical: 12, paddingHorizontal: 10 }]}
@@ -3553,24 +3562,25 @@ export default function ProfessionalUserProfileScreen() {
           visible={isAvatarModalOpen}
           transparent
           animationType="fade"
-          onRequestClose={() => setIsAvatarModalOpen(false)}
+          onRequestClose={() => { if (!isUploadingAvatar) setIsAvatarModalOpen(false); }}
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
-            <View style={{ width: '100%', maxWidth: 440, backgroundColor: '#0c1626', borderRadius: 24, borderWidth: 1, borderColor: '#1a273c', overflow: 'hidden' }}>
+          <View style={{ flex: 1, backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(15,23,42,0.35)', justifyContent: 'center', alignItems: 'center', padding: 16 }}>
+            <View style={{ width: '100%', maxWidth: 440, maxHeight: '90%', backgroundColor: cardBg, borderRadius: 24, borderWidth: 1, borderColor, overflow: 'hidden' }}>
               {/* Header (Close Button, Title, Options) */}
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12 }}>
                 <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Close profile photo editor"
+                  disabled={isUploadingAvatar}
                   onPress={() => setIsAvatarModalOpen(false)}
-                  style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#162338', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#24354d' }}
+                  style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: isDark ? '#162338' : '#F1F5F9', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor }}
                 >
-                  <MaterialIcons name="close" size={20} color="#ffffff" />
+                  <MaterialIcons name="close" size={20} color={textPrimary} />
                 </Pressable>
-                <Text style={{ fontSize: 18, fontWeight: '700', color: '#ffffff' }}>
+                <Text style={{ flex: 1, textAlign: 'center', marginHorizontal: 8, fontSize: 18, fontWeight: '700', color: textPrimary }}>
                   Add profile picture
                 </Text>
-                <Pressable style={{ padding: 4 }}>
-                  <MaterialIcons name="more-vert" size={22} color="#8b9bb4" />
-                </Pressable>
+                <View style={{ width: 44 }} />
               </View>
 
               <ScrollView style={{ paddingHorizontal: 20, paddingBottom: 20 }} showsVerticalScrollIndicator={false}>
@@ -3582,7 +3592,7 @@ export default function ProfessionalUserProfileScreen() {
                       style={{ width: 90, height: 90, borderRadius: 45, borderWidth: 3, borderColor: '#daa520' }}
                     />
                   ) : (
-                    <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#1a273c', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#daa520' }}>
+                    <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: isDark ? '#1a273c' : '#FEF3C7', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#daa520' }}>
                       <Text style={{ fontSize: 36, fontWeight: '800', color: '#daa520' }}>
                         {(profileUser.fullName || profileUser.username || 'U')[0]?.toUpperCase()}
                       </Text>
@@ -3594,55 +3604,61 @@ export default function ProfessionalUserProfileScreen() {
                 </View>
 
                 {/* Action Options List */}
-                <View style={{ backgroundColor: '#080f1a', borderRadius: 16, borderWidth: 1, borderColor: '#162338', overflow: 'hidden', marginBottom: 12 }}>
+                <View style={{ backgroundColor: isDark ? '#080f1a' : '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor, overflow: 'hidden', marginBottom: 12 }}>
 
                   {/* Upload from device */}
                   <Pressable
+                    accessibilityRole="button"
+                    disabled={isUploadingAvatar}
                     onPress={handleUploadFromDevice}
                     style={({ pressed, hovered }: any) => [
-                      { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#142033' },
-                      (pressed || hovered) && { backgroundColor: '#131e30' },
+                      { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: borderColor },
+                      (pressed || hovered) && { backgroundColor: isDark ? '#131e30' : '#E2E8F0' },
                     ]}
                   >
-                    <MaterialIcons name="photo-library" size={22} color="#60a5fa" style={{ marginRight: 14 }} />
+                    <MaterialIcons name="photo-library" size={22} color={isDark ? '#60a5fa' : '#2563eb'} style={{ marginRight: 14 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14.5, color: '#ffffff', fontWeight: '600' }}>
+                      <Text style={{ fontSize: 14.5, color: textPrimary, fontWeight: '600' }}>
                         Upload from device
                       </Text>
-                      <Text style={{ fontSize: 11.5, color: '#8b9bb4', marginTop: 1 }}>
+                      <Text style={{ fontSize: 11.5, color: textMuted, marginTop: 1 }}>
                         Choose JPG, PNG, or WebP photo
                       </Text>
                     </View>
-                    <MaterialIcons name="chevron-right" size={20} color="#8b9bb4" />
+                    <MaterialIcons name="chevron-right" size={20} color={textMuted} />
                   </Pressable>
 
                   {/* Take a picture */}
                   <Pressable
+                    accessibilityRole="button"
+                    disabled={isUploadingAvatar}
                     onPress={handleTakeCameraPicture}
                     style={({ pressed, hovered }: any) => [
-                      { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: profileUser.profilePicture ? 1 : 0, borderBottomColor: '#142033' },
-                      (pressed || hovered) && { backgroundColor: '#131e30' },
+                      { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: profileUser.profilePicture ? 1 : 0, borderBottomColor: borderColor },
+                      (pressed || hovered) && { backgroundColor: isDark ? '#131e30' : '#E2E8F0' },
                     ]}
                   >
-                    <MaterialIcons name="photo-camera" size={22} color="#34d399" style={{ marginRight: 14 }} />
+                    <MaterialIcons name="photo-camera" size={22} color={isDark ? '#34d399' : '#059669'} style={{ marginRight: 14 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14.5, color: '#ffffff', fontWeight: '600' }}>
+                      <Text style={{ fontSize: 14.5, color: textPrimary, fontWeight: '600' }}>
                         Take a picture
                       </Text>
-                      <Text style={{ fontSize: 11.5, color: '#8b9bb4', marginTop: 1 }}>
+                      <Text style={{ fontSize: 11.5, color: textMuted, marginTop: 1 }}>
                         Use camera for live photo
                       </Text>
                     </View>
-                    <MaterialIcons name="chevron-right" size={20} color="#8b9bb4" />
+                    <MaterialIcons name="chevron-right" size={20} color={textMuted} />
                   </Pressable>
 
                   {/* Remove picture (revert to initials) */}
                   {Boolean(profileUser.profilePicture) ? (
                     <Pressable
-                      onPress={handleRemoveAvatar}
+                      accessibilityRole="button"
+                    disabled={isUploadingAvatar}
+                    onPress={handleRemoveAvatar}
                       style={({ pressed, hovered }: any) => [
                         { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 16 },
-                        (pressed || hovered) && { backgroundColor: '#131e30' },
+                        (pressed || hovered) && { backgroundColor: isDark ? '#131e30' : '#E2E8F0' },
                       ]}
                     >
                       <MaterialIcons name="delete-outline" size={22} color="#ef4444" style={{ marginRight: 14 }} />
@@ -3654,6 +3670,7 @@ export default function ProfessionalUserProfileScreen() {
                 </View>
               </ScrollView>
             </View>
+            <ProfileNotice notice={profileNotice} onDismiss={() => setProfileNotice(null)} />
           </View>
         </Modal>
 
@@ -4230,11 +4247,13 @@ export default function ProfessionalUserProfileScreen() {
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={[styles.contactItemLabel, { color: textMuted }]}>EMAIL ADDRESS</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
-                      {isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai'))}
+                      {contactEmail || (isSelf ? 'Not provided' : 'Not shared')}
                     </Text>
                   </View>
-                  <Pressable
-                    onPress={() => handleCopyText(isSelf ? (profileUser.email || viewer?.email || `${profileUser.username || 'member'}@boolok.ai`) : (profileUser.email || (profileUser.username ? `${profileUser.username.toLowerCase()}@boolok.ai` : 'contact@boolok.ai')), 'email')}
+                  {contactEmail && <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="Copy email address"
+                    onPress={() => handleCopyText(contactEmail, 'email')}
                     style={[styles.contactCopyBtn, { borderColor }]}
                   >
                     <MaterialIcons
@@ -4245,7 +4264,7 @@ export default function ProfessionalUserProfileScreen() {
                     <Text style={[styles.contactCopyText, { color: copiedField === 'email' ? '#22c55e' : textMuted }]}>
                       {copiedField === 'email' ? 'Copied' : 'Copy'}
                     </Text>
-                  </Pressable>
+                  </Pressable>}
                 </View>
 
                 {/* Username */}
@@ -4333,6 +4352,8 @@ export default function ProfessionalUserProfileScreen() {
         </Modal>
       </View>
     </ScrollView>
+    {!isAvatarModalOpen && <ProfileNotice notice={profileNotice} onDismiss={() => setProfileNotice(null)} />}
+    </View>
   );
 }
 
