@@ -26,7 +26,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,6 +42,7 @@ import { formatSmartDateTime, formatConversationTime, formatLastSeen, getMessage
 import BoolokLogo from '../../components/BoolokLogo';
 import { parsePostShare } from '../../lib/postShare';
 import SharedPostImage from '../../components/SharedPostImage';
+import { startScreenPolling } from '../../lib/screenPolling';
 
 const COMMUNITY_MEMBERS_DIRECTORY: any[] = [];
 
@@ -466,18 +467,20 @@ export default function MessagesScreen() {
     }
   }, [activeConversation?._id, activeConversation?.id, isConnected, joinConversation, leaveConversation, fetchMessages]);
 
-  // 4b. Background message sync for open conversation (every 3 seconds fallback)
-  useEffect(() => {
-    if (!activeConversation?._id) return;
+  // Socket events handle live updates; poll only while focused and disconnected.
+  useFocusEffect(useCallback(() => {
+    if (!activeConversation?._id || isConnected) return;
     const currentConvId = String(activeConversation._id || activeConversation.id);
 
-    const interval = setInterval(async () => {
+    return startScreenPolling(async signal => {
       try {
         const authToken = await getToken();
         if (!authToken) return;
         const res = await axios.get(`${API_BASE_URL}/api/messages/history/${currentConvId}`, {
           headers: { Authorization: `Bearer ${authToken}` },
+          signal,
         });
+        if (signal.aborted) return;
         if (Array.isArray(res.data?.messages)) {
           setMessages((prev) => {
             if (res.data.messages.length !== prev.length) {
@@ -503,11 +506,9 @@ export default function MessagesScreen() {
             };
           });
         }
-      } catch (_) {}
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, [activeConversation?._id, activeConversation?.id]);
+      } catch (error) { throw error; }
+    }, 15000);
+  }, [activeConversation?._id, activeConversation?.id, isConnected, token]));
 
   // 5. Socket real-time listeners
   useEffect(() => {

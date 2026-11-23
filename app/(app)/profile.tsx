@@ -15,7 +15,7 @@ import {
   Alert,
   Modal,
 } from 'react-native';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, router, useFocusEffect } from 'expo-router';
 import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import axios from 'axios';
@@ -28,6 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BoolokLogo from '../../components/BoolokLogo';
 import ProfileBannerEditor from '../../components/ProfileBannerEditor';
 import ProfileNotice, { ProfileNoticeData } from '../../components/ProfileNotice';
+import { startScreenPolling } from '../../lib/screenPolling';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
@@ -668,7 +669,7 @@ const ProfileReelItem = ({ reel }: { reel: any }) => {
 
 export default function ProfessionalUserProfileScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
-  const { user: viewer, updateUser, signOut } = useAuth();
+  const { user: viewer, token: viewerToken, updateUser, signOut } = useAuth();
   const { theme, isDark } = useTheme();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
@@ -753,6 +754,26 @@ export default function ProfessionalUserProfileScreen() {
 
   // Custom Contact Info Modal State & Copy Helper
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [contactDetails, setContactDetails] = useState<{ targetId: string; email: string | null; loading: boolean; error: string }>({ targetId: '', email: null, loading: false, error: '' });
+  const [contactReload, setContactReload] = useState(0);
+  useEffect(() => {
+    if (!isContactModalOpen) return;
+    const controller = new AbortController();
+    let cancelled = false;
+    setContactDetails({ targetId, email: null, loading: true, error: '' });
+    const load = async () => {
+      try {
+        const token = await getToken();
+        if (!token) throw new Error('Please sign in to view contact info.');
+        const response = await axios.get(`${API_BASE_URL}/api/users/${encodeURIComponent(targetId)}/contact`, { headers: { Authorization: `Bearer ${token}` }, signal: controller.signal, timeout: 15000 });
+        if (!cancelled) setContactDetails({ targetId, email: typeof response.data.email === 'string' ? response.data.email : null, loading: false, error: '' });
+      } catch (error: any) {
+        if (!cancelled) setContactDetails({ targetId, email: null, loading: false, error: error.response?.status === 401 ? 'Please sign in to view contact info.' : 'Could not load email. Please retry.' });
+      }
+    };
+    void load();
+    return () => { cancelled = true; controller.abort(); };
+  }, [isContactModalOpen, targetId, viewerToken, contactReload]);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const handleCopyText = (text: string, fieldName: string) => {
@@ -1274,7 +1295,7 @@ export default function ProfessionalUserProfileScreen() {
   const getToken = async () =>
     Platform.OS === 'web' ? localStorage.getItem('userToken') : await SecureStore.getItemAsync('userToken');
 
-  const fetchProfileSilent = async (userId: string) => {
+  const fetchProfileSilent = async (userId: string, signal?: AbortSignal) => {
     // Don't run silent refresh while a follow/unfollow API call is in-flight —
     // it would overwrite the optimistic UI state with a stale backend value
     if (followBusy) return;
@@ -1282,7 +1303,9 @@ export default function ProfessionalUserProfileScreen() {
       const token = await getToken();
       const res = await axios.get(`${API_BASE_URL}/api/users/${userId}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
+        signal,
       });
+      if (signal?.aborted) return;
       if (res.data?.user) {
         setData(res.data);
         setFollowerCountState(res.data.followerCount ?? res.data.user?.followerCount ?? 0);
@@ -1296,18 +1319,20 @@ export default function ProfessionalUserProfileScreen() {
         }
       }
     } catch (e) {
-      // silent background refresh
+      throw e; // The polling loop backs off instead of repeatedly hitting a rate limit.
     }
   };
+  const profilePollRef = useRef(fetchProfileSilent);
+  profilePollRef.current = fetchProfileSilent;
 
   useEffect(() => {
     const activeId = isSelf ? (viewer?.id || viewer?._id || viewer?.username || 'self') : targetId;
     fetchProfile(activeId);
-    const interval = setInterval(() => {
-      fetchProfileSilent(activeId);
-    }, 3000);
-    return () => clearInterval(interval);
   }, [targetId, isSelf, viewer?.id, viewer?._id, viewer?.username]);
+  useFocusEffect(useCallback(() => {
+    const activeId = isSelf ? (viewer?.id || viewer?._id || viewer?.username || 'self') : targetId;
+    return startScreenPolling(signal => profilePollRef.current(activeId, signal), 15000);
+  }, [targetId, isSelf, viewer?.id, viewer?._id, viewer?.username]));
 
   const [profileUnavailable, setProfileUnavailable] = useState(false);
   const hiddenUsers = useHiddenUsers();
@@ -2064,9 +2089,9 @@ export default function ProfessionalUserProfileScreen() {
     ...baseProfileUser,
     closedDeals: calculatedClosedDeals,
   };
-  // Other members' account emails are private; never manufacture a contact address.
-  const ownEmail = isSelf ? (profileUser.email || viewer?.email) : null;
-  const contactEmail = typeof ownEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ownEmail.trim()) ? ownEmail.trim() : null;
+  const loadedContact = contactDetails.targetId === targetId ? contactDetails : null;
+  const savedEmail = loadedContact?.email || (isSelf ? (profileUser.email || viewer?.email) : null);
+  const contactEmail = typeof savedEmail === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(savedEmail.trim()) ? savedEmail.trim() : null;
 
   const serverReels = Array.isArray(data?.reels) ? data.reels : [];
   const mergedSelfReels = (() => {
@@ -4247,8 +4272,9 @@ export default function ProfessionalUserProfileScreen() {
                   <View style={{ flex: 1, marginLeft: 14 }}>
                     <Text style={[styles.contactItemLabel, { color: textMuted }]}>EMAIL ADDRESS</Text>
                     <Text style={[styles.contactItemValue, { color: textPrimary }]}>
-                      {contactEmail || (isSelf ? 'Not provided' : 'Not shared')}
+                      {contactEmail || (loadedContact?.loading ? 'Loading email...' : loadedContact?.error || 'Not provided')}
                     </Text>
+                    {Boolean(loadedContact?.error) && !contactEmail && <Pressable accessibilityRole="button" onPress={() => setContactReload(value => value + 1)} style={{ alignSelf: 'flex-start', marginTop: 8, borderWidth: 1, borderColor: goldPrimary, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10 }}><Text style={{ color: goldPrimary, fontWeight: '700' }}>Retry</Text></Pressable>}
                   </View>
                   {contactEmail && <Pressable
                     accessibilityRole="button"

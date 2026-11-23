@@ -14,6 +14,7 @@ import BoolokLogo from '../../components/BoolokLogo';
 import axios from 'axios';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { SocketProvider, useSocket } from '../../context/SocketContext';
+import { startScreenPolling } from '../../lib/screenPolling';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -278,25 +279,26 @@ function AppLayoutContent() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (signal?: AbortSignal) => {
     try {
       const authToken = await getAuthToken();
       if (!authToken) return;
       const res = await axios.get(`${API_BASE_URL}/api/users/notifications`, {
         headers: { Authorization: `Bearer ${authToken}` },
+        signal,
       });
+      if (signal?.aborted) return;
       setNotifications(res.data?.notifications || []);
       setUnreadCount(res.data?.unreadCount || 0);
     } catch (e) {
-      // ignore
+      if (signal) throw e;
     }
   };
 
   useEffect(() => {
     if (!token || !user) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 8000);
-    return () => clearInterval(interval);
+    return startScreenPolling(fetchNotifications, 30000);
   }, [token, user?.id, user?._id]);
 
   const handleToggleNotifications = async () => {
