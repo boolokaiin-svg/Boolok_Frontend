@@ -3302,39 +3302,35 @@ function ReelsInsightsScreen() {
 
               {/* Desktop Up / Down Float Navigation Rail */}
               <View style={styles.desktopNavRail}>
-                <TouchableOpacity
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous reel"
                   onPress={scrollToPrev}
-                  disabled={activeVideoIndex === 0}
-                  style={[
+                  disabled={activeVideoIndex <= 0 || videos.length === 0}
+                  style={({ pressed, hovered }: any) => [
                     styles.desktopNavBtn,
-                    activeVideoIndex === 0 && { opacity: 0.3 },
+                    hovered && { backgroundColor: '#3a3a3a' },
+                    pressed && { transform: [{ scale: 0.94 }] },
+                    (activeVideoIndex <= 0 || videos.length === 0) && { opacity: 0.35 },
                   ]}
-                  activeOpacity={0.7}
                 >
-                  <MaterialIcons name="keyboard-arrow-up" size={26} color="#ffffff" />
-                </TouchableOpacity>
+                  <MaterialIcons name="arrow-upward" size={30} color="#ffffff" />
+                </Pressable>
 
-                <View style={styles.desktopCounterBadge}>
-                  <Text style={{ color: theme.primary, fontSize: 12, fontWeight: '800' }}>
-                    {activeVideoIndex + 1}
-                  </Text>
-                  <Text style={{ color: '#64748b', fontSize: 10 }}>/</Text>
-                  <Text style={{ color: '#94a3b8', fontSize: 11 }}>
-                    {videos.length}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Next reel"
                   onPress={scrollToNext}
-                  disabled={activeVideoIndex === videos.length - 1}
-                  style={[
+                  disabled={activeVideoIndex >= videos.length - 1}
+                  style={({ pressed, hovered }: any) => [
                     styles.desktopNavBtn,
-                    activeVideoIndex === videos.length - 1 && { opacity: 0.3 },
+                    hovered && { backgroundColor: '#3a3a3a' },
+                    pressed && { transform: [{ scale: 0.94 }] },
+                    activeVideoIndex >= videos.length - 1 && { opacity: 0.35 },
                   ]}
-                  activeOpacity={0.7}
                 >
-                  <MaterialIcons name="keyboard-arrow-down" size={26} color="#ffffff" />
-                </TouchableOpacity>
+                  <MaterialIcons name="arrow-downward" size={30} color="#ffffff" />
+                </Pressable>
               </View>
             </View>
           </View>
@@ -3446,33 +3442,21 @@ const styles = StyleSheet.create({
   desktopNavRail: {
     position: 'absolute',
     right: 28,
-    top: '40%',
-    transform: [{ translateY: -60 }],
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    borderRadius: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-    padding: 6,
+    top: '50%',
+    transform: [{ translateY: -80 }],
     alignItems: 'center',
-    gap: 8,
+    gap: 20,
     zIndex: 40,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
   },
   desktopNavBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#292929',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  desktopCounterBadge: {
-    alignItems: 'center',
-    paddingVertical: 2,
   },
   // Video Card Container
   videoContainer: {

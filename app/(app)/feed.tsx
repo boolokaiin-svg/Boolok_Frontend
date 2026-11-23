@@ -1090,6 +1090,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
                 colors={['#0f223d', '#1a365d', '#0c1626']}
                 style={styles.profileCoverBanner}
               >
+                {Boolean(user?.coverImage) && <Image source={{ uri: resolveImageUrl(user?.coverImage)! }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />}
                 <View style={styles.bannerBadge}>
                   <BoolokLogo size={18} color="#ffffff" />
                   <Text style={styles.bannerBadgeText}>BoolokOne ELITE</Text>

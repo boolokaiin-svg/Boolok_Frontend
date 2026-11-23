@@ -26,6 +26,7 @@ import { spacing, typography, radius } from '../../constants/theme';
 import LoadingScreen from '../../components/LoadingScreen';
 import { LinearGradient } from 'expo-linear-gradient';
 import BoolokLogo from '../../components/BoolokLogo';
+import ProfileBannerEditor from '../../components/ProfileBannerEditor';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
@@ -838,6 +839,7 @@ export default function ProfessionalUserProfileScreen() {
   // Google-style "Add Profile Picture" Modal state
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isBannerEditorOpen, setIsBannerEditorOpen] = useState(false);
   const [showAllIllustrations, setShowAllIllustrations] = useState(false);
 
   // Real-time Followers list modal state
@@ -1283,7 +1285,7 @@ export default function ProfessionalUserProfileScreen() {
           setIsFollowingState(Boolean(res.data.isFollowing));
         }
         if (isSelf && res.data.user) {
-          updateUser({ closedDeals: res.data.user.closedDeals || '3' });
+          updateUser({ closedDeals: res.data.user.closedDeals || '3', coverImage: res.data.user.coverImage });
         }
       }
     } catch (e) {
@@ -2165,7 +2167,7 @@ export default function ProfessionalUserProfileScreen() {
             <Image
               source={{
                 uri:
-                  profileUser.coverImage ||
+                  resolveImageUrl(profileUser.coverImage) ||
                   'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200',
               }}
               style={styles.coverBannerImage}
@@ -2173,12 +2175,19 @@ export default function ProfessionalUserProfileScreen() {
             />
             <LinearGradient
               colors={['transparent', 'rgba(12,22,38,0.9)']}
-              style={StyleSheet.absoluteFill}
+              style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}
             />
-            <View style={[styles.coverBrandBadge, isSmallMobile && { paddingHorizontal: 6, paddingVertical: 3 }]}>
-              <BoolokLogo size={isSmallMobile ? 14 : 16} color="#ffffff" />
-              <Text style={styles.coverBrandText}>{isSmallMobile ? 'BoolokOne ELITE' : 'BoolokOne ELITE BROKERAGE'}</Text>
+            <View style={styles.coverControlsRow}>
+              <View style={[styles.coverBrandBadge, isSmallMobile && { paddingHorizontal: 8 }]}>
+                <BoolokLogo size={isSmallMobile ? 14 : 16} color="#ffffff" />
+                <Text numberOfLines={1} style={styles.coverBrandText}>{isSmallMobile ? 'BoolokOne ELITE' : 'BoolokOne ELITE BROKERAGE'}</Text>
+              </View>
+              {isSelf && <Pressable accessibilityRole="button" accessibilityLabel="Edit profile banner" hitSlop={4} onPress={() => setIsBannerEditorOpen(true)} style={({ pressed }) => [styles.editBannerButton, { opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}><MaterialIcons name="photo-camera" size={18} color="#111827" /><Text style={{ color: '#111827', fontWeight: '700', fontSize: 12 }}>Edit banner</Text></Pressable>}
             </View>
+            {isSelf && isBannerEditorOpen && <ProfileBannerEditor cover={profileUser.coverImage} onClose={() => setIsBannerEditorOpen(false)} onSaved={async coverImage => {
+              setData((prev: any) => ({ ...prev, user: { ...(prev?.user || viewer), coverImage } }));
+              await updateUser({ coverImage });
+            }} />}
           </View>
 
           {/* Profile Header Content Overlapping Cover */}
@@ -2273,7 +2282,7 @@ export default function ProfessionalUserProfileScreen() {
                 >
                   <BoolokLogo size={isSmallMobile ? 14 : 18} color={goldPrimary} />
                 </View>
-                <View style={{ marginLeft: isSmallMobile ? 6 : 8 }}>
+                <View style={{ marginLeft: isSmallMobile ? 6 : 8, flexShrink: 1, minWidth: 0 }}>
                   <Text
                     style={[
                       styles.affiliationTitle,
@@ -4659,9 +4668,10 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   coverBrandBadge: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
+    alignSelf: 'center',
+    flexShrink: 1,
+    minWidth: 0,
+    minHeight: 34,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -4672,7 +4682,31 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e6b800',
   },
+  coverControlsRow: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    right: 12,
+    zIndex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    pointerEvents: 'box-none',
+  },
+  editBannerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    gap: 6,
+    backgroundColor: '#daa520',
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    minHeight: 44,
+  },
   coverBrandText: {
+    flexShrink: 1,
     color: '#e6b800',
     fontSize: 10,
     fontWeight: '800',
@@ -4690,6 +4724,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     marginTop: -55,
     marginBottom: 16,
+    gap: 16,
   },
   avatarWrapper: {
     position: 'relative',
@@ -4711,6 +4746,8 @@ const styles = StyleSheet.create({
   },
 
   affiliationBox: {
+    flexShrink: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#162235',
