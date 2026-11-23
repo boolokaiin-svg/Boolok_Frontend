@@ -17,6 +17,7 @@ import {
   Dimensions,
   LayoutAnimation,
   UIManager,
+  Modal,
 } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -271,6 +272,12 @@ export default function MessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const attachmentAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(null);
+  const [sendError, setSendError] = useState('');
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // Dynamic keyboard avoidance padding for Android and Mobile Web
@@ -576,6 +583,15 @@ export default function MessagesScreen() {
       });
     };
 
+    const handleMessageDeleted = (data: any) => {
+      if (String(data?.conversationId) === String(activeConversationRef.current?._id || activeConversationRef.current?.id)) {
+        setMessages(prev => prev.map(m => String(m._id) === String(data.messageId)
+          ? { ...m, text: '', mediaUrl: null, deletedAt: data.deletedAt, read: true } : m));
+        setViewingImage(null);
+      }
+      fetchConversations();
+    };
+    socket.on('message_deleted', handleMessageDeleted);
     socket.on('new_message', handleNewMessage);
     socket.on('message_notification', handleMessageNotification);
     socket.on('user_typing', handleUserTyping);
@@ -583,6 +599,7 @@ export default function MessagesScreen() {
     socket.on('user_status_changed', handleUserStatusChanged);
 
     return () => {
+      socket.off('message_deleted', handleMessageDeleted);
       socket.off('new_message', handleNewMessage);
       socket.off('message_notification', handleMessageNotification);
       socket.off('user_typing', handleUserTyping);
@@ -608,6 +625,7 @@ export default function MessagesScreen() {
   const handleSendMessage = async () => {
     const textToSend = messageInput.trim();
     const mediaToSend = attachedImage;
+    const assetToSend = attachmentAssetRef.current;
     if ((!textToSend && !mediaToSend) || isSending || !activeConversation) return;
 
     const tempId = `temp-${Date.now()}`;
@@ -627,6 +645,7 @@ export default function MessagesScreen() {
     };
 
     setIsSending(true);
+    setSendError('');
     setMessageInput('');
     setAttachedImage(null);
     sendStopTyping(activeConversation._id);
@@ -637,18 +656,39 @@ export default function MessagesScreen() {
 
     try {
       const authToken = await getToken();
-      if (!authToken) return;
+      if (!authToken) throw new Error('Please sign in again to send messages.');
+
+      let uploadedMediaUrl: string | null = null;
+      if (mediaToSend) {
+        const formData = new FormData();
+        const mimeType = assetToSend?.mimeType || 'image/jpeg';
+        const filename = assetToSend?.fileName || `message.${mimeType === 'image/png' ? 'png' : mimeType === 'image/webp' ? 'webp' : 'jpg'}`;
+        if (Platform.OS === 'web') {
+          const blob = assetToSend?.file || await (await fetch(mediaToSend)).blob();
+          formData.append('image', blob, filename);
+        } else {
+          formData.append('image', { uri: mediaToSend, name: filename, type: mimeType } as any);
+        }
+        const uploadResponse = await fetch(`${API_BASE_URL}/api/messages/attachments`, {
+          method: 'POST', headers: { Authorization: `Bearer ${authToken}` }, body: formData,
+        });
+        const uploaded = await uploadResponse.json().catch(() => ({}));
+        if (!uploadResponse.ok || !uploaded.mediaUrl) throw new Error(uploaded.message || 'Image upload failed. Please try again.');
+        uploadedMediaUrl = uploaded.mediaUrl;
+      }
 
       const payload = {
         conversationId: activeConversation._id,
         recipientId: activeConversation.otherUser?._id,
         text: textToSend,
-        mediaUrl: mediaToSend,
+        mediaUrl: uploadedMediaUrl,
       };
 
       // Use socket direct dispatch if connected, or REST fallback
       if (socket && isConnected) {
-        socket.emit('send_message', payload, (response: any) => {
+        await new Promise<void>((resolve, reject) => {
+        socket.timeout(20000).emit('send_message', payload, (error: any, response: any) => {
+          if (error) { reject(new Error('Sending timed out. Check your connection and try again.')); return; }
           if (response?.message) {
             setMessages((prev) => {
               const withoutTemp = prev.filter((m) => m._id !== tempId);
@@ -657,7 +697,11 @@ export default function MessagesScreen() {
             });
             fetchConversations();
             setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
+            resolve();
+          } else {
+            reject(new Error(response?.error || 'Failed to deliver message.'));
           }
+        });
         });
       } else {
         const res = await axios.post(`${API_BASE_URL}/api/messages/send`, payload, {
@@ -672,9 +716,11 @@ export default function MessagesScreen() {
           setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 80);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to send message:', error);
-      Alert.alert('Error', 'Failed to deliver message.');
+      setSendError(error?.response?.data?.message || error?.message || 'Failed to deliver message.');
+      setMessageInput(prev => prev || textToSend);
+      setAttachedImage(prev => prev || mediaToSend);
       // Remove optimistic message if failed
       setMessages((prev) => prev.filter((m) => m._id !== tempId));
     } finally {
@@ -687,21 +733,43 @@ export default function MessagesScreen() {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
-        allowsEditing: true,
+        allowsEditing: false,
         quality: 0.8,
-        base64: true,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          setAttachedImage(`data:image/jpeg;base64,${asset.base64}`);
-        } else {
-          setAttachedImage(asset.uri);
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+          setSendError('Choose an image smaller than 10 MB.');
+          return;
         }
+        attachmentAssetRef.current = asset;
+        setSendError('');
+        setAttachedImage(asset.uri);
       }
     } catch (e) {
-      Alert.alert('Attachment', 'Could not open image picker.');
+      setSendError('Could not open image picker. Please try again.');
+    }
+  };
+
+  const deleteMessage = async () => {
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError('');
+    try {
+      const authToken = await getToken();
+      const res = await axios.delete(`${API_BASE_URL}/api/messages/${deleteTarget._id}`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      setMessages(prev => prev.map(m => String(m._id) === String(deleteTarget._id)
+        ? { ...m, text: '', mediaUrl: null, deletedAt: res.data.deletedAt, read: true } : m));
+      setDeleteTarget(null);
+      fetchConversations();
+    } catch {
+      setDeleteError('Could not delete this message. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -726,6 +794,27 @@ export default function MessagesScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: bgDark }]}>
+      <Modal visible={Boolean(viewingImage)} transparent animationType="fade" onRequestClose={() => setViewingImage(null)}>
+        <View style={{ flex: 1, backgroundColor: '#000', paddingTop: insets.top, paddingBottom: insets.bottom }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close image" onPress={() => setViewingImage(null)} style={{ alignSelf: 'flex-end', padding: 16 }}>
+            <MaterialIcons name="close" size={28} color="#fff" />
+          </Pressable>
+          {viewingImage && <Image source={{ uri: viewingImage }} resizeMode="contain" style={{ flex: 1, width: '100%' }} accessibilityLabel="Full message image" />}
+        </View>
+      </Modal>
+      <Modal visible={Boolean(deleteTarget)} transparent animationType="fade" onRequestClose={() => { if (!isDeleting) setDeleteTarget(null); }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.65)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: cardBg, padding: 24, borderRadius: 16, width: '100%', maxWidth: 360, gap: 16 }}>
+            <Text style={{ color: textPrimary, fontSize: 18, fontWeight: '700' }}>Delete message?</Text>
+            <Text style={{ color: textMuted }}>This removes the message for everyone in this chat.</Text>
+            {Boolean(deleteError) && <Text accessibilityRole="alert" style={{ color: '#ef4444' }}>{deleteError}</Text>}
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 24 }}>
+              <Pressable disabled={isDeleting} onPress={() => setDeleteTarget(null)} style={{ padding: 10 }}><Text style={{ color: textPrimary }}>Cancel</Text></Pressable>
+              <Pressable disabled={isDeleting} onPress={deleteMessage} style={{ padding: 10 }}><Text style={{ color: '#ef4444' }}>{isDeleting ? 'Deleting...' : 'Delete'}</Text></Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
       {/* ── TOP EXECUTIVE BANNER HEADER (Hidden on mobile when inside an active conversation) ── */}
       {(!activeConversation || isWide) && (
         <View style={[styles.headerBanner, { backgroundColor: cardBg, borderBottomColor: borderColor }]}>
@@ -1163,6 +1252,7 @@ export default function MessagesScreen() {
                               )}
 
                               {(() => {
+                                if (item.deletedAt) return <View style={[styles.messageBubble, { backgroundColor: cardBg }]}><Text style={{ color: textMuted, fontStyle: 'italic' }}>Message deleted</Text></View>;
                                 const reelData = parseReelMessage(item.text);
                                 if (reelData) {
                                   return (
@@ -1186,11 +1276,13 @@ export default function MessagesScreen() {
                                   >
                                     {/* Attached Media */}
                                     {Boolean(item.mediaUrl) && (
+                                      <Pressable accessibilityRole="button" accessibilityLabel="View full image" onPress={() => setViewingImage(resolveImageUrl(item.mediaUrl) || item.mediaUrl)}>
                                       <Image
                                         source={{ uri: resolveImageUrl(item.mediaUrl)! }}
-                                        style={{ width: 220, height: 140, borderRadius: 8, marginBottom: 6 }}
-                                        resizeMode="cover"
+                                        style={{ width: Math.min(220, width * 0.55), height: 220, borderRadius: 8, marginBottom: 6 }}
+                                        resizeMode="contain"
                                       />
+                                      </Pressable>
                                     )}
 
                                     {Boolean(item.text) && (
@@ -1214,6 +1306,11 @@ export default function MessagesScreen() {
                                   </View>
                                 );
                               })()}
+                              {isMe && !item.sending && !item.deletedAt && (
+                                <Pressable accessibilityRole="button" accessibilityLabel="Delete message" onPress={() => { setDeleteError(''); setDeleteTarget(item); }} style={{ padding: 10, alignSelf: 'center' }}>
+                                  <MaterialIcons name="delete-outline" size={19} color={textMuted} />
+                                </Pressable>
+                              )}
                             </View>
                           </View>
                         );
@@ -1232,6 +1329,7 @@ export default function MessagesScreen() {
                 </View>
 
                 {/* Attached Image Preview */}
+                {Boolean(sendError) && <Text accessibilityRole="alert" style={{ color: '#ef4444', padding: 12 }}>{sendError}</Text>}
                 {Boolean(attachedImage) && (
                   <View style={[styles.attachedPreviewRow, { backgroundColor: cardBg, borderColor }]}>
                     <Image source={{ uri: attachedImage! }} style={{ width: 44, height: 44, borderRadius: 6 }} />

@@ -108,6 +108,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     socketInstance.on('new_message', () => {
       refreshUnreadTotal();
     });
+      socketInstance.on('message_deleted', () => {
+        refreshUnreadTotal();
+      });
 
     socketInstance.on('initial_online_users', (keys: string[]) => {
       if (Array.isArray(keys)) {
