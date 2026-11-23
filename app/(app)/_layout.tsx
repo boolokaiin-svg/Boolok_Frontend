@@ -22,9 +22,8 @@ const MD_BREAKPOINT = 768;
 
 const NAV_ITEMS = [
   { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', route: '/(app)/dashboard' },
-  { id: 'feed', icon: 'forum', label: 'Social Feed', route: '/(app)/feed' },
+  { id: 'feed', icon: 'feed', label: 'Social Feed', route: '/(app)/feed' },
   { id: 'messages', icon: 'chat', label: 'Messages', route: '/(app)/messages' },
-  { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search' },
   { id: 'insights', icon: 'dynamic-feed', label: 'Insights Feed', route: '/(app)/insights' },
   { id: 'legal', icon: 'verified-user', label: 'Title & Legal AI', route: '/(app)/legal' },
   { id: 'blueprint', icon: 'home-work', label: 'House Plan', route: '/(app)/blueprint' },
@@ -399,9 +398,8 @@ function AppLayoutContent() {
 
   const MOBILE_NAV_ITEMS = [
     { id: 'dashboard', icon: 'dashboard', label: 'Home', route: '/(app)/dashboard' },
-    { id: 'feed', icon: 'forum', label: 'Social', route: '/(app)/feed' },
+    { id: 'feed', icon: 'feed', label: 'Social', route: '/(app)/feed' },
     { id: 'messages', icon: 'chat', label: 'Chat', route: '/(app)/messages' },
-    { id: 'search', icon: 'search', label: 'Search', route: '/(app)/search' },
     { id: 'insights', icon: 'dynamic-feed', label: 'Reels', route: '/(app)/insights' },
     { id: 'profile', icon: 'person', label: 'Profile', route: '/(app)/profile' },
   ];
@@ -450,9 +448,8 @@ function AppLayoutContent() {
 
   const ALL_FEATURES_NAV = [
     { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', route: '/(app)/dashboard', category: 'Main' },
-    { id: 'feed', icon: 'forum', label: 'Social Feed', route: '/(app)/feed', category: 'Main' },
+    { id: 'feed', icon: 'feed', label: 'Social Feed', route: '/(app)/feed', category: 'Main' },
     { id: 'messages', icon: 'chat', label: 'Direct Messages', route: '/(app)/messages', category: 'Main', badge: unreadTotal },
-    { id: 'search', icon: 'search', label: 'AI Search', route: '/(app)/search', category: 'Main' },
     { id: 'insights', icon: 'dynamic-feed', label: 'Video Reels & Insights', route: '/(app)/insights', category: 'Main' },
     { id: 'legal', icon: 'verified-user', label: 'Title & Legal Verification', route: '/(app)/legal', category: 'AI Intelligence', tag: 'AI' },
     { id: 'blueprint', icon: 'home-work', label: 'House Plan & Blueprint', route: '/(app)/blueprint', category: 'AI Intelligence', tag: 'PRO' },
@@ -777,11 +774,6 @@ function AppLayoutContent() {
                     if (searchResults.length > 0) {
                       setIsMobileSearchActive(false);
                       handleSelectUser(searchResults[0]);
-                    } else if (headerSearchQuery.trim()) {
-                      setIsMobileSearchActive(false);
-                      const q = headerSearchQuery.trim();
-                      setHeaderSearchQuery('');
-                      router.push({ pathname: '/(app)/search', params: { q, filter: 'Profiles' } } as any);
                     }
                   }}
                 />
@@ -855,19 +847,7 @@ function AppLayoutContent() {
                     </View>
                   ) : null}
 
-                  <Pressable
-                    onPress={() => {
-                      setIsMobileSearchActive(false);
-                      const q = headerSearchQuery.trim();
-                      setHeaderSearchQuery('');
-                      router.push({ pathname: '/(app)/search', params: { q, filter: 'Profiles' } } as any);
-                    }}
-                    style={{ padding: 12, borderTopWidth: 1, borderTopColor: isDark ? '#1a273c' : '#f0f0f0', alignItems: 'center', backgroundColor: isDark ? '#0f1a2e' : '#f8fafc', borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg }}
-                  >
-                    <Text style={{ color: '#daa520', fontSize: 12, fontWeight: '700' }}>
-                      Search all in AI Search Hub →
-                    </Text>
-                  </Pressable>
+
                 </View>
               )}
             </View>

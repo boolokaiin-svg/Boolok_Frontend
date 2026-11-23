@@ -19,7 +19,6 @@ export interface FeatureData {
 
 // Canonical copy — used everywhere the 4 feature cards appear.
 export const FEATURES: FeatureData[] = [
-  { icon: 'search', title: 'Smart Search', description: 'Find exactly what you need with semantic property discovery.' },
   { icon: 'sparkles', title: 'AI Advisor', description: 'Get AI-assisted insights on valuations and property data. Not professional legal or financial advice.' },
   { icon: 'chart', title: 'Market Insights', description: 'Real-time data visualization of global market trends.' },
   { icon: 'globe', title: 'Global Reach', description: 'Connect with opportunities across borders instantly.' },

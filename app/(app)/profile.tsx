@@ -28,6 +28,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import BoolokLogo from '../../components/BoolokLogo';
 import ProfileBannerEditor from '../../components/ProfileBannerEditor';
 import ProfileNotice, { ProfileNoticeData } from '../../components/ProfileNotice';
+import ProfilePostComposer from '../../components/ProfilePostComposer';
+import PostImage from '../../components/PostImage';
+import { buildPostForm } from '../../lib/postUpload';
 import { startScreenPolling } from '../../lib/screenPolling';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
@@ -89,35 +92,6 @@ const UserAvatar = ({ user, size = 40, style }: { user?: any; size?: number; sty
 };
 
 const COMMUNITY_MEMBERS: any[] = [];
-
-const resolvePropertyImage = (post: any) => {
-  const url = post?.mediaUrl || post?.image || post?.mediaUrls?.[0];
-  if (url && typeof url === 'string' && url.trim()) {
-    if (url.startsWith('http') || url.startsWith('data:')) return url;
-    return `${process.env.EXPO_PUBLIC_API_URL}${url}`;
-  }
-  const loc = (post?.location || '').toLowerCase();
-  const title = (post?.title || '').toLowerCase();
-  if (loc.includes('bangalore') || title.includes('it campus') || title.includes('tech park')) {
-    return 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=1200';
-  }
-  if (loc.includes('dubai') || loc.includes('palm') || title.includes('palm')) {
-    return 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200';
-  }
-  if (loc.includes('omr') || loc.includes('commercial') || title.includes('office')) {
-    return 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200';
-  }
-  if (loc.includes('penthouse') || loc.includes('poes') || title.includes('penthouse')) {
-    return 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1200';
-  }
-  if (loc.includes('miami') || loc.includes('star island') || title.includes('star island')) {
-    return 'https://images.unsplash.com/photo-1580587771525-78b9dba3b914?w=1200';
-  }
-  if (loc.includes('coventry') || loc.includes('united kingdom') || loc.includes('london')) {
-    return 'https://images.unsplash.com/photo-1577495508048-b635879837f1?w=1200';
-  }
-  return 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200';
-};
 
 const SAI_REELS: any[] = [];
 
@@ -722,10 +696,12 @@ export default function ProfessionalUserProfileScreen() {
 
   // Create Post state
   const [postContent, setPostContent] = useState('');
+  const [postError, setPostError] = useState('');
   const [postTitle, setPostTitle] = useState('');
   const [postPrice, setPostPrice] = useState('');
   const [postLocation, setPostLocation] = useState('');
   const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const postImageAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(null);
   const [isPublishing, setIsPublishing] = useState(false);
 
   // Custom Sign Out Modal State & Handlers
@@ -1805,20 +1781,20 @@ export default function ProfessionalUserProfileScreen() {
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
-        base64: true,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        if (asset.base64) {
-          setAttachedImage(`data:image/jpeg;base64,${asset.base64}`);
-        } else {
-          setAttachedImage(asset.uri);
-        }
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) { setPostError('Choose an image smaller than 10 MB.'); return; }
+        if (asset.mimeType && !['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(asset.mimeType)) { setPostError('Choose a JPG, PNG, or WEBP image.'); return; }
+        postImageAssetRef.current = asset;
+        setAttachedImage(asset.uri);
+        setPostError('');
       }
     } catch (error) {
       console.error('Image pick error:', error);
-      alertMsg('Could not open file picker.');
+      setPostError('Could not open your photos. Please try again.');
     }
   };
 
@@ -1868,24 +1844,21 @@ export default function ProfessionalUserProfileScreen() {
   };
 
   const handlePublishPost = async () => {
-    if (!postContent.trim() && !postTitle.trim()) {
-      alertMsg('Please enter a description or property details.');
+    if (isPublishing) return;
+    if (!postContent.trim() && !postTitle.trim() && !attachedImage) {
+      setPostError('Add a caption or photo before publishing.');
       return;
     }
+    setPostError('');
     setIsPublishing(true);
     try {
       const token = await getToken();
-      const res = await axios.post(
-        `${API_BASE_URL}/api/feed`,
-        {
-          content: postContent.trim() || `${postTitle} - ${postPrice} - ${postLocation}`,
-          title: postTitle.trim(),
-          price: postPrice.trim(),
-          location: postLocation.trim(),
-          mediaUrl: attachedImage,
-        },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      if (!token) throw new Error('Please sign in again to publish your post.');
+      const formData = await buildPostForm(postContent.trim() || [postTitle, postPrice, postLocation].map(value => value.trim()).filter(Boolean).join(' - '), attachedImage, postImageAssetRef.current, Platform.OS);
+      const response = await fetch(`${API_BASE_URL}/api/feed`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok || !responseData.post) throw new Error(responseData.message || 'Could not publish the post. Please retry.');
+      const res = { data: responseData };
       if (res.data?.post) {
         const newEntry = {
           ...res.data.post,
@@ -1904,12 +1877,13 @@ export default function ProfessionalUserProfileScreen() {
         setPostPrice('');
         setPostLocation('');
         setAttachedImage(null);
+        postImageAssetRef.current = null;
         setShowProfileUpload(false);
         alertMsg('Post published successfully!');
       }
     } catch (error: any) {
       console.error('Failed to create post:', error);
-      alertMsg(error?.response?.data?.message || 'Could not publish the post. Please retry.');
+      setPostError(error?.response?.data?.message || error?.message || 'Could not publish the post. Please retry.');
     } finally {
       setIsPublishing(false);
     }
@@ -2702,7 +2676,7 @@ export default function ProfessionalUserProfileScreen() {
 
           {isSelf && activeTab !== 'saved' && (
             <Pressable accessibilityRole="button" accessibilityLabel={activeTab === 'reels' ? 'Upload reel' : 'Create post'}
-              onPress={() => { setCreateType(activeTab === 'reels' ? 'reel' : 'post'); setShowProfileUpload(true); }}
+              onPress={() => { setPostError(''); setCreateType(activeTab === 'reels' ? 'reel' : 'post'); setShowProfileUpload(true); }}
               style={{ marginVertical: 12, padding: 12, borderRadius: 12, backgroundColor: goldPrimary, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 }}>
               <MaterialIcons name={activeTab === 'reels' ? 'video-call' : 'add-photo-alternate'} size={22} color="#000" />
               <Text style={{ color: '#000', fontWeight: '800' }}>{activeTab === 'reels' ? 'Upload Reel' : 'Create Post'}</Text>
@@ -2711,18 +2685,11 @@ export default function ProfessionalUserProfileScreen() {
           <ReelUploadModal visible={isSelf && showProfileUpload && createType === 'reel'}
             onClose={() => setShowProfileUpload(false)} theme={theme} isDark={isDark} user={viewer}
             onUploaded={(reel: any) => { setUserReels(prev => [reel, ...prev]); setShowProfileUpload(false); }} />
-          <Modal visible={isSelf && showProfileUpload && createType === 'post'} transparent animationType="slide" onRequestClose={() => setShowProfileUpload(false)}>
-            <View style={{ flex: 1, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.65)', padding: 20 }}>
-              <View style={{ backgroundColor: cardBg, borderRadius: 18, padding: 20, gap: 14 }}>
-                <Text style={{ color: textPrimary, fontSize: 20, fontWeight: '800' }}>Create Post</Text>
-                <TextInput value={postContent} onChangeText={setPostContent} multiline placeholder="Write a caption or property details?" placeholderTextColor={textMuted} style={{ color: textPrimary, minHeight: 100, borderWidth: 1, borderColor, padding: 12, borderRadius: 10 }} />
-                <Pressable onPress={handlePickImage}><Text style={{ color: goldPrimary }}>{attachedImage ? 'Change selected photo' : 'Add Photo'}</Text></Pressable>
-                {attachedImage && <Image source={{ uri: attachedImage }} style={{ height: 140, width: '100%' }} resizeMode="contain" />}
-                <Pressable disabled={isPublishing} onPress={handlePublishPost} style={{ backgroundColor: goldPrimary, padding: 12, borderRadius: 10 }}><Text style={{ color: '#000', textAlign: 'center', fontWeight: '800' }}>{isPublishing ? 'Publishing?' : 'Publish Post'}</Text></Pressable>
-                <Pressable disabled={isPublishing} onPress={() => setShowProfileUpload(false)}><Text style={{ color: textMuted, textAlign: 'center' }}>Close</Text></Pressable>
-              </View>
-            </View>
-          </Modal>
+          <ProfilePostComposer visible={isSelf && showProfileUpload && createType === 'post'} author={profileUser}
+            content={postContent} image={attachedImage} publishing={isPublishing} error={postError}
+            onChange={text => { setPostContent(text); setPostError(''); }}
+            onChoosePhoto={handlePickImage} onRemovePhoto={() => { setAttachedImage(null); postImageAssetRef.current = null; setPostError(''); }}
+            onPublish={handlePublishPost} onClose={() => setShowProfileUpload(false)} />
 
           {/* TAB 1: POSTS GRID (with Instagram Real-time Likes & Comments Hover Overlay) */}
           {activeTab === 'properties' && (
@@ -2752,8 +2719,7 @@ export default function ProfessionalUserProfileScreen() {
                     >
                       {({ hovered }: any) => (
                         <>
-                          <Image
-                            source={{ uri: resolvePropertyImage(post) }}
+                          <PostImage post={post}
                             style={StyleSheet.absoluteFill}
                             resizeMode="cover"
                           />
@@ -3050,8 +3016,7 @@ export default function ProfessionalUserProfileScreen() {
                         >
                           {({ hovered }: any) => (
                             <>
-                              <Image
-                                source={{ uri: resolvePropertyImage(post) }}
+                              <PostImage post={post}
                                 style={StyleSheet.absoluteFill}
                                 resizeMode="cover"
                               />
@@ -3766,10 +3731,7 @@ export default function ProfessionalUserProfileScreen() {
 
               <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Property Photo */}
-                <Image
-                  source={{
-                    uri: resolvePropertyImage(selectedPostDetails),
-                  }}
+                <PostImage post={selectedPostDetails}
                   style={{ width: '100%', height: 260 }}
                   resizeMode="cover"
                 />

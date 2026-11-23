@@ -4,10 +4,8 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   Pressable,
   Platform,
-  Alert,
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -25,7 +23,6 @@ export default function FeedScreen() {
   const { theme, isDark } = useTheme();
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
 
@@ -71,18 +68,6 @@ export default function FeedScreen() {
     }
   };
 
-  const handleSearch = () => {
-    if (!searchQuery.trim()) return;
-    if (Platform.OS === 'web') {
-      window.alert(`Searching across global databases for: ${searchQuery}`);
-    } else {
-      Alert.alert(
-        'Smart Search',
-        `Searching across global databases for: ${searchQuery}`
-      );
-    }
-  };
-
   if (loading) {
     return <LoadingScreen />;
   }
@@ -102,149 +87,6 @@ export default function FeedScreen() {
       >
         <View style={styles.grid}>
           {/* Row 1 */}
-          {/* AI Search Hub */}
-          <Pressable
-            style={({ pressed, hovered }: any) => [
-              styles.card,
-              { padding: isWide ? spacing.xl : spacing.md },
-              {
-                backgroundColor: theme.surface,
-                borderColor: isDark
-                  ? theme.outlineVariant
-                  : 'rgba(218, 165, 32, 0.35)',
-              },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(66.666% - 16px)' : '65%' } : { width: '100%' },
-              styles.searchCard,
-              (pressed || hovered) && {
-                transform: [{ scale: 1.01 }],
-                shadowColor: theme.primary,
-                shadowOffset: { width: 0, height: 4 },
-                shadowOpacity: 0.1,
-                shadowRadius: 15,
-                borderColor: 'rgba(218, 165, 32, 0.4)',
-              },
-            ]}
-          >
-            <View style={styles.cardHeaderRow}>
-              <View style={{ flexShrink: 1, marginRight: spacing.md }}>
-                <Text
-                  style={[typography.headlineMd, { color: theme.onSurface }]}
-                >
-                  AI Search Hub
-                </Text>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: theme.onSurfaceVariant,
-                    marginTop: 4,
-                  }}
-                >
-                  Deep-dive property intelligence across 40+ global databases.
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.iconBox,
-                  { backgroundColor: 'rgba(218, 165, 32, 0.1)' },
-                ]}
-              >
-                <MaterialIcons
-                  name="search"
-                  size={24}
-                  color={theme.primary}
-                />
-              </View>
-            </View>
-
-            <View style={styles.searchInputWrap}>
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  {
-                    backgroundColor: theme.surfaceContainerLowest,
-                    borderColor: theme.outlineVariant,
-                    color: theme.onSurface,
-                  },
-                  { paddingRight: isWide ? 150 : 60 },
-                ]}
-                placeholder="Describe the property you are looking for..."
-                placeholderTextColor={theme.outline}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-              />
-              <Pressable
-                onPress={handleSearch}
-                style={({ pressed, hovered }: any) => [
-                  styles.searchBtn,
-                  { backgroundColor: theme.primary },
-                  !isWide && { paddingHorizontal: 12 },
-                  (pressed || hovered) && {
-                    transform: [{ scale: 0.95 }],
-                    opacity: 0.9,
-                  },
-                ]}
-              >
-                {isWide ? (
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>
-                    Smart Search
-                  </Text>
-                ) : (
-                  <MaterialIcons name="search" size={20} color="#fff" />
-                )}
-              </Pressable>
-            </View>
-
-            <View>
-              <Text
-                style={{
-                  fontSize: 12,
-                  fontWeight: '700',
-                  textTransform: 'uppercase',
-                  color: theme.outline,
-                  marginBottom: spacing.sm,
-                  letterSpacing: 1,
-                }}
-              >
-                Recent Inquiries
-              </Text>
-              <View style={styles.chipRow}>
-                {(stats?.recentInquiries ?? []).map(
-                  (inquiry: string, index: number) => (
-                    <Pressable
-                      key={index}
-                      style={({ pressed, hovered }: any) => [
-                        styles.chip,
-                        {
-                          backgroundColor: theme.surfaceContainerHigh,
-                          borderColor: theme.outlineVariant,
-                        },
-                        (pressed || hovered) && {
-                          borderColor: theme.primary,
-                        },
-                      ]}
-                    >
-                      <MaterialIcons
-                        name="history"
-                        size={14}
-                        color={theme.onSurfaceVariant}
-                        style={{ marginRight: 4 }}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          color: theme.onSurfaceVariant,
-                        }}
-                      >
-                        {inquiry}
-                      </Text>
-                    </Pressable>
-                  )
-                )}
-              </View>
-            </View>
-          </Pressable>
-
           {/* Legal AI */}
           <Pressable
             onPress={() => router.push('/(app)/legal')}
@@ -258,7 +100,7 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(33.333% - 16px)' : '32%' } : { width: '100%' },
+              isWide ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
               styles.legalCard,
               (pressed || hovered) && {
                 transform: [{ scale: 1.02 }],
@@ -368,7 +210,7 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(33.333% - 16px)' : '32%' } : { width: '100%' },
+              isWide ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
               styles.blueprintCard,
               (pressed || hovered) && {
                 transform: [{ scale: 1.02 }],
@@ -450,7 +292,7 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(66.666% - 16px)' : '65%' } : { width: '100%' },
+              { width: '100%' },
               styles.predictionsCard,
               (pressed || hovered) && {
                 transform: [{ scale: 1.01 }],
@@ -648,32 +490,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
   },
 
-  // Search Card
-  searchCard: { flexShrink: 0 },
-  searchInputWrap: {
-    flexDirection: 'row',
-    position: 'relative',
-    marginBottom: spacing.xl,
-  },
-  searchInput: {
-    flex: 1,
-    borderWidth: 2,
-    borderRadius: radius.xl,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    fontSize: 16,
-  },
-  searchBtn: {
-    position: 'absolute',
-    right: 8,
-    top: 8,
-    bottom: 8,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...Platform.select({ web: { transition: 'transform 0.2s ease' } as any }),
-  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     flexDirection: 'row',

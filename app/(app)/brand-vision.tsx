@@ -298,15 +298,7 @@ export default function BrandVisionScreen() {
         </View>
 
         <View style={styles.pillarRow}>
-          <View style={{ flex: 1.5 }}>
-            <PillarCard
-              icon="search"
-              title="Smart Search"
-              description="Moving beyond simple filters. Our natural language engine understands context, lifestyle needs, and architectural preferences to surface properties that feel like home before you even visit."
-              theme={theme}
-              styles={styles}
-            />
-          </View>
+
           <View style={{ flex: 1 }}>
             <PillarCard
               icon="zap"

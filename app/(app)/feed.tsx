@@ -27,6 +27,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import BoolokLogo from '../../components/BoolokLogo';
 import PostShareModal from '../../components/PostShareModal';
+import PostImage from '../../components/PostImage';
+import { buildPostForm } from '../../lib/postUpload';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { formatSmartDateTime } from '../../lib/dateTime';
 import SafetyActions from '../../components/SafetyActions';
@@ -311,6 +313,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newPostText, setNewPostText] = useState('');
   const [newPostImage, setNewPostImage] = useState<string | null>(null);
+  const newPostAssetRef = useRef<ImagePicker.ImagePickerAsset | null>(null);
   const [rawSelectedImage, setRawSelectedImage] = useState<string | null>(null);
   const [isCropModalOpen, setIsCropModalOpen] = useState(false);
   const [cropAspectRatio, setCropAspectRatio] = useState<number>(1);
@@ -340,7 +343,6 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
   const [isNewslettersModalOpen, setIsNewslettersModalOpen] = useState(false);
   const [isAuctionsModalOpen, setIsAuctionsModalOpen] = useState(false);
   const [selectedNewsStory, setSelectedNewsStory] = useState<any>(null);
-  const [failedImages, setFailedImages] = useState<Record<string, boolean>>({});
 
   const getToken = async () =>
     Platform.OS === 'web' ? localStorage.getItem('userToken') : await SecureStore.getItemAsync('userToken');
@@ -955,6 +957,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
         cropRotation
       );
       setNewPostImage(croppedUri);
+      if (croppedUri !== src) newPostAssetRef.current = null;
       setIsCropModalOpen(false);
       setIsCreateModalOpen(true);
     } catch (err) {
@@ -973,12 +976,13 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
         mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
-        base64: true,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        newPostAssetRef.current = asset;
+        const uri = asset.uri;
         setNewPostImage(uri);
         openCropTool(uri);
       }
@@ -994,12 +998,13 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
         mediaTypes: ['images'],
         allowsEditing: false,
         quality: 1,
-        base64: true,
+        base64: false,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const asset = result.assets[0];
-        const uri = asset.base64 ? `data:image/jpeg;base64,${asset.base64}` : asset.uri;
+        newPostAssetRef.current = asset;
+        const uri = asset.uri;
         setNewPostImage(uri);
         openCropTool(uri);
       }
@@ -1010,6 +1015,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
   };
 
   const handleCreatePost = async () => {
+    if (isPublishing || isCropping) return;
     if (!newPostText.trim() && !newPostImage) {
       alertMsg('Please write some details or attach a property image.');
       return;
@@ -1018,11 +1024,12 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
 
     try {
       const token = await getToken();
-      const res = await axios.post(
-        `${API_BASE_URL}/api/feed`,
-        { content: newPostText.trim(), mediaUrl: newPostImage || null },
-        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-      );
+      if (!token) throw new Error('Please sign in again to publish your post.');
+      const form = await buildPostForm(newPostText.trim(), newPostImage, newPostAssetRef.current, Platform.OS);
+      const response = await fetch(`${API_BASE_URL}/api/feed`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+      const responseData = await response.json().catch(() => ({}));
+      if (!response.ok || !responseData.post) throw new Error(responseData.message || 'Your photo could not be published. Please try again.');
+      const res = { data: responseData };
 
       if (res.data && res.data.post) {
         setPosts((prev) => [res.data.post, ...prev]);
@@ -1032,11 +1039,12 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
 
       setNewPostText('');
       setNewPostImage(null);
+      newPostAssetRef.current = null;
       setIsCreateModalOpen(false);
       alertMsg('Property post published successfully to BoolokOne Real Estate Network!');
     } catch (error: any) {
       console.error('Create post error:', error);
-      alertMsg(error?.response?.data?.message || 'Failed to publish post.');
+      alertMsg(error?.response?.data?.message || error?.message || 'Failed to publish post.');
     } finally {
       setIsPublishing(false);
     }
@@ -1430,34 +1438,11 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
                   {mediaList.length > 0 && (
                     <View style={styles.postMediaContainer}>
                       {mediaList.length === 1 ? (
-                        <Image
-                          source={{
-                            uri: failedImages[post._id]
-                              ? 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200'
-                              : mediaList[0]
-                          }}
-                          style={styles.singlePostImage}
-                          resizeMode="cover"
-                          onError={() => {
-                            setFailedImages((prev) => ({ ...prev, [post._id]: true }));
-                          }}
-                        />
+                        <PostImage post={post} style={styles.singlePostImage} />
                       ) : (
                         <View style={styles.multiImageRow}>
                           {mediaList.slice(0, 2).map((imgUrl: string, idx: number) => (
-                            <Image
-                              key={idx}
-                              source={{
-                                uri: failedImages[`${post._id}-${idx}`]
-                                  ? 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=1200'
-                                  : imgUrl
-                              }}
-                              style={styles.multiPostImage}
-                              resizeMode="cover"
-                              onError={() => {
-                                setFailedImages((prev) => ({ ...prev, [`${post._id}-${idx}`]: true }));
-                              }}
-                            />
+                            <PostImage key={idx} post={{ mediaUrl: imgUrl, imageUrl: idx === 0 ? post.imageUrl : null }} style={styles.multiPostImage} />
                           ))}
                         </View>
                       )}
@@ -1870,6 +1855,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
                     <Pressable
                       onPress={() => {
                         setNewPostImage(null);
+                        newPostAssetRef.current = null;
                         setRawSelectedImage(null);
                       }}
                       style={styles.imagePreviewRemoveBtn}
@@ -1906,7 +1892,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
                     placeholderTextColor="#66768f"
                     style={[styles.modalUrlInput, { borderColor, marginBottom: 0, flex: 1 }]}
                     value={newPostImage || ''}
-                    onChangeText={setNewPostImage}
+                    onChangeText={value => { newPostAssetRef.current = null; setNewPostImage(value); }}
                   />
                   {newPostImage ? (
                     <Pressable
@@ -3025,15 +3011,7 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
                     <Text style={{ color: isDark ? '#cbd5e1' : '#475569', fontSize: 11.5 }}>
                       {auc.organizer}
                     </Text>
-                    <Pressable
-                      onPress={() => {
-                        setIsAuctionsModalOpen(false);
-                        router.push('/(app)/search');
-                      }}
-                      style={{ backgroundColor: goldPrimary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 6 }}
-                    >
-                      <Text style={{ color: '#000000', fontSize: 12, fontWeight: '800' }}>Bid / Register</Text>
-                    </Pressable>
+
                   </View>
                 </View>
               ))}

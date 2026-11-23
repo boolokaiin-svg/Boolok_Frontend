@@ -33,7 +33,6 @@ const MD_BREAKPOINT = 768;
 type SubmitState = 'idle' | 'loading' | 'success';
 
 const FEATURES = [
-  { icon: 'search', title: 'Smart Search', desc: 'Find properties with natural language.' },
   { icon: 'auto-awesome', title: 'AI Advisor', desc: 'Get expert real estate guidance.' },
   { icon: 'trending-up', title: 'Market Insights', desc: 'Real-time data and trends.' },
   { icon: 'public', title: 'Global Reach', desc: 'Connect with international markets.' },

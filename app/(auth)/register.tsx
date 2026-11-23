@@ -40,7 +40,6 @@ interface FieldProps {
 }
 
 const FEATURES = [
-  { icon: 'search', title: 'Smart Search', desc: 'Find exactly what you need with semantic property discovery.' },
   { icon: 'auto-awesome', title: 'AI Advisor', desc: 'Get AI-assisted insights on valuations and property data. Not professional legal or financial advice.' },
   { icon: 'trending-up', title: 'Market Insights', desc: 'Real-time data visualization of global market trends.' },
   { icon: 'public', title: 'Global Reach', desc: 'Connect with opportunities across borders instantly.' },

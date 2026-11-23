@@ -18,6 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 
 import { API_BASE_URL } from '../../lib/api';
+import { buildPostForm } from '../../lib/postUpload';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius } from '../../constants/theme';
@@ -34,6 +35,7 @@ type PickedImage = {
     uri: string;
     name: string;
     mimeType: string;
+    asset: ImagePicker.ImagePickerAsset;
 };
 
 export default function CreatePostScreen() {
@@ -73,7 +75,7 @@ export default function CreatePostScreen() {
         const fileName = asset.fileName || asset.uri.split('/').pop() || `photo-${Date.now()}.jpg`;
         const mimeType = asset.mimeType || 'image/jpeg';
 
-        setImage({ uri: asset.uri, name: fileName, mimeType });
+        setImage({ uri: asset.uri, name: fileName, mimeType, asset });
     };
 
     const removeImage = () => setImage(null);
@@ -94,23 +96,7 @@ export default function CreatePostScreen() {
                 return;
             }
 
-            const formData = new FormData();
-            formData.append('content', content.trim());
-
-            if (image) {
-                if (Platform.OS === 'web') {
-                    // On web, fetch the blob from the local URI before appending
-                    const response = await fetch(image.uri);
-                    const blob = await response.blob();
-                    formData.append('image', blob, image.name);
-                } else {
-                    formData.append('image', {
-                        uri: image.uri,
-                        name: image.name,
-                        type: image.mimeType,
-                    } as any);
-                }
-            }
+            const formData = await buildPostForm(content.trim(), image?.uri || null, image?.asset || null, Platform.OS);
 
             const uploadResponse = await fetch(`${API_BASE_URL}/api/feed`, {
                 method: 'POST',
