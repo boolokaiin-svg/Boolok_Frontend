@@ -1277,7 +1277,7 @@ export default function ProfessionalUserProfileScreen() {
     if (followBusy) return;
     try {
       const token = await getToken();
-      const res = await axios.get(`${API_BASE_URL}/api/users/${userId}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/users/${userId}?compact=1`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
         signal,
       });
@@ -1318,7 +1318,7 @@ export default function ProfessionalUserProfileScreen() {
     const fallbackUser = resolveMemberProfile(isSelf ? 'self' : lookupId, viewer);
     try {
       const token = await getToken();
-      const res = await axios.get(`${API_BASE_URL}/api/users/${lookupId}`, {
+      const res = await axios.get(`${API_BASE_URL}/api/users/${lookupId}?compact=1`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.data && res.data.user) {

@@ -8,17 +8,18 @@ const source = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../lib/d
   { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText;
 
 function fixture({ fail = false, contentType = 'image/png', platform = 'web' } = {}) {
-  const calls = [], links = [], timers = [], revoked = [], shared = [], removed = [];
+  const calls = [], requests = [], links = [], timers = [], revoked = [], shared = [], removed = [];
   const context = { exports: {},
     require: name => {
       if (name === 'react-native') return { Platform: { OS: platform } };
+      if (name === './api') return { API_BASE_URL: 'https://backend.example', getStoredToken: async () => 'private-token' };
       if (name === 'expo-file-system/legacy') return { cacheDirectory: 'file://cache/',
-        downloadAsync: async (url, destination) => { calls.push({ url, destination }); return { status: fail ? 403 : 200 }; },
+        downloadAsync: async (url, destination, options) => { calls.push({ url, destination }); requests.push({ url, options }); return { status: fail ? 403 : 200 }; },
         deleteAsync: async destination => removed.push(destination) };
       if (name === 'expo-sharing') return { isAvailableAsync: async () => true, shareAsync: async (uri, options) => shared.push({ uri, options }) };
       return {};
     },
-    fetch: async url => { calls.push(url); return { ok: !fail, blob: async () => ({ type: contentType }) }; },
+    fetch: async (url, options) => { calls.push(url); requests.push({ url, options }); return { ok: !fail, blob: async () => ({ type: contentType }) }; },
     URL: { createObjectURL: () => 'blob:local-image', revokeObjectURL: url => revoked.push(url) },
     setTimeout: fn => timers.push(fn),
     document: { body: { appendChild: () => {} }, createElement: () => {
@@ -27,7 +28,7 @@ function fixture({ fail = false, contentType = 'image/png', platform = 'web' } =
     } },
   };
   vm.runInNewContext(source, context);
-  return { download: context.exports.downloadBlueprint, calls, links, timers, revoked, shared, removed };
+  return { download: context.exports.downloadBlueprint, calls, requests, links, timers, revoked, shared, removed };
 }
 
 test('cross-origin images download as a local blob file without opening a tab', async () => {
@@ -43,6 +44,16 @@ test('cross-origin images download as a local blob file without opening a tab', 
   f.timers[0]();
   assert.deepEqual(f.revoked, ['blob:local-image']);
 });
+
+for (const platform of ['web', 'ios']) {
+  test(`expired preview links can use owner authentication without leaking tokens (${platform})`, async () => {
+    const f = fixture({ platform });
+    await f.download('https://backend.example/api/blueprint/images/plan.png?ticket=expired', 'plan.png');
+    assert.equal(f.requests[0].options.headers.Authorization, 'Bearer private-token');
+    await f.download('https://attacker.test/plan.png', 'plan.png');
+    assert.equal(f.requests[1].options.headers.Authorization, undefined);
+  });
+}
 
 for (const options of [{ fail: true }, { contentType: 'text/html' }]) {
   test(`failed or non-image responses cannot download an error page (${JSON.stringify(options)})`, async () => {

@@ -553,10 +553,17 @@ export default function ProfessionalSocialFeedScreen({ focusedPostId }: { focuse
       const token = await getToken();
       const headers = token ? { Authorization: `Bearer ${token}` } : {};
       const [feedRes, newsRes, suggestedRes, myFollowingRes] = await Promise.allSettled([
-        axios.get(`${API_BASE_URL}/api/feed`, { headers }),
-        axios.get(`${API_BASE_URL}/api/feed/news`),
-        axios.get(`${API_BASE_URL}/api/users/suggested`, { headers }),
-        token ? axios.get(`${API_BASE_URL}/api/users/self/following`, { headers }) : Promise.reject('No token'),
+        axios.get(`${API_BASE_URL}/api/feed?compact=1`, { headers, timeout: 15000 }).then(response => {
+          if (!focusedPostId) {
+            const raw = response.data;
+            setPosts(_applyLikeCache(Array.isArray(raw) ? raw : (Array.isArray(raw?.posts) ? raw.posts : [])));
+            setLoading(false);
+          }
+          return response;
+        }),
+        axios.get(`${API_BASE_URL}/api/feed/news`, { timeout: 8000 }),
+        axios.get(`${API_BASE_URL}/api/users/suggested`, { headers, timeout: 8000 }),
+        token ? axios.get(`${API_BASE_URL}/api/users/self/following`, { headers, timeout: 8000 }) : Promise.reject('No token'),
       ]);
 
       let focusedPost: any = null;

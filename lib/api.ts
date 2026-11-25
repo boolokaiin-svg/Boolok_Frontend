@@ -133,9 +133,12 @@ export async function clearStoredToken(): Promise<void> {
  * so no screen accidentally forgets to attach the token.
  */
 export async function apiFetch<T = any>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = await getStoredToken();
   const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${path}`;
+  if (new URL(url).origin !== new URL(API_BASE_URL).origin) {
+    throw new Error('Authenticated requests must use the configured API server.');
+  }
+  const token = await getStoredToken();
 
   const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
 

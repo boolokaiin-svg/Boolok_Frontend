@@ -1,9 +1,17 @@
 import { Platform } from 'react-native';
+import { API_BASE_URL, getStoredToken } from './api';
 
 export async function downloadBlueprint(url: string, filename: string) {
+  const headers: Record<string, string> = {};
+  // Owner authentication keeps downloads working after a preview ticket expires.
+  // Never forward credentials to provider/CDN URLs.
+  if (url.startsWith(`${API_BASE_URL}/api/blueprint/images/`)) {
+    const token = await getStoredToken();
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
   if (Platform.OS === 'web') {
     // Browsers ignore download= for cross-origin URLs. A local blob URL saves a file.
-    const response = await fetch(url);
+    const response = await fetch(url, { headers });
     if (!response.ok) throw new Error('The plan image could not be downloaded. Please retry.');
     const blob = await response.blob();
     if (!blob.type.startsWith('image/')) throw new Error('The server did not return a plan image.');
@@ -39,7 +47,7 @@ export async function downloadBlueprint(url: string, filename: string) {
       });
       await FileSystem.writeAsStringAsync(destination, data, { encoding: FileSystem.EncodingType.Base64 });
     } else {
-      const downloaded = await FileSystem.downloadAsync(url, destination);
+      const downloaded = await FileSystem.downloadAsync(url, destination, { headers });
       if (downloaded.status !== 200) throw new Error('The plan image could not be downloaded. Please retry.');
     }
     await Sharing.shareAsync(destination, { mimeType: 'image/png', UTI: 'public.png', dialogTitle: 'Save floor plan image' });

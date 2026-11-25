@@ -16,7 +16,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { spacing, typography, radius, shadows } from '../../constants/theme';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
-import LoadingScreen from '../../components/LoadingScreen';
 import BlueprintPreviewIllustration from '../../components/BlueprintPreviewIllustration';
 import { DashboardTool, RecentDashboardTool, orderedDashboardTools, readRecentDashboardTools } from '../../lib/recentDashboardTools';
 
@@ -24,7 +23,6 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const { theme, isDark } = useTheme();
   const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
   const accountId = user?.id || user?._id || '';
@@ -58,12 +56,17 @@ export default function FeedScreen() {
   };
 
   useEffect(() => {
-    fetchDashboardStats();
-  }, []);
+    setStats(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    void fetchDashboardStats(controller.signal);
+    return () => { controller.abort(); clearTimeout(timeout); };
+  }, [accountId]);
 
-  const fetchDashboardStats = async () => {
+  const fetchDashboardStats = async (signal: AbortSignal) => {
     try {
-      const data = await apiFetch('/api/dashboard/stats');
+      const data = await apiFetch('/api/dashboard/stats', { signal });
+      if (signal.aborted) return;
 
       setStats({
         complianceAlert: '',
@@ -81,6 +84,7 @@ export default function FeedScreen() {
           : [],
       });
     } catch (error) {
+      if (signal.aborted) return;
       console.error('Failed to fetch stats:', error);
       setStats({
         recentInquiries: [],
@@ -94,14 +98,8 @@ export default function FeedScreen() {
           peakDate: '—',
         },
       });
-    } finally {
-      setLoading(false);
     }
   };
-
-  if (loading) {
-    return <LoadingScreen />;
-  }
 
   const cards: Record<DashboardTool, React.ReactNode> = {
     legal: (
@@ -336,7 +334,7 @@ export default function FeedScreen() {
                   style={{ fontSize: 12, color: theme.onSurfaceVariant }}
                 >
                   Global growth index:{' '}
-                  {stats?.marketPredictions?.growthIndex}
+                  {stats?.marketPredictions?.growthIndex || '—'}
                 </Text>
               </View>
               <View
@@ -352,7 +350,7 @@ export default function FeedScreen() {
                     color: theme.onSurfaceVariant,
                   }}
                 >
-                  {stats?.marketPredictions?.location}
+                  {stats?.marketPredictions?.location || '—'}
                 </Text>
                 <MaterialIcons
                   name="keyboard-arrow-down"
@@ -367,7 +365,7 @@ export default function FeedScreen() {
             <View style={styles.chartArea}>
               <Text style={styles.bullishText}>BULLISH</Text>
               <Text style={[styles.peakDate, { color: theme.primary }]}>
-                PREDICTED PEAK: {stats?.marketPredictions?.peakDate}
+                PREDICTED PEAK: {stats?.marketPredictions?.peakDate || '—'}
               </Text>
               {Platform.OS === 'web' ? (
                 <svg
@@ -422,7 +420,7 @@ export default function FeedScreen() {
                     color: theme.onSurface,
                   }}
                 >
-                  {stats?.marketPredictions?.value}
+                  {stats?.marketPredictions?.value || '—'}
                 </Text>
               </View>
               <View>
@@ -443,7 +441,7 @@ export default function FeedScreen() {
                     color: theme.onSurface,
                   }}
                 >
-                  {stats?.marketPredictions?.volatility}
+                  {stats?.marketPredictions?.volatility || '—'}
                 </Text>
               </View>
               <View style={{ marginLeft: 'auto', alignItems: 'flex-end' }}>
@@ -464,7 +462,7 @@ export default function FeedScreen() {
                     color: theme.onSurface,
                   }}
                 >
-                  {stats?.marketPredictions?.growthPercent}
+                  {stats?.marketPredictions?.growthPercent || '—'}
                 </Text>
               </View>
             </View>
