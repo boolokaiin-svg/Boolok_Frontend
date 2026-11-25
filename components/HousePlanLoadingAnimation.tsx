@@ -1,7 +1,7 @@
 /**
  * HouseDesignLoader / HousePlanLoadingAnimation
  * ---------------------------------------------------------------------------
- * React Native recreation of the 12-second "BoolokOne · AI Architect" progress
+ * React Native recreation of the "BoolokOne · AI Architect" progress
  * animation (brief → plot → floor plan → details → 3D cube → ready card).
  *
  * Supports:
@@ -23,7 +23,7 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import Svg, { Circle, G, Line, Path, Polygon, Rect, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, ClipPath, Defs, G, Line, Path, Polygon, Rect, Text as SvgText } from 'react-native-svg';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -116,6 +116,13 @@ STAGES.slice(1).forEach((s) => {
 });
 
 const READY_AT = 11.55;
+const WAIT_AT = 10.6;
+const WAITING_MESSAGES = [
+  'Getting your plan ready...',
+  'Your design is taking shape...',
+  'Preparing your previews...',
+  'Almost there. Still generating...',
+];
 
 /* ───────────────────────── animation helpers ───────────────────────── */
 
@@ -197,28 +204,28 @@ function Fade({ clk, a, b, children }: { clk: Clock; a: number; b: number; child
 
 /* ───────────────────────── live text pieces ───────────────────────── */
 
-function StageTitle({ clk }: { clk: Clock }) {
+function StageTitle({ clk, waiting = false }: { clk: Clock; waiting?: boolean }) {
   const C = useTokens();
   const idx = useClockSelect(clk, stageAt);
   const o = useMemo(() => keys(clk, DIP_IN, DIP_OUT), [clk]);
   return (
     <AG opacity={o as any}>
       <SvgText x={32} y={118} fontSize={27} fontWeight="700" fill={C.ink}>
-        {STAGES[idx].title}
+        {waiting ? 'Bringing your plan to life' : STAGES[idx].title}
       </SvgText>
       <SvgText x={33} y={141} fontSize={14.5} letterSpacing={0.3} fill={C.sub}>
-        {STAGES[idx].sub}
+        {waiting ? 'Your floor plan is still being generated' : STAGES[idx].sub}
       </SvgText>
     </AG>
   );
 }
 
-function PercentLabel({ clk }: { clk: Clock }) {
+function PercentLabel({ clk, waiting = false }: { clk: Clock; waiting?: boolean }) {
   const C = useTokens();
   const pct = useClockSelect(clk, (t) => Math.min(100, Math.floor((t / DURATION_S) * 100)));
   return (
     <SvgText x={410} y={771} fontSize={8} textAnchor="end" letterSpacing={0.5} fill={C.amber}>
-      {String(pct).padStart(2, '0')}%
+      {waiting ? 'IN PROGRESS' : `${String(pct).padStart(2, '0')}%`}
     </SvgText>
   );
 }
@@ -536,7 +543,20 @@ function CubeScene({ clk }: { clk: Clock }) {
 
 /* ───────────────────────── scene 5 · bottom cards (10 – 12s) ───────────────────────── */
 
-function BottomCard({ clk }: { clk: Clock }) {
+function ProgressSweep({ activity, x, y, width, clipId }: { activity: Clock; x: number; y: number; width: number; clipId: string }) {
+  const C = useTokens();
+  const sweepX = useMemo(() => activity.interpolate({ inputRange: [0, 1], outputRange: [x - 90, x + width] }), [activity, x, width]);
+  return (
+    <G>
+      <Defs><ClipPath id={clipId}><Rect x={x} y={y} width={width} height={6} rx={3} /></ClipPath></Defs>
+      <G clipPath={`url(#${clipId})`}>
+        <ARect x={sweepX as any} y={y} width={90} height={6} rx={3} fill={C.amberSoft} />
+      </G>
+    </G>
+  );
+}
+
+function BottomCard({ clk, activity, waiting, message }: { clk: Clock; activity: Clock; waiting: boolean; message: string }) {
   const C = useTokens();
   const cardO = useMemo(() => seg(clk, 10.0, 10.25), [clk]);
   const workingO = useMemo(() => keys(clk, [10.0, 10.25, 11.3, 11.5], [0, 1, 1, 0]), [clk]);
@@ -552,13 +572,14 @@ function BottomCard({ clk }: { clk: Clock }) {
       {/* "putting the finishing touches on…" */}
       <AG opacity={workingO as any}>
         <SvgText x={64} y={594} fontSize={10.5} fontWeight="700" fill={C.ink}>
-          Putting the finishing touches on
+          {waiting ? message : 'Putting the finishing touches on'}
         </SvgText>
-        <SvgText x={64} y={624} fontSize={14} fill={C.sub}>
-          your home concept...
+        <SvgText x={64} y={624} fontSize={waiting ? 12 : 14} fill={C.sub}>
+          {waiting ? 'Your results will appear as soon as they are ready.' : 'your home concept...'}
         </SvgText>
         <Rect x={64} y={650} width={353} height={6} rx={3} fill={C.track} />
         <ARect x={64} y={650} width={miniW as any} height={6} rx={3} fill={C.amber} />
+        {waiting && <ProgressSweep activity={activity} x={64} y={650} width={353} clipId="house-plan-mini-progress" />}
       </AG>
 
       {/* "your home concept is ready" + button */}
@@ -589,7 +610,7 @@ function BottomCard({ clk }: { clk: Clock }) {
 
 /* ───────────────────────── chrome: frame, header, footer ───────────────────────── */
 
-function Chrome({ clk }: { clk: Clock }) {
+function Chrome({ clk, activity, waiting }: { clk: Clock; activity: Clock; waiting: boolean }) {
   const C = useTokens();
   const fill = useMemo(() => lerp(seg(clk, 0, DURATION_S), 0, 416), [clk]);
   return (
@@ -614,10 +635,11 @@ function Chrome({ clk }: { clk: Clock }) {
       {/* progress */}
       <Rect x={31} y={745} width={416} height={6} rx={3} fill={C.track} />
       <ARect x={31} y={745} width={fill as any} height={6} rx={3} fill={C.amber} />
+      {waiting && <ProgressSweep activity={activity} x={31} y={745} width={416} clipId="house-plan-main-progress" />}
       <SvgText x={31} y={771} fontSize={7.5} letterSpacing={0.8} fill={C.mute}>
         DESIGNED AROUND YOU
       </SvgText>
-      <PercentLabel clk={clk} />
+      <PercentLabel clk={clk} waiting={waiting} />
       <SvgText x={31} y={803} fontSize={7.5} letterSpacing={0.8} fill={C.sub}>
         BoolokOne  ·  AI HOUSE PLAN
       </SvgText>
@@ -630,10 +652,11 @@ function Chrome({ clk }: { clk: Clock }) {
 export interface HouseDesignLoaderProps {
   /** tapped on the "VIEW HOUSE PLAN →" button (only active once it appears) */
   onViewPlan?: () => void;
-  /** fires when the 12s sequence finishes */
+  /** Fires after the sequence finishes and the generated outputs are ready. */
   onComplete?: () => void;
-  /** real playback time in ms (default 12000 = same speed as the video) */
+  /** Playback time in ms; generation may keep the final scene active longer. */
   durationMs?: number;
+  isReady?: boolean;
   style?: StyleProp<ViewStyle>;
   theme?: any;
   isDark?: boolean;
@@ -643,7 +666,8 @@ export interface HouseDesignLoaderProps {
 export default function HouseDesignLoader({
   onViewPlan,
   onComplete,
-  durationMs = 12000,
+  durationMs = 30000,
+  isReady = true,
   style,
   isDark: propIsDark,
   formData,
@@ -658,9 +682,17 @@ export default function HouseDesignLoader({
   const clk = useRef(new Animated.Value(0)).current;
   const doneRef = useRef(onComplete);
   doneRef.current = onComplete;
+  const completedRef = useRef(false);
+  const pulse = useRef(new Animated.Value(1)).current;
+  const activity = useRef(new Animated.Value(0)).current;
+  const [waitingMessageIndex, setWaitingMessageIndex] = useState(0);
+  const [introFinished, setIntroFinished] = useState(false);
+  const waiting = introFinished && !isReady;
   const [box, setBox] = useState({ w: 0, h: 0 });
 
   const handleFinish = () => {
+    if (!isReady || completedRef.current) return;
+    completedRef.current = true;
     if (onViewPlan) {
       onViewPlan();
     } else if (onComplete) {
@@ -669,18 +701,66 @@ export default function HouseDesignLoader({
   };
 
   useEffect(() => {
+    completedRef.current = false;
+    setIntroFinished(false);
     clk.setValue(0);
     const anim = Animated.timing(clk, {
-      toValue: DURATION_S,
-      duration: durationMs,
+      toValue: WAIT_AT,
+      duration: durationMs * WAIT_AT / DURATION_S,
       easing: Easing.linear,
       useNativeDriver: false, // SVG props can't use the native driver
     });
     anim.start(({ finished }) => {
-      if (finished) doneRef.current?.();
+      if (finished) setIntroFinished(true);
     });
     return () => anim.stop();
   }, [clk, durationMs]);
+
+  useEffect(() => {
+    if (!introFinished || !isReady) return;
+    const anim = Animated.timing(clk, {
+      toValue: DURATION_S,
+      duration: durationMs * (DURATION_S - WAIT_AT) / DURATION_S,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+    anim.start(({ finished }) => {
+      if (finished && !completedRef.current) {
+        completedRef.current = true;
+        doneRef.current?.();
+      }
+    });
+    return () => anim.stop();
+  }, [clk, durationMs, introFinished, isReady]);
+
+  useEffect(() => {
+    if (!introFinished || isReady) {
+      pulse.setValue(1);
+      return;
+    }
+    const anim = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 0.65, duration: 1200, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1, duration: 1200, useNativeDriver: true }),
+    ]));
+    anim.start();
+    return () => anim.stop();
+  }, [introFinished, isReady, pulse]);
+
+  useEffect(() => {
+    if (!waiting) {
+      setWaitingMessageIndex(0);
+      return;
+    }
+    activity.setValue(0);
+    const anim = Animated.loop(Animated.timing(activity, {
+      toValue: 1, duration: 1800, easing: Easing.linear, useNativeDriver: false,
+    }));
+    anim.start();
+    const wordingTimer = setInterval(() => {
+      setWaitingMessageIndex(index => (index + 1) % WAITING_MESSAGES.length);
+    }, 4500);
+    return () => { anim.stop(); clearInterval(wordingTimer); };
+  }, [activity, waiting]);
 
   const ready = useClockSelect(clk, (t) => t >= READY_AT);
 
@@ -752,6 +832,9 @@ export default function HouseDesignLoader({
         {/* Floating Top Right Skip Button */}
         <Pressable
           onPress={handleFinish}
+          disabled={!isReady}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: !isReady }}
           style={({ pressed }) => [
             styles.skipBtn,
             {
@@ -761,30 +844,27 @@ export default function HouseDesignLoader({
             },
           ]}
         >
-          <Text style={[styles.skipBtnText, { color: C.amber }]}>Skip</Text>
-          <MaterialIcons name="fast-forward" size={14} color={C.amber} />
+          <Text style={[styles.skipBtnText, { color: C.amber }]}>{isReady ? 'View result' : 'Generating plan'}</Text>
+          <MaterialIcons name={isReady ? 'arrow-forward' : 'hourglass-top'} size={14} color={C.amber} />
         </Pressable>
 
         {/* Animated SVG Scene */}
         {s > 0 && (
           <>
-            <Svg
-              width={cw}
-              height={ch}
-              viewBox={`0 0 ${VB_W} ${VB_H}`}
-              style={{ position: 'absolute', left: ox, top: oy, pointerEvents: 'none' }}
-            >
-              <Chrome clk={clk} />
-              <StageTitle clk={clk} />
-              <BriefScene clk={clk} formData={formData} />
-              <PlotScene clk={clk} formData={formData} />
-              <PlanScene clk={clk} formData={formData} />
-              <CubeScene clk={clk} />
-              <BottomCard clk={clk} />
-            </Svg>
+            <Animated.View pointerEvents="none" style={{ position: 'absolute', left: ox, top: oy, width: cw, height: ch, opacity: pulse }}>
+              <Svg width={cw} height={ch} viewBox={`0 0 ${VB_W} ${VB_H}`}>
+                <Chrome clk={clk} activity={activity} waiting={waiting} />
+                <StageTitle clk={clk} waiting={waiting} />
+                <BriefScene clk={clk} formData={formData} />
+                <PlotScene clk={clk} formData={formData} />
+                <PlanScene clk={clk} formData={formData} />
+                <CubeScene clk={clk} />
+                <BottomCard clk={clk} activity={activity} waiting={waiting} message={WAITING_MESSAGES[waitingMessageIndex]} />
+              </Svg>
+            </Animated.View>
 
             {/* Clickable Overlay for "VIEW HOUSE PLAN →" */}
-            {ready && (
+            {ready && isReady && (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="View house plan"

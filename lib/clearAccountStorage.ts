@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
 const accountKeys = [
   'userToken', 'userData', 'user_openai_api_key', 'boolok_following_users_set',
   'boolok_saved_posts', 'boolok_saved_reels',
-  'boolok_user_uploaded_reels', 'boolok_post_likes', 'boolok_liked_reels_set',
+  'boolok_user_uploaded_reels', 'boolok_post_likes', 'boolok_liked_reels_set', 'boolok_recent_tools',
 ];
 
 export async function clearAccountStorage() {

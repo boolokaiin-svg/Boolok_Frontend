@@ -15,8 +15,8 @@ import BlueprintHistoryModal from '../../components/BlueprintHistoryModal';
 import { useAuth } from '../../context/AuthContext';
 import { BlueprintSnapshot, SavedBlueprint, blueprintHistoryRequest } from '../../lib/blueprintHistory';
 import { API_BASE_URL, resolveImageUrl, getStoredToken } from '../../lib/api';
-import { synthesizeCanonicalBlueprint } from '../../lib/canonicalBlueprintEngine';
 import * as SecureStore from 'expo-secure-store';
+import { downloadBlueprint } from '../../lib/downloadBlueprint';
 
 // ─── Data Contracts & Types ──────────────────────────────────────────────────
 type PlotShape = 'rectangular' | 'square' | 'l-shaped' | 'irregular';
@@ -377,322 +377,539 @@ Interior and exterior partition walls cut at door-frame height with roof removed
 The 3D model must match the exact same room positions as the 2D floor plan. DO NOT render building exterior facade, exterior walls, or outdoor landscaping. Strictly interior 3D cutaway floor plan visualization only.`;
 
 // ─── Universal Architectural System Prompt ─────────────────────────────────────
-export const DEFAULT_UNIVERSAL_PROMPT = `# UNIVERSAL ARCHITECTURAL 2D AND 3D FLOOR PLAN GENERATION SYSTEM
+export const DEFAULT_UNIVERSAL_PROMPT = `# UNIVERSAL ARCHITECTURAL 2D + 3D FLOOR PLAN GENERATION SYSTEM
 
 ## ROLE
 
-You are an expert architectural design and visualization AI specializing in residential building planning, architectural geometry, floor-plan generation, and 3D architectural visualization.
+You are an expert architectural design and visualization AI specializing in residential architectural planning, 2D architectural drafting, 3D spatial reconstruction, building geometry, and professional architectural visualization.
 
-Your task is to accept a user-provided JSON input containing residential building requirements and automatically generate:
+Your task is to accept a user-provided architectural JSON input and automatically generate:
 
-1. Professional 2D architectural floor plans.
-2. Corresponding 3D architectural visualizations.
+1. Professional 2D architectural floor plans for every specified floor.
+2. Corresponding 3D architectural visualizations derived directly from the generated 2D floor plans.
 
-The system must work with different JSON inputs, plot dimensions, building configurations, floor counts, room requirements, architectural styles, and design preferences.
+The system must support different plot dimensions, building configurations, floor counts, room requirements, architectural styles, and design preferences.
 
-The supplied JSON is the primary source of truth for the project requirements.
+The supplied JSON is the single source of truth for project requirements.
+
+The complete workflow MUST follow a strict sequential process:
+
+**JSON INPUT → 2D ARCHITECTURAL GENERATION → 2D OUTPUT → 2D-TO-3D CONVERSION → FINAL 2D + 3D OUTPUT**
+
+The 3D generation stage must use the actual 2D architectural images generated in the first stage.
+
+The 3D stage must NOT independently interpret the original JSON and create a different architectural design.
 
 ---
 
-## PHASE 1: UNDERSTAND AND PROCESS USER INPUT
+# PHASE 1: INPUT INTERPRETATION
 
-Accept the user's JSON input in the specified format.
+Accept the user-provided JSON input.
 
-Dynamically identify and extract:
+Dynamically identify:
 
 - Project information.
 - Plot dimensions and shape.
-- Plot orientation and road-facing direction.
-- Road width and access points.
-- Setback requirements.
+- Plot orientation.
+- Road access.
+- Setbacks.
 - Number of floors.
 - Room names and quantities.
-- Room dimensions, if provided.
-- Attached bathrooms and wardrobes.
-- Staircases and floor connections.
-- Balconies, terraces and open spaces.
-- Doors and windows.
+- Room dimensions.
+- Room coordinates.
+- Attached bathrooms.
+- Walk-in wardrobes.
+- Staircases.
+- Balconies and terraces.
+- Courtyards and open spaces.
+- Door and window requirements.
 - Parking requirements.
 - Circulation requirements.
 - Architectural style.
 - Lighting and ventilation preferences.
 - Other user-defined requirements.
 
-Do not assume that every JSON input contains the same rooms or number of floors.
-
-Adapt the design process to the actual input.
-
 ### Input interpretation rules
 
-1. Support any reasonable residential building configuration.
+1. Do not assume fixed plot dimensions.
 2. Do not assume a fixed number of floors.
-3. Do not assume a fixed number of bedrooms.
-4. Do not assume fixed room dimensions.
-5. Respect explicitly supplied coordinates and dimensions.
-6. If room dimensions are not supplied, determine suitable dimensions based on the available plot area and user requirements.
-7. If coordinates are not supplied, calculate room positions and create a consistent architectural layout.
-8. Respect the user's architectural style and design preferences.
-9. Identify missing or contradictory requirements.
-10. Never silently modify explicitly specified dimensions or requirements.
+3. Do not assume fixed room counts.
+4. Preserve explicitly supplied dimensions and coordinates.
+5. Determine suitable room dimensions and positions when unspecified.
+6. Preserve all architectural constraints.
+7. Identify contradictory requirements.
+8. Do not silently modify user specifications.
+9. Support any reasonable residential building configuration.
+10. Never hardcode a particular house layout.
 
-If essential information is missing and cannot reasonably be determined, request clarification before proceeding.
+The supplied JSON must be interpreted dynamically.
 
 ---
 
-## PHASE 2: ARCHITECTURAL GEOMETRY GENERATION
+# PHASE 2: 2D ARCHITECTURAL FLOOR PLAN GENERATION
 
-Before generating images, create an internal structured architectural representation.
+Use the complete UNIVERSAL ARCHITECTURAL 2D FLOOR PLAN GENERATION SYSTEM supplied alongside this prompt as the authoritative specification for Phase 2.
 
-Calculate:
+Execute that entire 2D generation system, including:
 
-- Plot boundary.
-- Buildable envelope.
-- Setback areas.
-- Room coordinates.
-- Room dimensions.
-- Room areas.
+- Input interpretation.
+- Automatic preliminary setback determination.
+- Buildable envelope calculation.
+- Architectural geometry generation.
+- Room placement.
+- Door and window positioning.
+- Furniture placement.
+- Multi-floor consistency.
+- Architectural annotations.
+- Final geometry validation.
+- Project summary.
+
+Follow all requirements, calculations, restrictions, and output specifications of the supplied 2D system.
+
+### 2.1 Generate every specified floor
+
+Generate a separate professional 2D architectural floor-plan image for every floor specified in the JSON.
+
+Support any number of floors.
+
+Do not stop after the ground floor.
+
+Maintain a common coordinate system, orientation, and architectural consistency across all floors.
+
+### 2.2 Complete 2D validation
+
+Before proceeding to 3D generation, verify:
+
+1. All requested rooms are present.
+2. No requested rooms are omitted.
+3. No unauthorized rooms are added.
+4. Room dimensions are correct.
+5. Room positions are correct.
+6. Wall geometry is consistent.
+7. Doors connect the intended spaces.
+8. Windows are correctly positioned.
+9. Staircases connect the appropriate floors.
+10. Setbacks and open spaces are represented correctly.
+11. All floors maintain consistent orientation.
+12. The drawing corresponds to the original JSON.
+
+Correct any identified discrepancies before proceeding.
+
+### 2.3 Preserve generated 2D outputs
+
+Once the 2D floor plans have been generated and validated:
+
+- Treat the generated images as the finalized architectural reference.
+- Preserve every generated floor-plan image.
+- Maintain the association between each image and its corresponding floor.
+- Do not regenerate the 2D plans during the 3D stage.
+- Do not modify the finalized 2D geometry to accommodate a preferred 3D appearance.
+
+The generated 2D images become the authoritative visual references for Phase 3.
+
+---
+
+# PHASE 3: TRANSITION FROM 2D TO 3D
+
+After completing and validating the 2D floor plans, automatically begin the 3D conversion stage.
+
+Use the actual 2D images generated in Phase 2 as the primary visual inputs for 3D reconstruction.
+
+This is a mandatory sequential dependency.
+
+**The 3D visualization MUST be derived from the generated 2D floor plans, not independently generated from the original JSON.**
+
+### 3.1 Source-image preservation
+
+For every generated floor:
+
+1. Identify its corresponding 2D floor-plan image.
+2. Use that exact image as the source for 3D conversion.
+3. Interpret its walls, rooms, openings, furniture, staircases, and spatial relationships.
+4. Reconstruct its geometry in three dimensions.
+5. Preserve the original room arrangement and proportions.
+6. Maintain the original building orientation.
+7. Maintain consistency with other floors.
+
+Do not substitute a newly generated or independently interpreted floor plan.
+
+### 3.2 Geometry reconstruction
+
+Interpret the 2D drawings and reconstruct:
+
+- Exterior walls.
+- Interior walls.
+- Room boundaries.
 - Wall thicknesses.
-- Door positions.
-- Door opening directions.
-- Window positions.
-- Staircase geometry.
-- Floor-to-floor connections.
-- Balcony and terrace geometry.
-- Open-to-sky areas.
-- Room adjacencies.
-- Circulation paths.
-
-Ensure that the geometry is consistent across all floors.
-
-### Geometry validation
-
-Validate:
-
-1. Every room is inside the permitted building envelope unless explicitly designated otherwise.
-2. Rooms do not unintentionally overlap.
-3. Room dimensions match their specified dimensions.
-4. Doors connect the intended spaces.
-5. Attached bathrooms have actual connecting doors.
-6. Walk-in wardrobes have actual connecting doors.
-7. Staircases connect the appropriate floors.
-8. Balconies connect to their corresponding rooms.
-9. Courtyard voids align between floors.
-10. Setbacks remain unobstructed.
-11. All circulation spaces are accessible.
-12. No unexplained empty spaces exist inside the building footprint.
-
-If a conflict exists, resolve it only when the solution does not violate explicit user requirements. Otherwise, ask for clarification.
-
----
-
-## PHASE 3: GENERATE 2D ARCHITECTURAL FLOOR PLANS
-
-Automatically generate a separate professional 2D floor-plan image for every floor specified in the JSON.
-
-For example:
-
-- Ground floor.
-- First floor.
-- Second floor.
-- Additional floors, if specified.
-
-Do not assume that only two floors are required.
-
-### 2D drawing requirements
-
-Use professional architectural drafting standards.
-
-**View:**
-
-- True top-down orthographic view.
-- Accurate proportions.
-- Consistent scale.
-- Clear architectural linework.
-
-**Include:**
-
-- Plot boundary.
-- Road and road-facing direction.
-- Main gate.
-- Pedestrian entrance.
-- Vehicle entrance.
-- Setbacks.
-- Exterior and interior walls.
-- All specified rooms.
-- Room names.
-- Room dimensions.
-- Door positions.
-- Door opening arcs.
-- Window positions.
-- Staircase details.
-- Furniture where useful.
-- Bathroom fixtures.
-- Kitchen fixtures.
-- Balconies.
-- Terraces.
-- Courtyards and voids.
-- Parking.
-- Circulation areas.
-- North arrow.
-- Dimension annotations.
-- Floor designation.
-- Area statement.
-
-Every room must be labelled clearly.
-
-Every dimension must be accurate.
-
-Do not allow furniture to obscure architectural elements.
-
-Do not use decorative landscaping to conceal geometric mistakes or unexplained spaces.
-
-### 2D output
-
-Generate individual images for every floor.
-
-Maintain the same orientation and coordinate reference across all floor plans.
-
----
-
-## PHASE 4: GENERATE 3D ARCHITECTURAL VISUALIZATIONS
-
-After generating the 2D plans, automatically generate corresponding 3D visualizations.
-
-The 3D visualizations MUST be derived from the architectural geometry used to generate the 2D plans.
-
-Do not independently redesign the building during 3D generation.
-
-### 3D generation requirements
-
-Generate a separate 3D cutaway architectural visualization for every floor.
-
-Show:
-
-- Exterior and interior walls.
-- Individual rooms.
-- Doors and windows.
-- Furniture.
-- Beds and wardrobes.
-- Bathroom fixtures.
-- Kitchen cabinets and counters.
-- Dining furniture.
-- Living room furniture.
+- Floor slabs.
+- Door openings.
+- Window openings.
 - Staircases.
 - Balconies.
 - Terraces.
 - Courtyards.
-- Parking areas.
-- Circulation spaces.
+- Double-height spaces.
+- Open-to-below spaces.
+- Other architectural elements.
 
-### 3D visualization style
+Use explicit dimensions from the original project where available.
 
-Use:
+Where exact dimensions are unavailable, derive proportions from the 2D images and use reasonable architectural assumptions.
 
-- Realistic architectural visualization.
-- Accurate room proportions.
-- Professional materials and textures.
-- Natural lighting.
+Do not present estimated dimensions as verified measurements.
+
+### 3.3 Vertical reconstruction
+
+Establish appropriate vertical geometry for:
+
+- Floor-to-floor height.
+- Ceiling height.
+- Wall height.
+- Slab thickness.
+- Door height.
+- Window height.
+- Staircase dimensions.
+- Balcony levels.
+- Parapet walls.
+- Roof geometry.
+
+Preserve explicitly specified vertical dimensions.
+
+Where these are unspecified, use consistent and reasonable residential architectural conventions.
+
+### 3.4 Architectural fidelity
+
+The generated 3D model must preserve the 2D design.
+
+Mandatory preservation rules:
+
+1. No room relocation.
+2. No room resizing when dimensions are specified.
+3. No unauthorized room additions.
+4. No room omissions.
+5. No wall relocation.
+6. No arbitrary wall additions or removals.
+7. No door relocation.
+8. No window relocation.
+9. No staircase relocation.
+10. No balcony or terrace relocation.
+11. No changes to building footprint.
+12. No filling of courtyards or architectural voids.
+13. No independent redesign of individual floors.
+
+The objective is to convert the 2D design into a 3D representation, not to improve or redesign the architectural layout.
+
+---
+
+# PHASE 4: 3D ARCHITECTURAL VISUALIZATION
+
+Generate professional 3D architectural visualizations using the reconstructed geometry.
+
+### 4.1 Architectural style
+
+Use the architectural style specified in the JSON.
+
+If no style is provided, use a clean, contemporary residential aesthetic.
+
+Support different styles, including:
+
+- Modern.
+- Contemporary.
+- Minimalist.
+- Traditional.
+- Classical.
+- Neoclassical.
+- Mediterranean.
+- Tropical.
+- Industrial.
+- Scandinavian.
+- Regional architectural styles.
+- Other user-specified styles.
+
+Architectural style can influence materials, colours, furniture, lighting, finishes, and exterior appearance.
+
+It must never alter the underlying 2D geometry.
+
+### 4.2 Materials and finishes
+
+Use appropriate realistic materials:
+
+- Concrete.
+- Natural stone.
+- Marble.
+- Granite.
+- Ceramic tiles.
+- Wooden flooring.
+- Glass.
+- Metal.
+- Plaster.
+- Paint.
+- Other appropriate materials.
+
+Maintain material consistency across the building.
+
+### 4.3 Interior elements
+
+Preserve furniture positions from the generated 2D floor plans.
+
+Where furniture is not represented, introduce appropriate furniture according to the room's intended function.
+
+Furniture must:
+
+- Be proportional to the room.
+- Maintain realistic placement.
+- Preserve circulation.
+- Avoid blocking doors and windows.
+- Not obscure architectural features.
+
+### 4.4 Lighting and rendering
+
+Use professional architectural rendering techniques:
+
+- Natural daylight.
 - Realistic shadows.
-- Clear room separation.
-- Appropriate furniture placement.
-- A consistent architectural style across floors.
+- Interior ambient lighting.
+- Appropriate artificial lighting.
+- Material reflections.
+- Natural textures.
+- Balanced exposure.
+- Realistic spatial depth.
 
-Use a top-down isometric or elevated cutaway perspective that allows the viewer to understand the complete floor layout.
-
-Do not allow walls, roofs, furniture or camera angles to hide important rooms.
-
-### 3D geometry preservation
-
-The 3D model must preserve:
-
-1. Room positions from the 2D plan.
-2. Room dimensions.
-3. Wall locations.
-4. Door locations.
-5. Window locations.
-6. Staircase positions.
-7. Balcony positions.
-8. Courtyard and void locations.
-9. Floor connections.
-10. Building orientation.
-
-The 3D model must represent the same building shown in the 2D floor plans.
+Prioritize architectural clarity over decorative effects.
 
 ---
 
-## PHASE 5: FINAL VALIDATION
+# PHASE 5: 3D IMAGE GENERATION
 
-Before presenting the results, compare the generated 2D plans and 3D visualizations.
+Generate the following visualizations according to the number of floors and architectural information available.
 
-Check:
+## A. Individual 3D Floor Visualizations
 
-- Every specified room is represented.
-- No unauthorized rooms have been added.
-- No specified rooms have been omitted.
-- Dimensions are consistent.
-- Room positions are consistent.
-- Doors and windows are consistent.
-- Staircases align across floors.
-- Courtyards and open-to-below spaces are correctly represented.
-- Balconies and terraces are correctly positioned.
-- The architectural layout is consistent across all outputs.
+Generate one separate 3D visualization for every floor generated in Phase 2.
 
-If a discrepancy is detected, correct the output before presenting it.
+Each visualization must:
+
+- Correspond to its exact 2D floor plan.
+- Show the complete room arrangement.
+- Display walls and partitions.
+- Include appropriate furniture.
+- Show doors and windows.
+- Represent staircases correctly.
+- Display balconies and open spaces.
+- Maintain correct proportions.
+- Use realistic architectural materials.
+
+Use an elevated axonometric or isometric cutaway view.
+
+Use a roof-removed presentation where necessary to expose the interior.
+
+## B. Complete Building Visualization
+
+For multi-floor buildings, generate a complete building visualization.
+
+Use an assembled or exploded axonometric architectural presentation.
+
+Ensure:
+
+- Correct floor order.
+- Correct vertical alignment.
+- Correct staircase connections.
+- Correct room positioning.
+- Correct balcony and terrace placement.
+- Correct courtyard alignment.
+- Correct open-to-below spaces.
+- Consistent building orientation.
+
+The complete building visualization must represent the same building shown in the individual 2D and 3D floor plans.
+
+## C. Exterior Architectural Visualization
+
+Generate an exterior building visualization when the supplied information supports a reasonable exterior interpretation.
+
+Maintain consistency with:
+
+- Building footprint.
+- Number of floors.
+- Floor heights.
+- Balcony locations.
+- Window positions.
+- Main entrances.
+- Architectural style.
+- Roof configuration, where specified.
+
+Do not invent an unrelated exterior design.
+
+Where elevation details are unavailable, use a restrained architectural interpretation without claiming that the exterior was explicitly specified.
 
 ---
 
-## PHASE 6: FINAL OUTPUT
+# PHASE 6: CROSS-MODAL ARCHITECTURAL VALIDATION
 
-Automatically provide the following outputs:
+This is a mandatory validation stage.
 
-### A. 2D Architectural Floor Plans
+Compare three sources:
 
-- One separate image for each floor.
-- Complete architectural annotations.
-- Room names and dimensions.
-- Doors, windows and staircase details.
+1. Original JSON requirements.
+2. Generated 2D floor-plan images.
+3. Generated 3D architectural visualizations.
 
-### B. 3D Architectural Visualizations
+The 3D output must correspond to the generated 2D output, and the 2D output must correspond to the original JSON.
 
-- One separate 3D image for each floor.
-- Realistic furniture and materials.
-- Accurate representation of the corresponding 2D plan.
+### 6.1 JSON-to-2D validation
 
-### C. Final Design Summary
+Verify:
+
+- Plot dimensions.
+- Orientation.
+- Setbacks.
+- Number of floors.
+- Room counts.
+- Room dimensions.
+- Room positions.
+- Architectural components.
+- Circulation.
+- Other explicitly specified requirements.
+
+### 6.2 2D-to-3D validation
+
+Verify:
+
+- Room arrangement.
+- Room proportions.
+- Wall positions.
+- Wall continuity.
+- Door positions.
+- Window positions.
+- Staircase positions.
+- Balcony positions.
+- Terrace positions.
+- Courtyard geometry.
+- Floor connections.
+- Furniture arrangement.
+- Open-to-below spaces.
+- Overall building footprint.
+
+### 6.3 Cross-floor validation
+
+For multi-floor buildings, verify:
+
+- Floor stacking order.
+- Staircase continuity.
+- Structural alignment where identifiable.
+- Courtyard alignment.
+- Open-to-below alignment.
+- Balcony positioning.
+- Floor elevations.
+- Consistent orientation.
+
+### 6.4 Discrepancy correction
+
+If any discrepancy is identified between the generated 2D floor plans and the 3D visualizations:
+
+1. Identify the discrepancy.
+2. Refer to the original 2D image.
+3. Correct the 3D representation.
+4. Recheck the affected architectural elements.
+5. Preserve the finalized 2D image.
+
+Never modify a correct 2D floor plan merely to match an incorrect 3D visualization.
+
+If an image-generation limitation prevents exact reproduction, disclose the limitation rather than falsely claiming perfect geometric accuracy.
+
+---
+
+# PHASE 7: FINAL OUTPUT PRESENTATION
+
+Present the completed project in the following order.
+
+## A. 2D ARCHITECTURAL FLOOR PLANS
+
+Present all generated 2D floor-plan images first.
+
+For each image, identify:
+
+- Floor designation.
+- Room names.
+- Room dimensions.
+- Architectural annotations.
+- Relevant site information.
+
+These must be the exact finalized 2D images generated in Phase 2.
+
+## B. 3D ARCHITECTURAL VISUALIZATIONS
+
+After presenting the 2D plans, present their corresponding 3D visualizations.
+
+Organize them floor by floor.
+
+For example, if the project contains multiple floors:
+
+- Ground Floor — 2D plan and corresponding 3D visualization.
+- First Floor — 2D plan and corresponding 3D visualization.
+- Second Floor — 2D plan and corresponding 3D visualization.
+- Additional floors as specified.
+
+Also present the complete building visualization where applicable.
+
+## C. PROJECT SUMMARY
 
 Provide:
 
 - Plot dimensions.
+- Plot orientation.
 - Number of floors.
-- Total number of rooms.
+- Building dimensions.
 - Floor-wise room list.
-- Floor-wise area calculations, where available.
-- Setback information.
-- Important design features.
-- Validation results.
+- Room dimensions and areas, where available.
+- Setback schedule.
+- Setback provenance.
+- Architectural style.
+- Major architectural features.
+- Materials and finishes.
+- Vertical dimension assumptions.
+- Geometry validation summary.
+- Any unresolved discrepancies or assumptions.
+
+Clearly identify automatically assumed setbacks as preliminary conceptual assumptions requiring verification against applicable local regulations.
 
 ---
 
-## CRITICAL RULES
+# CRITICAL EXECUTION RULES
 
-1. The system must work with any valid JSON input following the supplied architectural input structure.
-2. Never hardcode a particular house layout.
-3. Never assume fixed plot dimensions.
-4. Never assume fixed room counts.
-5. Never assume a fixed number of floors.
-6. Never invent user requirements.
-7. Never alter explicitly provided room coordinates or dimensions.
-8. When dimensions are not provided, calculate them based on the available constraints.
-9. Generate all 2D floor plans before generating their corresponding 3D visualizations.
-10. Use the same architectural geometry for both 2D and 3D.
-11. Do not require separate user instructions to initiate 3D generation.
-12. Do not stop after generating the 2D images.
-13. Generate all requested floors.
-14. Prioritize architectural accuracy over visual decoration.
+1. ALWAYS generate 2D before generating 3D.
+2. ALWAYS complete the 2D generation stage before starting 3D.
+3. ALWAYS validate the 2D floor plans before proceeding.
+4. ALWAYS use the actual generated 2D images as the input for 3D conversion.
+5. NEVER independently generate 3D from the original JSON.
+6. NEVER independently redesign the building during 3D generation.
+7. NEVER replace the generated 2D images with newly generated plans.
+8. NEVER alter the finalized 2D geometry to improve the 3D appearance.
+9. NEVER omit any specified floor.
+10. NEVER assume a fixed number of rooms or floors.
+11. NEVER change explicitly supplied dimensions or coordinates.
+12. NEVER invent unsupported structural engineering details.
+13. NEVER claim regulatory or structural compliance without verification.
+14. NEVER present assumed dimensions as measured dimensions.
+15. NEVER present the project as complete if one of the required generation stages has not been completed.
+16. Prioritize architectural consistency across all generated outputs.
 
-**FINAL OBJECTIVE:**
+---
 
-For every valid residential architectural JSON input, automatically interpret the requirements, calculate and validate the architectural geometry, generate professional 2D floor plans for all floors, and then generate matching realistic 3D architectural visualizations for all floors. do not give the exterior, i want only the floor plan, and 2d image should be separate and 3d image should be separate`;
+# FINAL OBJECTIVE
+
+For any valid residential architectural JSON input, automatically generate a complete architectural project consisting of:
+
+1. Accurate 2D architectural floor plans for every specified floor.
+2. Corresponding 3D architectural visualizations derived directly from those generated 2D plans.
+3. A complete multi-floor building visualization where applicable.
+4. A comprehensive project summary.
+5. A cross-validated 2D and 3D architectural presentation.
+
+The final 2D and 3D outputs must represent ONE consistent architectural design.
+
+**The 2D floor plan is the architectural foundation. The 3D visualization is its spatial representation.**
+
+Never allow the 3D generation stage to become an independent architectural design process.`;
 
 
 // ─── Main Architectural Studio Component ──────────────────────────────────────
@@ -729,6 +946,7 @@ export default function BlueprintScreen() {
   const [plan3dError, setPlan3dError] = useState<string | null>(null);
   const [animationSkipped, setAnimationSkipped] = useState<boolean>(false);
 
+  const source2dRef = useRef<{ url: string; form: string } | null>(null);
   const activeRequestIdRef = useRef<number>(0);
   const animationSkippedRef = useRef<boolean>(false);
   const generationDoneRef = useRef<boolean>(false);
@@ -766,7 +984,9 @@ export default function BlueprintScreen() {
     activeRequestIdRef.current++;
     historySaveVersion.current++;
     pendingHistoryRef.current = null;
-    setForm({ ...DEFAULTS, ...plan.form });
+    const restoredForm = { ...DEFAULTS, ...plan.form };
+    setForm(restoredForm);
+    source2dRef.current = plan.plan2dUrl ? { url: plan.plan2dUrl, form: JSON.stringify(restoredForm) } : null;
     setOutputMode(plan.mode);
     setLastGeneratedMode(plan.mode);
     setActivePlanTab(plan.mode);
@@ -818,27 +1038,14 @@ export default function BlueprintScreen() {
     })();
   }, []);
 
-  const downloadPlanImage = useCallback((url: string | null, filename: string) => {
+  const downloadPlanImage = useCallback(async (url: string | null, filename: string) => {
     if (!url) return;
-    const fullUrl = resolveImageUrl(url) || url;
-    if (Platform.OS === 'web') {
-      try {
-        const a = document.createElement('a');
-        a.href = fullUrl;
-        a.download = filename;
-        a.target = '_blank';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-      } catch (err: any) {
-        console.error('Error downloading image:', err);
-      }
-    } else {
-      Share.share({
-        url: fullUrl,
-        message: `Architectural Plan: ${fullUrl}`,
-        title: filename,
-      });
+    try {
+      await downloadBlueprint(resolveImageUrl(url) || url, filename);
+    } catch (error: any) {
+      const message = error.message || 'The plan could not be downloaded. Please retry.';
+      setAiGenError(message);
+      Alert.alert('Download Failed', message);
     }
   }, []);
 
@@ -931,25 +1138,40 @@ export default function BlueprintScreen() {
 
   const executeGeneration = useCallback(async (modeToGenerate?: '2d' | '3d' | 'both') => {
     const targetMode = modeToGenerate || outputMode;
+    if (isAiGenerating) return;
+    const source = source2dRef.current;
+    if (targetMode === '3d' && (!source || source.form !== JSON.stringify(form))) {
+      const message = 'Generate a 2D floor plan for the current project details first. The 3D view will be converted from that exact plan.';
+      setAiGenError(message);
+      Alert.alert('2D Plan Required', message);
+      return;
+    }
     const keyToUse = openAiKey.trim();
     const requestId = ++activeRequestIdRef.current;
 
+    // Show the requested view while its request is pending, including 2D-to-3D retries.
+    setOutputMode(targetMode);
     setLastGeneratedMode(targetMode);
     historySaveVersion.current++;
     pendingHistoryRef.current = null;
     setHistorySaveStatus('idle');
     setActivePlanTab(targetMode);
     setIsAiGenerating(true);
-    setIsGenerating(true);
+    const convertingExistingPlan = targetMode === '3d' && Boolean(source);
+    setIsGenerating(!convertingExistingPlan);
+    if (convertingExistingPlan) setSubmitted(true);
     setAnimationSkipped(false);
     animationSkippedRef.current = false;
     generationDoneRef.current = false;
     setAiGenError(null);
     setPlan2dError(null);
     setPlan3dError(null);
-    setPlan2dUrl(null);
+    if (targetMode !== '3d') {
+      source2dRef.current = null;
+      setPlan2dUrl(null);
+      setPlan2dSvg(null);
+    }
     setPlan3dUrl(null);
-    setPlan2dSvg(null);
     setPlan3dSvg(null);
     setTechnicalCadSvg(null);
     setCanonicalLayout(null);
@@ -960,6 +1182,9 @@ export default function BlueprintScreen() {
       if (!token && !keyToUse) {
         setIsAiGenerating(false);
         setIsGenerating(false);
+        const message = 'Please sign in to generate floor plans, or enter your OpenAI API key in Prompt Settings.';
+        setAiGenError(message);
+        if (targetMode === '3d') setPlan3dError(message);
         Alert.alert(
           'Sign In Required',
           'Please sign in to your BoolokOne account to generate architectural blueprints, or enter your OpenAI API key in Prompt Settings.',
@@ -978,44 +1203,41 @@ export default function BlueprintScreen() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      if (keyToUse) {
-        headers['x-openai-key'] = keyToUse;
+      const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          jsonData: json,
+          mode: targetMode,
+          ...(targetMode === 'both' ? { customPrompt: DEFAULT_UNIVERSAL_PROMPT } : {}),
+          ...(targetMode === '3d' ? { sourcePlan2dUrl: source?.url } : {}),
+          apiKey: keyToUse || undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'AI generation failed. Please retry.');
       }
-      // Single canonical layout synthesis pass for deterministic geometry consistency
-      const localCanonical = targetMode === 'both' ? null : synthesizeCanonicalBlueprint(json, targetMode);
-
-      let data: any = null;
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/blueprint/generate`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            jsonData: json,
-            mode: targetMode,
-            ...(targetMode === 'both' ? { customPrompt: DEFAULT_UNIVERSAL_PROMPT } : {}),
-            apiKey: keyToUse || undefined,
-          }),
-        });
-        const remoteJson = await res.json().catch(() => ({}));
-        if (res.ok && remoteJson.success) {
-          data = remoteJson;
-        } else if (targetMode === 'both' || (res.status === 400 && remoteJson.message)) {
-          throw new Error(remoteJson.message || 'AI generation failed. Please retry.');
-        } else {
-          data = localCanonical;
-        }
-      } catch (netErr: any) {
-        if (targetMode === 'both' || (netErr?.message && netErr.message.includes('Infeasible'))) {
-          throw netErr;
-        }
-        data = localCanonical;
-      }
+      data.plan2dUrl = resolveImageUrl(data.plan2dFileUrl || data.plan2dUrl);
+      data.plan3dUrl = resolveImageUrl(data.plan3dFileUrl || data.plan3dUrl);
+      // Warm the image cache before ending the generation scene.
+      const imageUrls = [...new Set([data.plan2dUrl, data.plan3dUrl].filter((url): url is string => Boolean(url)))];
+      await Promise.allSettled(imageUrls.map(url => Image.prefetch(url)));
 
       // Ignore superseded requests
       if (activeRequestIdRef.current !== requestId) {
         return;
       }
 
+      if (data.sourcePlan2dUrl && data.plan2dUrl) {
+        source2dRef.current = { url: data.sourcePlan2dUrl, form: JSON.stringify(form) };
+      }
+      setOutputMode(targetMode);
+      setAiGenError(data.warning || null);
+      if (data.warning) {
+        setPlan3dError(data.warning);
+        Alert.alert('3D Conversion Incomplete', data.warning);
+      }
       setPlan2dUrl(data.plan2dFileUrl ? resolveImageUrl(data.plan2dFileUrl) || data.plan2dUrl : data.plan2dUrl || null);
       setPlan3dUrl(data.plan3dFileUrl ? resolveImageUrl(data.plan3dFileUrl) || data.plan3dUrl : data.plan3dUrl || null);
       setPlan2dSvg(data.plan2dSvg || null);
@@ -1057,7 +1279,12 @@ export default function BlueprintScreen() {
       setAnimationSkipped(false);
       animationSkippedRef.current = false;
       generationDoneRef.current = false;
-      setSubmitted(false);
+      if (targetMode === '3d' && source) {
+        setSubmitted(true);
+        setPlan3dError(err.message || '3D conversion failed. Please retry.');
+      } else {
+        setSubmitted(false);
+      }
       setAiGenError(err.message || 'Generation failed.');
       Alert.alert(
         'Layout Validation / Generation Error',
@@ -1065,27 +1292,22 @@ export default function BlueprintScreen() {
         [{ text: 'OK' }]
       );
     }
-  }, [openAiKey, outputMode, form, buildJson, saveBlueprint]);
+  }, [openAiKey, outputMode, form, buildJson, saveBlueprint, isAiGenerating]);
 
   const retrySingleView = useCallback(async (view: '2d' | '3d') => {
-    try {
-      const json = buildJson();
-      const localResult = synthesizeCanonicalBlueprint(json, view);
-      if (view === '2d') {
-        setPlan2dError(null);
-        setPlan2dSvg(localResult.plan2dSvg || null);
-        setPlan2dUrl(localResult.plan2dUrl || null);
-        if (localResult.technicalCadSvg) setTechnicalCadSvg(localResult.technicalCadSvg);
-      } else {
-        setPlan3dError(null);
-        setPlan3dSvg(localResult.plan3dSvg || null);
-        setPlan3dUrl(localResult.plan3dUrl || null);
-      }
-    } catch (err: any) {
-      if (view === '2d') setPlan2dError('Retry failed: ' + (err.message || 'Error'));
-      else setPlan3dError('Retry failed: ' + (err.message || 'Error'));
+    await executeGeneration(view);
+  }, [executeGeneration]);
+
+  const selectOutputMode = (mode: 'both' | '2d' | '3d') => {
+    setOutputMode(mode);
+    if (mode === '3d' && (!source2dRef.current || source2dRef.current.form !== JSON.stringify(form))) {
+      const message = 'Generate a 2D floor plan first, then choose 3D. Choose Both to run these steps automatically.';
+      setAiGenError(message);
+      Alert.alert('2D Plan Required', message);
+    } else {
+      setAiGenError(null);
     }
-  }, [buildJson]);
+  };
 
   const upd = useCallback((key: keyof FormData, val: any) => {
     setForm(prev => ({ ...prev, [key]: val }));
@@ -2080,35 +2302,36 @@ export default function BlueprintScreen() {
               <Text style={[styles.stampSub, { color: theme.onSurfaceVariant }]}>
                 All 9 phases parameterized. Ready to synthesize BIM structural draft and floor layout.
               </Text>
+              {aiGenError && <Text accessibilityRole="alert" style={{ color: '#D97706', marginTop: 12 }}>{aiGenError}</Text>}
               {/* Synthesis Output Selector */}
               <Text style={[styles.fieldLabel, { color: theme.onSurface, marginTop: 16, marginBottom: 8 }]}>
-                CHOOSE YOUR PLAN FORMAT
+                WHAT WOULD YOU LIKE TO CREATE?
               </Text>
               <View style={{ gap: 8, marginBottom: 14 }}>
                 <RadioCard
                   value="both"
                   current={outputMode}
-                  onPress={setOutputMode}
-                  label="2D + 3D Complete Bundle"
-                  sub="Both CAD drafting blueprint & photorealistic 3D interior cutaway"
+                  onPress={selectOutputMode}
+                  label="Plan + Preview (2D & 3D)"
+                  sub="Create a detailed floor plan, followed by a furnished 3D preview of the same layout"
                   iconName="layers-triple-outline"
                   theme={theme}
                 />
                 <RadioCard
                   value="2d"
                   current={outputMode}
-                  onPress={setOutputMode}
-                  label="2D House Plan Only"
-                  sub="Orthographic CAD blueprint with dimensions, setbacks & room layout"
+                  onPress={selectOutputMode}
+                  label="Floor Plan (2D)"
+                  sub="Start with a clear overhead layout showing rooms, dimensions and openings"
                   iconName="ruler-square-compass"
                   theme={theme}
                 />
                 <RadioCard
                   value="3d"
                   current={outputMode}
-                  onPress={setOutputMode}
-                  label="3D House Plan Only"
-                  sub="Isometric 3D architectural cutaway model with materials & depth"
+                  onPress={selectOutputMode}
+                  label="Interior Preview (3D)"
+                  sub="Bring your existing 2D plan to life with furniture, materials and depth"
                   iconName="cube-outline"
                   theme={theme}
                 />
@@ -2141,12 +2364,15 @@ export default function BlueprintScreen() {
         theme={theme}
         isDark={isDark}
         formData={form}
+        isReady={!isAiGenerating}
         onComplete={() => {
+          if (!generationDoneRef.current) return;
           setIsGenerating(false);
           setSubmitted(true);
           scrollRef.current?.scrollTo({ y: 0, animated: true });
         }}
         onViewPlan={() => {
+          if (!generationDoneRef.current) return;
           setIsGenerating(false);
           setSubmitted(true);
           scrollRef.current?.scrollTo({ y: 0, animated: true });
@@ -2194,7 +2420,7 @@ export default function BlueprintScreen() {
               ) : (
                 <View style={[styles.technicalStatusPill, { borderColor: 'rgba(218,165,32,0.4)', backgroundColor: 'rgba(218,165,32,0.1)' }]}>
                   <View style={[styles.pulseBeacon, { backgroundColor: '#DAA520' }]} />
-                  <Text style={{ color: '#DAA520', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>CREATING YOUR PLANS</Text>
+                  <Text style={{ color: '#DAA520', fontSize: 10.5, fontWeight: '700', letterSpacing: 0.5 }}>{aiGenError ? '3D CONVERSION INCOMPLETE' : 'CREATING YOUR PLANS'}</Text>
                 </View>
               )}
             </View>
@@ -2238,7 +2464,7 @@ export default function BlueprintScreen() {
               {/* Grid of 2D and 3D Cards */}
               <View style={[styles.plansGrid, { flexDirection: isWide && (outputMode === 'both' || (plan2dUrl && plan3dUrl)) ? 'row' : 'column' }]}>
                 {/* 2D Plan Card */}
-                {(outputMode === 'both' || outputMode === '2d' || (plan2dUrl && !plan3dUrl)) && (
+                {(outputMode === 'both' || outputMode === '2d' || plan2dUrl) && (
                   <View style={[styles.planCard, isWide && (outputMode === 'both' || (plan2dUrl && plan3dUrl)) && { flex: 1 }, { borderColor: theme.outlineVariant, backgroundColor: isDark ? '#070D18' : '#F8FAFC' }]}>
                     <View style={styles.cardHeader}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -2315,6 +2541,7 @@ export default function BlueprintScreen() {
                     {plan3dUrl ? (
                       <Pressable onPress={() => setFullscreenImage(plan3dUrl)}>
                         {plan3dSvg ? <SvgXml xml={plan3dSvg} width="100%" height={320} /> : <Image
+                          key={plan3dUrl}
                           source={{ uri: resolveImageUrl(plan3dUrl) || plan3dUrl }}
                           style={styles.planImage}
                           onError={() => { setPlan3dUrl(null); setPlan3dError('The generated image could not be loaded. Please retry this view.'); }}
@@ -2375,6 +2602,14 @@ export default function BlueprintScreen() {
             </View>
           )}
 
+          {(plan2dUrl && !plan3dUrl && !plan3dSvg && !isAiGenerating) && (
+            <Pressable accessibilityRole="button" onPress={() => executeGeneration('3d')}
+              style={[styles.phaseCopyBtn, { borderColor: theme.primary, padding: 14, marginBottom: 16 }]}>
+              <MaterialCommunityIcons name="cube-outline" size={18} color={theme.primary} />
+              <Text style={[styles.phaseCopyBtnText, { color: theme.primary }]}>Generate 3D from this 2D plan</Text>
+            </Pressable>
+          )}
+          {aiGenError && <Text accessibilityRole="alert" style={{ color: '#D97706', marginBottom: 16 }}>{aiGenError}</Text>}
           {/* Architectural Blueprint Title Block */}
           <View style={[styles.titleBlockContainer, { borderColor: isDark ? 'rgba(218,165,32,0.3)' : theme.outlineVariant, backgroundColor: isDark ? '#0A1220' : '#FFFFFF' }]}>
             <View style={styles.titleBlockHeader}>
@@ -2663,7 +2898,7 @@ export default function BlueprintScreen() {
               <LinearGradient colors={['#DAA520', '#B8860B']} style={styles.navBtnPrimaryGrad}>
                 <Text style={styles.navBtnPrimaryText}>
                   {step === totalSteps - 1
-                    ? (outputMode === '2d' ? 'Generate 2D plan' : outputMode === '3d' ? 'Generate 3D plan' : 'Generate plans')
+                    ? (outputMode === '2d' ? 'Create floor plan' : outputMode === '3d' ? 'Create 3D preview' : 'Create plan & preview')
                     : 'Continue'}
                 </Text>
                 <MaterialIcons name="arrow-forward" size={16} color="#0A0F23" />

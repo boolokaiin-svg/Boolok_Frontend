@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { apiFetch } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -17,6 +17,8 @@ import { spacing, typography, radius, shadows } from '../../constants/theme';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 import LoadingScreen from '../../components/LoadingScreen';
+import BlueprintPreviewIllustration from '../../components/BlueprintPreviewIllustration';
+import { DashboardTool, RecentDashboardTool, orderedDashboardTools, readRecentDashboardTools } from '../../lib/recentDashboardTools';
 
 export default function FeedScreen() {
   const { user } = useAuth();
@@ -25,6 +27,35 @@ export default function FeedScreen() {
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
+  const accountId = user?.id || user?._id || '';
+  const [recentTools, setRecentTools] = useState<{ accountId: string; tools: RecentDashboardTool[] }>({ accountId: '', tools: [] });
+  const recent = recentTools.accountId === accountId ? recentTools.tools : [];
+  const toolOrder = orderedDashboardTools(recent);
+
+  useFocusEffect(useCallback(() => {
+    let active = true;
+    void readRecentDashboardTools(accountId).then(tools => {
+      if (active) setRecentTools({ accountId, tools });
+    });
+    return () => { active = false; };
+  }, [accountId]));
+
+  const recentBadge = (tool: DashboardTool) => {
+    const index = recent.findIndex(item => item.id === tool);
+    if (index < 0) return null;
+    const latest = index === 0;
+    return (
+      <View style={[styles.recentBadge, {
+        backgroundColor: latest ? (isDark ? 'rgba(233,184,74,0.12)' : '#FFF5DD') : theme.surfaceContainer,
+        borderColor: latest ? 'rgba(218,165,32,0.3)' : theme.outlineVariant,
+      }]}>
+        <MaterialIcons name={latest ? 'history' : 'schedule'} size={14} color={latest ? theme.primary : theme.onSurfaceVariant} />
+        <Text style={{ color: latest ? theme.primary : theme.onSurfaceVariant, fontSize: 11, fontWeight: '600' }}>
+          {latest ? 'Recently used' : 'Previously opened'}
+        </Text>
+      </View>
+    );
+  };
 
   useEffect(() => {
     fetchDashboardStats();
@@ -72,23 +103,10 @@ export default function FeedScreen() {
     return <LoadingScreen />;
   }
 
-  return (
-    <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
-      <ScrollView
-        style={[
-          styles.container,
-          { backgroundColor: theme.background },
-        ]}
-        contentContainerStyle={[
-          styles.contentContainer,
-          { padding: isWide ? spacing.xl : spacing.md },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.grid}>
-          {/* Row 1 */}
-          {/* Legal AI */}
+  const cards: Record<DashboardTool, React.ReactNode> = {
+    legal: (
           <Pressable
+            key="legal"
             onPress={() => router.push('/(app)/legal')}
             style={({ pressed, hovered }: any) => [
               styles.card,
@@ -100,8 +118,9 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
+              isWide && toolOrder[2] !== 'legal' ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
               styles.legalCard,
+              recent[0]?.id === 'legal' && { borderColor: 'rgba(218,165,32,0.55)' },
               (pressed || hovered) && {
                 transform: [{ scale: 1.02 }],
                 shadowColor: theme.primary,
@@ -112,6 +131,7 @@ export default function FeedScreen() {
               },
             ]}
           >
+            {recentBadge('legal')}
             <View style={styles.cardHeaderRow}>
               <Text
                 style={[typography.headlineSm, { color: theme.onSurface }]}
@@ -195,10 +215,10 @@ export default function FeedScreen() {
               Verify Title Deed →
             </Text>
           </Pressable>
-
-          {/* Row 2 */}
-          {/* Blueprint Architect */}
+    ),
+    blueprint: (
           <Pressable
+            key="blueprint"
             onPress={() => router.push('/(app)/blueprint')}
             style={({ pressed, hovered }: any) => [
               styles.card,
@@ -210,8 +230,9 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              isWide ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
+              isWide && toolOrder[2] !== 'blueprint' ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
               styles.blueprintCard,
+              recent[0]?.id === 'blueprint' && { borderColor: 'rgba(218,165,32,0.55)' },
               (pressed || hovered) && {
                 transform: [{ scale: 1.02 }],
                 shadowColor: theme.primary,
@@ -222,12 +243,9 @@ export default function FeedScreen() {
               },
             ]}
           >
-            <View style={styles.blueprintBg}>
-              <Text
-                style={{ color: 'rgba(218, 165, 32, 0.1)', fontSize: 12 }}
-              >
-                LVG_RM: 24' x 18'
-              </Text>
+            {recentBadge('blueprint')}
+            <View style={styles.blueprintPreview} pointerEvents="none">
+              <BlueprintPreviewIllustration isDark={isDark} />
             </View>
 
             <View style={{ marginTop: 'auto' }}>
@@ -259,8 +277,8 @@ export default function FeedScreen() {
                   marginBottom: spacing.md,
                 }}
               >
-                Generate 2D/3D floor plans from simple text descriptions or
-                rough sketches.
+                Turn your plot and room requirements into a detailed 2D plan
+                and furnished 3D preview.
               </Text>
               <Pressable
                 onPress={() => router.push('/(app)/blueprint')}
@@ -278,9 +296,10 @@ export default function FeedScreen() {
               </Pressable>
             </View>
           </Pressable>
-
-          {/* Market Predictions */}
+    ),
+    predictions: (
           <Pressable
+            key="predictions"
             onPress={() => router.push('/(app)/predictions')}
             style={({ pressed, hovered }: any) => [
               styles.card,
@@ -292,8 +311,9 @@ export default function FeedScreen() {
                   : 'rgba(218, 165, 32, 0.35)',
                 cursor: 'pointer',
               },
-              { width: '100%' },
+              isWide && toolOrder[2] !== 'predictions' ? { width: Platform.OS === 'web' ? 'calc(50% - 12px)' : '48%' } : { width: '100%' },
               styles.predictionsCard,
+              recent[0]?.id === 'predictions' && { borderColor: 'rgba(218,165,32,0.55)' },
               (pressed || hovered) && {
                 transform: [{ scale: 1.01 }],
                 shadowColor: theme.primary,
@@ -304,6 +324,7 @@ export default function FeedScreen() {
               },
             ]}
           >
+            {recentBadge('predictions')}
             <View style={styles.cardHeaderRow}>
               <View style={{ flexShrink: 1, marginRight: spacing.md }}>
                 <Text
@@ -448,6 +469,35 @@ export default function FeedScreen() {
               </View>
             </View>
           </Pressable>
+    ),
+  };
+
+  return (
+    <Animated.View style={{ flex: 1 }} entering={FadeIn.duration(400)}>
+      <ScrollView
+        style={[
+          styles.container,
+          { backgroundColor: theme.background },
+        ]}
+        contentContainerStyle={[
+          styles.contentContainer,
+          { padding: isWide ? spacing.xl : spacing.md },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.workspaceHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={[typography.headlineSm, { color: theme.onSurface }]}>Your workspace</Text>
+            <Text style={{ fontSize: 13, lineHeight: 20, color: theme.onSurfaceVariant, marginTop: 4 }}>
+              {recent.length ? 'Pick up where you left off. Your latest tool comes first.' : 'Choose a tool to start your next property project.'}
+            </Text>
+          </View>
+          <View style={[styles.workspaceIcon, { backgroundColor: isDark ? 'rgba(218,165,32,0.1)' : '#FFF5DD' }]}>
+            <MaterialIcons name={recent.length ? 'history' : 'dashboard'} size={22} color={theme.primary} />
+          </View>
+        </View>
+        <View style={styles.grid}>
+          {toolOrder.map(tool => cards[tool])}
         </View>
       </ScrollView>
     </Animated.View>
@@ -457,6 +507,30 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   contentContainer: { padding: spacing.xl },
+  workspaceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: spacing.lg,
+  },
+  workspaceIcon: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginBottom: spacing.md,
+  },
   grid: {
     display: 'flex',
     flexDirection: 'row',
@@ -529,17 +603,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     minHeight: 300,
   },
-  blueprintBg: {
-    position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
-    height: 120,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(218, 165, 32, 0.2)',
-    padding: spacing.sm,
-    justifyContent: 'flex-end',
+  blueprintPreview: {
+    width: '100%',
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
   },
   generateBtn: {
     paddingVertical: 14,

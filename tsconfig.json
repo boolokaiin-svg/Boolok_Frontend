@@ -11,5 +11,6 @@
     "noEmit": true,
     "resolveJsonModule": true,
     "skipLibCheck": true
-  }
+  },
+  "exclude": ["node_modules", "dist", "web-build"]
 }

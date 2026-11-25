@@ -15,6 +15,7 @@ import axios from 'axios';
 import { API_BASE_URL, resolveImageUrl } from '../../lib/api';
 import { SocketProvider, useSocket } from '../../context/SocketContext';
 import { startScreenPolling } from '../../lib/screenPolling';
+import { DASHBOARD_TOOLS, recordDashboardTool } from '../../lib/recentDashboardTools';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
@@ -37,6 +38,12 @@ function AppLayoutContent() {
   const pathname = usePathname();
   const params = useGlobalSearchParams();
   const { theme, isDark, toggleTheme } = useTheme();
+
+  useEffect(() => {
+    const tool = DASHBOARD_TOOLS.find(id => pathname === `/${id}` || pathname === `/(app)/${id}`);
+    const accountId = user?.id || user?._id;
+    if (tool && accountId) void recordDashboardTool(accountId, tool);
+  }, [pathname, user?.id, user?._id]);
 
   // Track keyboard visibility so BottomNav doesn't obstruct inputs or sit above keyboard
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
